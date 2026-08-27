@@ -48,3 +48,6 @@ credentials.json
 
 # MCP configuration is user-local; the plugin ships without one (Requirement 1 AC7)
 mcp.json
+
+# Kiro development files (specs, steering) - not part of the plugin
+.kiro/
