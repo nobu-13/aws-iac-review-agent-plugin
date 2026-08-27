@@ -19,7 +19,9 @@ let taggable_resources = Resources.*[
     'AWS::DynamoDB::Table',
     'AWS::Lambda::Function',
     'AWS::SNS::Topic',
-    'AWS::SQS::Queue'
+    'AWS::SQS::Queue',
+    'AWS::EC2::VPC',
+    'AWS::EC2::Subnet'
   ]
 ]
 

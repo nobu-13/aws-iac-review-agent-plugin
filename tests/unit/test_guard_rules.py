@@ -55,10 +55,16 @@ CATEGORY_DIRECTORIES = [
 EXPECTED_GUARD_FILES = [
     "backup/rds_backup_retention.guard",
     "backup/rds_deletion_protection.guard",
+    "backup/s3_deletion_policy.guard",
+    "backup/s3_versioning_enabled.guard",
+    "encryption/ebs_volume_encrypted.guard",
+    "encryption/logs_group_encrypted.guard",
     "encryption/rds_storage_encrypted.guard",
     "encryption/s3_bucket_encryption.guard",
+    "encryption/sns_topic_encrypted.guard",
     "iam/iam_policy_no_star_star.guard",
     "logging/cloudtrail_enabled.guard",
+    "logging/logs_retention_set.guard",
     "logging/s3_access_logging.guard",
     "public-access/rds_publicly_accessible.guard",
     "public-access/s3_public_access_block.guard",
@@ -102,7 +108,11 @@ OPTIONAL_RULE_KEYS = ("normalized_category", "finding_type")
 
 # The single rule that overrides its category default (design.md: an ingress rule
 # open to the internet is a network boundary problem, not object exposure).
-NORMALIZED_CATEGORY_OVERRIDES = {"security_group_open_ingress": "NetworkSecurity"}
+NORMALIZED_CATEGORY_OVERRIDES = {
+    "security_group_open_ingress": "NetworkSecurity",
+    "rds_deletion_protection": "Availability",
+    "s3_versioning_enabled": "DataProtection",
+}
 
 # cfn-guard reports an unparseable rule file on stderr and exits 5. Both signals
 # are checked because the exit code alone is not documented as stable.

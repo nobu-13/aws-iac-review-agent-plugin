@@ -1,0 +1,11 @@
+# rules/encryption/sns_topic_encrypted.guard
+#
+# Category: encryption
+# Reports SNS topics without KMS encryption configured.
+
+let sns_topics = Resources.*[ Type == 'AWS::SNS::Topic' ]
+
+rule sns_topic_encrypted when %sns_topics !empty {
+  %sns_topics.Properties.KmsMasterKeyId exists
+    << This SNS topic is not encrypted. Set KmsMasterKeyId to a KMS key ARN or alias to encrypt messages at rest. >>
+}

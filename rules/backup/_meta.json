@@ -13,9 +13,21 @@
       "recommendation": "Set BackupRetentionPeriod to at least 7 so that point in time recovery covers a full week."
     },
     "rds_deletion_protection": {
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "why_it_matters": "DeletionProtection defaults to false, so an accidental stack update or stack delete can remove the instance and its automated backups.",
-      "recommendation": "Set DeletionProtection to true on the DB instance."
+      "recommendation": "Set DeletionProtection to true on the DB instance.",
+      "normalized_category": "Availability"
+    },
+    "s3_deletion_policy": {
+      "severity": "HIGH",
+      "why_it_matters": "Without a DeletionPolicy, the S3 bucket and all its objects are permanently deleted when the CloudFormation stack is deleted.",
+      "recommendation": "Add DeletionPolicy: Retain to the S3 bucket resource."
+    },
+    "s3_versioning_enabled": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Without versioning, overwritten or accidentally deleted objects cannot be recovered.",
+      "recommendation": "Set VersioningConfiguration.Status to Enabled.",
+      "normalized_category": "DataProtection"
     }
   }
 }

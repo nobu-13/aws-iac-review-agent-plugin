@@ -1,0 +1,11 @@
+# rules/encryption/logs_group_encrypted.guard
+#
+# Category: encryption
+# Reports CloudWatch Log Groups without KMS encryption.
+
+let log_groups = Resources.*[ Type == 'AWS::Logs::LogGroup' ]
+
+rule logs_group_encrypted when %log_groups !empty {
+  %log_groups.Properties.KmsKeyId exists
+    << This CloudWatch Logs log group is not encrypted with a customer-managed KMS key. Set KmsKeyId to encrypt log data at rest. >>
+}

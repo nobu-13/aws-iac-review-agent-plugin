@@ -12,6 +12,8 @@ Parameters:
 Resources:
   DataBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketEncryption:
         ServerSideEncryptionConfiguration:
@@ -26,6 +28,8 @@ Resources:
         DestinationBucketName:
           Ref: AccessLogBucketName
         LogFilePrefix: data-bucket/
+      VersioningConfiguration:
+        Status: Enabled
       Tags:
         - Key: Environment
           Value: production

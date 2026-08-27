@@ -8,22 +8,26 @@
   "expected_findings": [
     {
       "resource": "OrdersDatabase",
-      "normalized_category": "Backup",
+      "normalized_category": "Availability",
       "finding_type": "BestPractice",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "confidence": "Confirmed",
       "detection_class": "deterministic",
-      "detected_by": ["cfn-guard"],
+      "detected_by": [
+        "cfn-guard"
+      ],
       "note": "No DeletionProtection property on the DB instance, reported by the rds_deletion_protection Guard rule, whose clause requires the value to be true and therefore fails on an absent property. FindingType BestPractice and Severity MEDIUM come from rules/backup/_meta.json."
     },
     {
       "resource": "InventoryDatabase",
-      "normalized_category": "Backup",
+      "normalized_category": "Availability",
       "finding_type": "BestPractice",
-      "severity": "MEDIUM",
+      "severity": "HIGH",
       "confidence": "Confirmed",
       "detection_class": "deterministic",
-      "detected_by": ["cfn-guard"],
+      "detected_by": [
+        "cfn-guard"
+      ],
       "note": "DeletionProtection: false on the DB instance, the explicit form of the same defect, reported by the same rds_deletion_protection Guard rule."
     }
   ],

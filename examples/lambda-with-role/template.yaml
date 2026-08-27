@@ -71,6 +71,8 @@ Resources:
     Properties:
       LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-report-writer"
       RetentionInDays: !Ref LogRetentionInDays
+      # Customer-managed KMS encryption for log data at rest.
+      KmsKeyId: !Sub "arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:alias/application-logs"
 
   ReportWriterRole:
     Type: AWS::IAM::Role

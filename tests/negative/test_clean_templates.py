@@ -137,7 +137,7 @@ EXCLUDED_CLASSES: FrozenSet[Tuple[str, str]] = frozenset(
 #: with the one Source that reports the class, so the case needs at most one
 #: external tool.
 TAGGING_CASE = "case-007-missing-tags"
-BACKUP_CASE = "case-010-missing-deletion-protection"
+BACKUP_CASE = "case-006-missing-backup"
 
 #: A template whose every IAM value is beyond static resolution, so the IAM
 #: Source reports ``Informational`` + INFO coverage gaps and nothing else.
@@ -727,9 +727,9 @@ def test_a_real_bestpractice_low_finding_is_excluded() -> None:
     decision from the detection question the case exists to ask.
     """
     skip_unless_available(["cfn-guard"])
-    findings = review(["--target", case_target(TAGGING_CASE), "--sources", "cfn-guard"])[
+    findings = [f for f in review(["--target", case_target(TAGGING_CASE), "--sources", "cfn-guard"])[
         "findings"
-    ]
+    ] if f["Normalized_Category"] == "Tagging"]
 
     assert findings != []
     for finding in findings:
@@ -749,9 +749,9 @@ def test_a_real_bestpractice_medium_finding_is_counted() -> None:
     that would show.
     """
     skip_unless_available(["cfn-guard"])
-    findings = review(["--target", case_target(BACKUP_CASE), "--sources", "cfn-guard"])[
+    findings = [f for f in review(["--target", case_target(BACKUP_CASE), "--sources", "cfn-guard"])[
         "findings"
-    ]
+    ] if f["Normalized_Category"] == "Backup"]
 
     assert findings != []
     for finding in findings:
@@ -817,9 +817,9 @@ def test_the_two_counts_agree_where_no_class_is_excluded() -> None:
     consequence of AC6, not of the two rules measuring different things.
     """
     skip_unless_available(["cfn-guard"])
-    findings = review(["--target", case_target(BACKUP_CASE), "--sources", "cfn-guard"])[
+    findings = [f for f in review(["--target", case_target(BACKUP_CASE), "--sources", "cfn-guard"])[
         "findings"
-    ]
+    ] if f["Normalized_Category"] == "Backup"]
 
     benchmark_count = metrics.compute([], findings)["false_positive_count"]
 

@@ -1,0 +1,11 @@
+# rules/logging/logs_retention_set.guard
+#
+# Category: logging
+# Reports CloudWatch Log Groups without a retention policy (defaults to never expire).
+
+let log_groups = Resources.*[ Type == 'AWS::Logs::LogGroup' ]
+
+rule logs_retention_set when %log_groups !empty {
+  %log_groups.Properties.RetentionInDays exists
+    << This CloudWatch Logs log group has no retention period configured. Without one, log data is retained indefinitely, increasing storage costs. Set RetentionInDays to an appropriate value (e.g. 30, 90, 365). >>
+}

@@ -16,6 +16,21 @@
       "severity": "HIGH",
       "why_it_matters": "Storage encryption on an RDS DB instance cannot be enabled in place after creation, so an unencrypted instance keeps its data, snapshots and read replicas unencrypted for the whole life of the resource.",
       "recommendation": "Set StorageEncrypted to true, and set KmsKeyId when a customer managed key is required."
+    },
+    "ebs_volume_encrypted": {
+      "severity": "HIGH",
+      "why_it_matters": "An unencrypted EBS volume exposes data at rest to anyone who gains access to the underlying storage or a snapshot.",
+      "recommendation": "Set Encrypted to true on each Ebs block device mapping, or use an encrypted AMI."
+    },
+    "sns_topic_encrypted": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Messages in an unencrypted SNS topic can be read by anyone with access to the underlying storage infrastructure.",
+      "recommendation": "Set KmsMasterKeyId to a KMS key ARN or alias."
+    },
+    "logs_group_encrypted": {
+      "severity": "MEDIUM",
+      "why_it_matters": "CloudWatch Logs data without customer-managed encryption relies solely on service-managed encryption, which may not satisfy compliance requirements.",
+      "recommendation": "Set KmsKeyId on the log group to a customer-managed KMS key."
     }
   }
 }

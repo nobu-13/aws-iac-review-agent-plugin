@@ -16,6 +16,11 @@
       "severity": "HIGH",
       "why_it_matters": "A trail that is not started records no API activity, and a trail without log file validation gives no way to detect tampering with delivered log files, so the audit trail cannot be relied on during an investigation.",
       "recommendation": "Set IsLogging to true and EnableLogFileValidation to true on the trail."
+    },
+    "logs_retention_set": {
+      "severity": "LOW",
+      "why_it_matters": "Without a retention period, log data accumulates indefinitely, increasing storage costs with no operational benefit for older entries.",
+      "recommendation": "Set RetentionInDays to a value appropriate for your compliance and debugging needs (e.g. 30, 90, or 365)."
     }
   }
 }

@@ -1,0 +1,13 @@
+# rules/encryption/ebs_volume_encrypted.guard
+#
+# Category: encryption
+# Requirement: Additional rule for EBS volume encryption
+#
+# Reports EC2 instances whose EBS block device mappings do not enable encryption.
+
+let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance' ]
+
+rule ebs_volume_encrypted when %ec2_instances !empty {
+  %ec2_instances.Properties.BlockDeviceMappings[*].Ebs.Encrypted == true
+    << An EBS volume attached to this EC2 instance is not encrypted at rest. Set Encrypted to true on each Ebs block device mapping, or use an encrypted AMI whose volumes inherit encryption. >>
+}

@@ -122,6 +122,8 @@ Resources:
       # LogGroupName is deliberately absent: CloudFormation generates a unique
       # name, so two stacks of this template do not collide.
       RetentionInDays: 90
+      # Customer-managed KMS key for log encryption at rest.
+      KmsKeyId: !Sub "arn:${AWS::Partition}:kms:${AWS::Region}:${AWS::AccountId}:alias/application-logs"
 
 Outputs:
   EdgeSecurityGroupId:

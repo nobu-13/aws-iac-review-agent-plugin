@@ -938,7 +938,7 @@ def test_the_bundled_sidecars_resolve_every_bundled_rule() -> None:
     """Eleven rules across six categories, with no fallback and no error."""
     metadata = load_rule_metadata()
     assert metadata.errors == ()
-    assert metadata.rule_count == 11
+    assert metadata.rule_count == 17
     assert len(metadata.category_names()) == 6
     for rule_name in metadata.rule_names():
         meta = metadata.for_rule(rule_name)

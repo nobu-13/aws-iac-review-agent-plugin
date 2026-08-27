@@ -467,7 +467,7 @@ def test_sidecar_recommendation_wins_over_the_rule_message(
         ("security_group_open_ingress", "Security", "HIGH", "NetworkSecurity"),
         ("s3_access_logging", "Security", "MEDIUM", "Logging"),
         ("rds_backup_retention", "BestPractice", "MEDIUM", "Backup"),
-        ("rds_deletion_protection", "BestPractice", "MEDIUM", "Backup"),
+        ("rds_deletion_protection", "BestPractice", "HIGH", "Availability"),
         ("required_tags", "BestPractice", "LOW", "Tagging"),
     ],
 )

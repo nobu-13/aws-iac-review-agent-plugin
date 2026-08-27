@@ -1,0 +1,11 @@
+# rules/backup/s3_versioning_enabled.guard
+#
+# Category: backup
+# Reports S3 buckets without versioning enabled.
+
+let s3_buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_versioning_enabled when %s3_buckets !empty {
+  %s3_buckets.Properties.VersioningConfiguration.Status == "Enabled"
+    << Versioning is not enabled on this S3 bucket. Without versioning, overwritten or deleted objects cannot be recovered. Set VersioningConfiguration.Status to Enabled. >>
+}

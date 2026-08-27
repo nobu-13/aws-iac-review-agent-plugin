@@ -1,0 +1,11 @@
+# rules/backup/s3_deletion_policy.guard
+#
+# Category: backup
+# Reports S3 buckets without a DeletionPolicy, meaning data is lost on stack delete.
+
+let s3_buckets = Resources[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_deletion_policy when %s3_buckets !empty {
+  %s3_buckets.DeletionPolicy exists
+    << This S3 bucket has no DeletionPolicy. Without one, the bucket and its contents are deleted when the stack is deleted. Set DeletionPolicy to Retain to protect data from accidental deletion. >>
+}

@@ -923,7 +923,7 @@ DESIGN_DEFECT_CASE_CATEGORIES = {
     "case-007-missing-tags": "Tagging",
     "case-008-unsafe-passrole": "IAM",
     "case-009-public-database": "PublicAccess",
-    "case-010-missing-deletion-protection": "Backup",
+    "case-010-missing-deletion-protection": "Availability",
 }
 
 #: The case design.md attributes to the IAM detectors alone, because no bundled
