@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""A fake ``cfn-lint`` for integration tests, configured through a JSON file.
+
+Integration tests need to drive the whole entry point -- argument parsing,
+containment, template loading, tool invocation, normalization, report assembly --
+against a *known* set of cfn-lint results. Real cfn-lint cannot provide that: its
+findings depend on its version and on the AWS resource specification it bundles,
+so a test asserting on them would fail on the next upstream release for reasons
+having nothing to do with this plugin. It also may not be installed at all.
+
+Tests place this script first on ``PATH`` when they want a deterministic tool. It
+imitates only the surface the plugin depends on:
+
+``--version``
+    Prints ``cfn-lint <version>`` on stdout and exits 0, which is what
+    :func:`iacreview.toolcheck.require_tool` parses.
+
+anything else
+    Prints the configured results payload on stdout and exits with cfn-lint's
+    bit mask: 2 if any Error is present, 4 for any Warning, 8 for any
+    Informational, OR-ed together, and 0 for an empty payload.
+
+Configuration
+-------------
+
+From ``$TMPDIR/fake-cfn-lint.json``, if that file exists. An absent file, or an
+absent ``TMPDIR``, means every default below. ``cfn-guard-configured/cfn-guard``
+and ``cdk-configured/cdk`` take the same keys, so one protocol covers all three
+fakes.
+
+===================  ========================================================
+``version``          Version in the ``--version`` banner. Default ``1.22.0``.
+``version_text``     Verbatim ``--version`` stdout, replacing the formatted
+                     banner. ``""`` produces an empty banner, which is how the
+                     :data:`~iacreview.toolcheck.UNKNOWN_VERSION` path is
+                     reached.
+``version_stderr``   Text written to stderr on ``--version``.
+``version_exit``     Exit code of ``--version``. Default 0.
+``version_sleep_s``  Seconds to sleep before answering ``--version``.
+``results_text``     Printed verbatim as the results payload. Default ``[]``.
+                     Verbatim rather than re-serialized, so a test can feed
+                     malformed JSON through the same channel.
+``exit_code``        Exit code, overriding the computed bit mask. Use it to
+                     imitate a crash (1).
+``stderr``           Text written to stderr before exiting.
+``sleep_s``          Seconds to sleep before answering a normal invocation.
+                     A large value produces a hang; prefer
+                     ``../cfn-lint-timeout/`` when no other configuration is
+                     needed, since it needs no ``TMPDIR``.
+``log_argv``         When true, the received arguments are written as a JSON
+                     array to ``$TMPDIR/fake-cfn-lint-argv.json``, so a test can
+                     assert the exact command line the plugin built.
+===================  ========================================================
+
+Why a file in ``TMPDIR`` and not ``FAKE_CFN_LINT_*`` environment variables:
+:mod:`iacreview.proc` passes children an explicit environment allowlist
+(``INHERITED_ENV_VARS``) so that AWS credentials in the parent environment cannot
+reach a static analyzer. Arbitrary variables are dropped by design and would
+never arrive here. ``TMPDIR`` is on that allowlist, so pointing it at a per-test
+directory is the supported way to hand this script something it can find.
+
+This script writes nothing but the optional argv log, reads nothing but its own
+configuration file, and never evaluates an argument it was given.
+"""
+
+import json
+import os
+import sys
+import time
+
+DEFAULT_VERSION = "1.22.0"
+DEFAULT_RESULTS = "[]"
+
+CONFIG_FILENAME = "fake-cfn-lint.json"
+ARGV_LOG_FILENAME = "fake-cfn-lint-argv.json"
+
+#: cfn-lint's exit bit per result level.
+LEVEL_BITS = {"Error": 2, "Warning": 4, "Informational": 8}
+
+
+def _tmpdir():
+    """Return the configured temporary directory, or ``None``."""
+    return os.environ.get("TMPDIR") or None
+
+
+def _config():
+    """Read the configuration file, or return an empty configuration."""
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        return {}
+    path = os.path.join(tmpdir, CONFIG_FILENAME)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        config = json.load(handle)
+    if not isinstance(config, dict):
+        raise SystemExit("fake cfn-lint: {0} must hold a JSON object".format(path))
+    return config
+
+
+def _log_argv(config, arguments):
+    """Record the received arguments when the configuration asks for it."""
+    if not config.get("log_argv"):
+        return
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        raise SystemExit("fake cfn-lint: log_argv requires TMPDIR to be set")
+    with open(os.path.join(tmpdir, ARGV_LOG_FILENAME), "w", encoding="utf-8") as h:
+        json.dump(list(arguments), h)
+
+
+def _sleep(config, key):
+    """Sleep for the configured number of seconds, if any."""
+    seconds = config.get(key)
+    if seconds:
+        time.sleep(float(seconds))
+
+
+def _computed_exit(payload):
+    """Return the bit mask cfn-lint would exit with for ``payload``.
+
+    An unparsable payload yields 0: the exit code is then whatever the test
+    configured explicitly, and guessing a mask from text that is not JSON would
+    invent a claim this script cannot support.
+    """
+    try:
+        results = json.loads(payload)
+    except ValueError:
+        return 0
+    if not isinstance(results, list):
+        return 0
+    mask = 0
+    for result in results:
+        if isinstance(result, dict):
+            mask |= LEVEL_BITS.get(result.get("Level"), 0)
+    return mask
+
+
+def main(argv):
+    config = _config()
+    _log_argv(config, argv)
+
+    if "--version" in argv:
+        _sleep(config, "version_sleep_s")
+        banner = config.get("version_text")
+        if banner is None:
+            banner = "cfn-lint {0}\n".format(config.get("version", DEFAULT_VERSION))
+        sys.stdout.write(banner)
+        version_stderr = config.get("version_stderr")
+        if version_stderr:
+            sys.stderr.write(version_stderr)
+        return int(config.get("version_exit", 0))
+
+    _sleep(config, "sleep_s")
+
+    payload = config.get("results_text", DEFAULT_RESULTS)
+    sys.stdout.write(payload)
+
+    stderr_text = config.get("stderr")
+    if stderr_text:
+        sys.stderr.write(stderr_text)
+
+    override = config.get("exit_code")
+    if override is not None:
+        return int(override)
+    return _computed_exit(payload)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

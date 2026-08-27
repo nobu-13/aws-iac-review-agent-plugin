@@ -1,0 +1,167 @@
+# Using this plugin as a Kiro Power
+
+Kiro loads Agent Plugins packages as Powers. This document records what a Kiro
+Power load depends on in this package, which files in the repository are
+Kiro-specific and why they sit apart from the portable package, and exactly how
+far the "loadable as a Kiro Power" claim has been verified.
+
+`docs/architecture.md` owns the decision behind the shape described here: why
+`plugin.json` carries no `extensions` field, and how every component is
+classified as portable or client-specific. That reasoning is not restated below.
+This document carries the verification, and it is the file the README's
+"Using as a Kiro Power" section links to.
+
+> **Status.** The structural preconditions a Power load depends on are verified
+> mechanically and re-checked by the test suite on every run; the table in
+> [What was verified](#what-was-verified) lists each one. Driving a Kiro
+> installation to load this package and observing the five Skills reach the host
+> agent has **not** been done. No installation procedure is therefore stated
+> here, and Requirement 10 AC7 stays partly owed. README Known Limitations
+> (Task 27.1) records that.
+
+## The package is portable, and Kiro adds nothing to it
+
+The package root is the repository root: `plugin.json` sits beside `skills/`,
+`iacreview/` and `rules/`. There is no build step, nothing is generated, and
+nothing is rearranged for a particular client. The directory a client is handed
+is the repository directory.
+
+| What a client needs to load this package | Where it is |
+| --- | --- |
+| A manifest at the package root | `plugin.json` |
+| Skills as immediate children of `skills/` | `skills/<name>/SKILL.md`, five of them |
+| The code each Skill runs | `skills/<name>/scripts/*.py`, importing `iacreview/` from the package root |
+| The policy rules cfn-guard evaluates | `rules/**/*.guard` |
+
+Nothing in that list is Kiro-specific, and nothing in it names a client. The
+Skills' entry points are plain `python3` programs that take arguments and write
+JSON to stdout, so the machinery that invokes them is the host agent's business
+rather than the package's. The external tools -- cfn-lint, cfn-guard, and the
+CDK CLI for `--confirm-cdk-synth` -- are resolved on `PATH` and are not bundled,
+which is a property of the package independent of which client loaded it.
+
+## What was verified
+
+Every check below was run against this repository. Each is also pinned by a test,
+so a change that breaks a precondition fails the suite rather than surfacing as a
+load failure in a client.
+
+| Precondition | Result | Re-checked by |
+| --- | --- | --- |
+| `plugin.json` exists at the package root and parses as a JSON object | Yes | `tests/unit/test_manifest.py` |
+| Every key of `plugin.json` is one the Agent Plugins 1.0.0 manifest schema defines; the schema is closed (`additionalProperties: false`) | Yes, 9 keys, all defined | `tests/unit/test_manifest.py` |
+| The two fields the schema requires, `$schema` and `name`, are present, and `$schema` equals the 1.0.0 manifest schema identifier | Yes | `tests/unit/test_manifest.py` |
+| `name` satisfies the schema's pattern and length bound | Yes, 27 characters | `tests/unit/test_manifest.py` |
+| `author` is an object whose keys are drawn from `name` / `email` / `url` (also a closed schema) | Yes | `tests/unit/test_manifest.py` |
+| `keywords` is an array of strings, `version` is semver | Yes | `tests/unit/test_manifest.py` |
+| `extensions` is absent, and no reverse-domain extension directory exists at the package root | Yes | `tests/unit/test_manifest.py` |
+| `skills/` has exactly five child directories, each holding a `SKILL.md` | Yes | `tests/unit/test_skills.py` |
+| Each `SKILL.md` declares a front matter `name` equal to its directory name | Yes | `tests/unit/test_skills.py` |
+| No child of `skills/` is skipped by discovery: all five parse and carry a top-level heading | Yes | `tests/unit/test_skills.py` |
+| Each of the six Skill entry points runs under plain `python3` and answers `--help` with exit 0 | Yes | `tests/integration/test_skill_*.py` run them for real; `tests/unit/test_bootstrap.py` pins the path bootstrap they depend on |
+| No file under `skills/`, `iacreview/`, `rules/` or `benchmark/` reads anything from `.kiro/` | Yes, no reference exists | -- (owed to Task 26.7) |
+| No `mcp.json` at the package root, and no tool binary bundled anywhere in it | Yes | `tests/unit/test_manifest.py` |
+| The package contains no symbolic link | Yes | -- . Containment of a path that resolves outside the root is `tests/unit/test_pathguard.py`'s concern |
+
+Two of those deserve a sentence more.
+
+**The manifest was validated against the published schema**, not only against the
+project's own reading of it. The document at the `$schema` identifier
+[`plugin.schema.json` for Agent Plugins 1.0.0](https://agent-plugins.org/schemas/1.0.0/plugin.schema.json)
+declares the top level closed, requires `$schema` and `name`, and constrains
+`author` to a closed object. Each constraint was checked against `plugin.json`
+field by field and all of them hold.
+
+One difference between that schema and this project's own assertion is worth
+recording, because it is the kind of thing that becomes a surprise later. The
+published schema bounds `name` at 64 characters and its pattern admits neither
+`_` nor a `--` or `..` sequence; Requirement 1 AC5 states a 128 character bound
+and a pattern that admits `_`. The declared name, `aws-iac-review-agent-plugin`,
+is 27 characters and satisfies both, so nothing in v0.1 depends on which bound is
+the real one.
+
+**Five Skills, one level deep, is the shape a non-recursive scan finds.** Agent
+Plugins discovers Skills as the immediate children of `skills/`, so a Skill
+nested any deeper would be invisible. `skills/` also holds a `.gitkeep`, which is
+a file rather than a directory and therefore not a discovery candidate.
+Requirement 10 AC8 is satisfied structurally by this shape rather than by
+anything a client does.
+
+## What was not verified
+
+The load itself. No Kiro installation was driven to install this package as a
+Power, and no host agent was observed enumerating the five Skills. That step
+needs a human with a Kiro installation, and until someone performs it the claim
+"the five Skills are discoverable in Kiro" rests on the structural argument
+above rather than on an observation.
+
+Because of that, this document states no installation steps. Kiro's own
+documentation is the authoritative and current procedure for installing a Power,
+including installing one from a local directory: see
+[Install powers](https://kiro.dev/docs/powers/installation/). Restating steps
+here that this project has not executed would be exactly the sort of claim
+Requirement 13 AC11 forbids, and a procedure copied into a second place is a
+procedure that goes stale.
+
+What a person doing the verification should look for, so the result is
+comparable to the checks above:
+
+1. All five Skills -- `cfn-lint-review`, `cfn-guard-review`, `iam-review`,
+   `cloudformation-review`, `iac-review` -- reach the host agent, not a subset.
+2. Each Skill's `scripts/` entry point runs, which means the `parents[3]` path
+   bootstrap resolved the package root correctly from wherever the Power was
+   installed (see `docs/architecture.md`, "The shared package `iacreview/`").
+3. Nothing had to be added to the package to make either of those happen.
+
+If point 3 turns out to be false, the change belongs under an `extensions`
+namespace as described below, and this document should record what was needed.
+
+## The Kiro-specific files in this repository
+
+| Path | What it is | Needed to load the plugin |
+| --- | --- | --- |
+| `.kiro/steering/` | The project's own development rules, read by Kiro while working on this repository | No |
+| `.kiro/specs/` | Requirements, design and task documents for this feature | No |
+| `docs/kiro-power.md` | This file. A portable file whose content is Kiro-specific | No. It is documentation, not part of loading |
+
+The first two are development files: they configure Kiro as an environment for
+*building* this plugin, not as a runtime for *running* it. The separation is not
+only a convention -- no file under `skills/`, `iacreview/`, `rules/` or
+`benchmark/` reads anything from `.kiro/`, so deleting the directory would not
+change a single review result. That is what makes Requirement 10 AC9 concrete:
+another Agent Plugins 1.0.0 client receives the same package, minus files it has
+no reason to open.
+
+## If a Kiro-specific hook is ever needed
+
+The way in is a `dev.kiro` namespace under `extensions` in `plugin.json`, with a
+matching top-level directory if the client requires one, leaving the portable
+core loadable without either. `tests/unit/test_manifest.py` holds the door open
+deliberately: one case asserts that adding an `extensions` object with a
+`dev.kiro` namespace introduces exactly one top-level key and leaves the manifest
+inside the closed schema, so the future change is known to be schema-legal before
+anyone needs it.
+
+This is a future path, not a current capability. v0.1 has no vendor-specific
+setting to separate, which is why the field is absent rather than empty; the
+reasoning is in `docs/architecture.md`, "`extensions` is unused in v0.1".
+
+## Open design decision O-7
+
+O-7 asked for the exact directory layout a Kiro Power load requires and whether a
+Kiro-specific manifest is needed. It is resolved as follows.
+
+| | Resolution |
+| --- | --- |
+| Directory layout | Unchanged from the portable Agent Plugins 1.0.0 layout. `plugin.json` at the package root, five Skills as immediate children of `skills/`. No layout change was needed for Kiro |
+| Kiro-specific manifest | None. No file was added, and `extensions` stays absent |
+| Requirement 10 AC8 | Satisfied structurally: the preconditions a non-recursive discovery scan depends on are verified and pinned by tests. Not confirmed by observation in a running Kiro |
+| Requirement 10 AC9 | Satisfied and mechanically checked: no Kiro-specific file participates in loading, and no runtime file reads from `.kiro/` |
+| Requirement 10 AC7 | Partly owed. This document separates the Kiro-specific material from the portable packaging, and points at Kiro's own installation documentation, but states no procedure of its own because none was executed |
+| O-7's "if verification is not possible" row | Applied. Only verified material appears here; the unverified load is disclosed in the Status note above and in README Known Limitations (Task 27.1) |
+
+The decision that mattered was the conservative one: nothing was added to the
+portable core on the strength of an assumption about what Kiro might want. If
+the load verification later shows something is missing, the package gains one
+`extensions` namespace and every other client keeps loading exactly what it
+loads today.

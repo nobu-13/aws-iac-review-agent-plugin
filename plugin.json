@@ -1,0 +1,22 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "aws-iac-review-agent-plugin",
+  "version": "0.1.0",
+  "description": "Reviews AWS CloudFormation and synthesized CDK templates by combining deterministic static analysis (cfn-lint, cfn-guard, IAM pattern matching) with agent semantic review, and emits a single normalized finding report.",
+  "author": {
+    "name": "aws-iac-review-agent-plugin maintainers"
+  },
+  "homepage": "https://github.com/nobu-13/aws-iac-review-agent-plugin",
+  "repository": "https://github.com/nobu-13/aws-iac-review-agent-plugin",
+  "license": "Apache-2.0",
+  "keywords": [
+    "aws",
+    "cloudformation",
+    "cdk",
+    "iac",
+    "security-review",
+    "iam",
+    "cfn-lint",
+    "cfn-guard"
+  ]
+}

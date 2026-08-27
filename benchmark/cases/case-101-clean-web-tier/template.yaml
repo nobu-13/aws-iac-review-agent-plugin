@@ -1,0 +1,141 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-101-clean-web-tier/template.yaml
+#
+# CLEAN BY DESIGN. This is a negative benchmark case: it carries no deliberate
+# defect, and the review is expected to report nothing about it. A HIGH or
+# CRITICAL finding from a deterministic Source here is a false positive, which is
+# the measurement this case exists for.
+#
+# It is still a benchmark case rather than an example. examples/ holds the small
+# templates a reader is invited to copy; this one is measured, and it deliberately
+# uses resource types the examples do not (security groups, an SNS topic, a log
+# group) so that the false-positive measurement covers rules the examples never
+# reach.
+#
+# What makes it clean, rule by rule:
+#
+#   EdgeSecurityGroup     ingress from one documented IPv4 range only, never
+#                         0.0.0.0/0 or ::/0, so
+#                         rules/public-access/security_group_open_ingress.guard
+#                         has nothing to report. Tagged for
+#                         rules/tagging/required_tags.guard.
+#   ApplicationSecurityGroup
+#                         ingress by SourceSecurityGroupId rather than a CIDR, so
+#                         the application tier is reachable only through the edge
+#                         group. Tagged.
+#   AlarmTopic            encrypted with the AWS managed SNS key, and tagged.
+#   ApplicationLogGroup   a retention window, so application logs are neither
+#                         lost after a few days nor kept forever.
+#
+# The template declares no IAM resource and no policy document on purpose. The
+# deterministic IAM detectors report the shape of a policy, and an AWS service
+# trust policy that the service itself does not bound with a condition is
+# reported as HIGH (examples/README.md records that asymmetry for
+# examples/lambda-with-role). A clean case has to be clean for a reason that
+# holds, not because a finding was argued away, so this case stays out of that
+# territory: the IAM layer sees a template with nothing IAM-related in it.
+
+Description: >-
+  Benchmark case 101. A correctly configured web tier: two security groups
+  admitting only the traffic they need, an encrypted alarm topic, and a log group
+  with a retention window. Used as a negative case.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC the security groups belong to.
+
+Resources:
+  EdgeSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: >-
+        Edge security group. Accepts HTTPS from the office range only.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # A single documented source range (RFC 5737 TEST-NET-3, which routes
+        # nowhere) instead of 0.0.0.0/0. A published template names no real
+        # network.
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "203.0.113.0/24"
+          Description: HTTPS from the office range.
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 8443
+          ToPort: 8443
+          DestinationSecurityGroupId: !Ref ApplicationSecurityGroup
+          Description: Forward to the application tier.
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-101
+
+  ApplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: >-
+        Application security group. Reachable from the edge group only.
+      VpcId: !Ref VpcId
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-101
+
+  # Declared as a separate resource rather than inline on the group above,
+  # because the two groups reference each other and an inline rule on both sides
+  # would be a circular dependency.
+  ApplicationIngressFromEdge:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref ApplicationSecurityGroup
+      IpProtocol: tcp
+      FromPort: 8443
+      ToPort: 8443
+      # The source is a security group, not an address range: the application
+      # tier admits the edge tier and nothing else.
+      SourceSecurityGroupId: !Ref EdgeSecurityGroup
+      Description: HTTPS from the edge security group.
+
+  AlarmTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Web tier alarms
+      # Server-side encryption with the AWS managed key for SNS. Alarm payloads
+      # name resources and hosts, so they are not left unencrypted at rest.
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-101
+
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # LogGroupName is deliberately absent: CloudFormation generates a unique
+      # name, so two stacks of this template do not collide.
+      RetentionInDays: 90
+
+Outputs:
+  EdgeSecurityGroupId:
+    Description: ID of the edge security group.
+    Value: !Ref EdgeSecurityGroup
+
+  ApplicationSecurityGroupId:
+    Description: ID of the application security group.
+    Value: !Ref ApplicationSecurityGroup
+
+  AlarmTopicArn:
+    Description: ARN of the alarm topic.
+    Value: !Ref AlarmTopic
+
+  ApplicationLogGroupName:
+    Description: Name of the application log group.
+    Value: !Ref ApplicationLogGroup

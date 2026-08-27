@@ -1,0 +1,21 @@
+#!/bin/sh
+# A cfn-lint that answers --version normally and then crashes.
+#
+# Isolates "the tool failed while analyzing" from "the tool is missing" and
+# "the tool is too old": the version gate must be passed for the crash to be
+# the thing under test. Exit 1 is what cfn-lint returns on an internal error,
+# which decode_cfnlint_exit reports as tool_execution (Requirement 4 AC12).
+#
+# POSIX sh, not python3, because tests point PATH at this directory *only*.
+# /bin/sh is an absolute interpreter path; a `#!/usr/bin/env python3` script
+# would exit 127 without running a line, because python3 would not be found.
+# Arguments are compared, never evaluated: nothing here executes its input.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "cfn-lint 1.22.0"
+        exit 0
+    fi
+done
+echo "cfn-lint: internal error while processing the template" >&2
+echo "RuntimeError: fake cfn-lint always crashes" >&2
+exit 1

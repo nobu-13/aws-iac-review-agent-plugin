@@ -1,0 +1,124 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-008-unsafe-passrole/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# This case measures the deterministic IAM detectors on their own: no bundled
+# cfn-guard rule reaches either defect. rules/iam/iam_policy_no_star_star.guard
+# does cover AWS::IAM::Policy, the resource type used below, but it only looks for
+# Action "*" together with Resource "*" -- neither statement here is that shape.
+# An unsafe iam:PassRole is therefore invisible to the rule set and visible only to
+# IAM Review, which is the gap this case exists to keep measured.
+#
+# Deliberate defects, one per resource:
+#
+#   ArtifactPublisherPolicy  iam:PassRole on a wildcarded role ARN. Every role
+#                            under the /deploy/ path can be passed, so the policy
+#                            is bounded by a naming convention rather than by a
+#                            list of roles. This is the second of the two shapes
+#                            passrole_unrestricted recognises; case-001 covers the
+#                            first, a bare Resource "*", and covers it in an
+#                            inline role policy rather than in a standalone
+#                            AWS::IAM::Policy resource.
+#   InstanceLauncherRole     ec2:RunInstances together with iam:PassRole. Each
+#                            statement is defensible on its own -- the PassRole
+#                            grant even names a single role and restricts
+#                            iam:PassedToService -- and together they let the
+#                            holder launch an instance carrying that role and read
+#                            its credentials from instance metadata. This is the
+#                            escalation pair, not a wildcard, so it measures
+#                            something no other case does.
+#
+# The role's trust policy is deliberately correct: a service principal bounded by
+# an aws:SourceAccount condition, which keeps privesc_broad_trust and
+# cross_service_missing_condition quiet so that the case measures PassRole alone.
+# The template declares no S3 bucket, no RDS instance and no taggable resource
+# type, so no other bundled rule applies.
+
+Description: >-
+  Benchmark case 008. Two unsafe iam:PassRole grants: one on a wildcarded role
+  ARN, and one paired with ec2:RunInstances so that a single role can be turned
+  into instance credentials.
+
+Parameters:
+  PublisherRoleName:
+    Type: String
+    Description: >-
+      Name of an existing IAM role that the artifact publisher policy is attached
+      to. Supplied as a parameter so that the case declares one policy document
+      per defect and no incidental role.
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: "[\\w+=,.@-]+"
+    ConstraintDescription: must be a valid IAM role name.
+
+Resources:
+  ArtifactPublisherPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: benchmark-case-008-artifact-publisher
+      Roles:
+        - !Ref PublisherRoleName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # A wildcarded role ARN is not a restriction: anything the account
+          # creates under /deploy/ becomes passable, including a role added later
+          # with more permissions than this policy's author ever saw. No
+          # iam:PassedToService condition narrows who may receive it either.
+          - Sid: PassAnyDeploymentRole
+            Effect: Allow
+            Action: iam:PassRole
+            Resource: arn:aws:iam::123456789012:role/deploy/*
+
+  InstanceLauncherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # Deliberately correct: the service principal is bounded by
+      # aws:SourceAccount, so only this account's CodeBuild projects may assume
+      # the role. Without the condition the trust policy would be a second defect
+      # in the same category on the same resource, and the two would merge into
+      # one finding -- which would leave the PassRole pair unmeasured.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: LaunchWorkloadInstances
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # Half one: the ability to start an instance.
+              - Sid: LaunchInstances
+                Effect: Allow
+                Action: ec2:RunInstances
+                Resource: arn:aws:ec2:*:123456789012:instance/*
+              # Half two: the ability to attach one specific role to it. Named,
+              # scoped to EC2, and still an escalation when combined with the
+              # statement above, because the instance's metadata then hands that
+              # role's credentials to whoever can reach it.
+              - Sid: PassTheWorkloadRole
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: arn:aws:iam::123456789012:role/workload/AppInstanceRole
+                Condition:
+                  StringEquals:
+                    iam:PassedToService: ec2.amazonaws.com
+
+Outputs:
+  ArtifactPublisherPolicyId:
+    Description: ID of the policy that may pass any deployment role.
+    Value: !Ref ArtifactPublisherPolicy
+
+  InstanceLauncherRoleArn:
+    Description: ARN of the role holding the RunInstances and PassRole pair.
+    Value: !GetAtt InstanceLauncherRole.Arn

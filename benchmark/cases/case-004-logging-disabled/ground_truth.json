@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-004-logging-disabled",
+  "template": "template.yaml",
+  "description": "Audit records missing on the two resource types the bundled rules cover. UploadBucket declares no LoggingConfiguration, so no record exists of who read or wrote its objects. AuditTrail is declared with IsLogging: false and without EnableLogFileValidation: a trail that records nothing, and whose delivered files could not be checked for tampering if it did. Those are two defects on one resource in one category, and the report merges on resource plus category, so they are one expected finding rather than two. The bucket is otherwise correctly configured -- server-side encryption, a full public access block, Environment and Owner tags -- so no other bundled rule applies.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "UploadBucket",
+      "normalized_category": "Logging",
+      "finding_type": "Security",
+      "severity": "MEDIUM",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No LoggingConfiguration on the bucket, reported by the s3_access_logging Guard rule."
+    },
+    {
+      "resource": "AuditTrail",
+      "normalized_category": "Logging",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "IsLogging: false and no EnableLogFileValidation on the trail. Both clauses of the cloudtrail_enabled Guard rule fail on the same resource in the same category, so they merge into this one entry."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

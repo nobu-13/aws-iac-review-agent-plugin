@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Security-issue fixture for iacreview.iam.detectors (Task 13.3).
+#
+# Every defect here is intentional and is listed below so the expectation is
+# written from the Template rather than read back from the review output. This
+# file is test data for the deterministic detectors only; benchmark cases with
+# their own ground truth live under benchmark/.
+#
+#   AdminRole
+#     trust policy      Principal "*" allowed to sts:AssumeRole
+#                       -> principal_star (CRITICAL), privesc_broad_trust (CRITICAL),
+#                          sensitive_prefix_without_condition (HIGH)
+#     inline policy     Action "*" on Resource "*"
+#                       -> star_action_star_resource (CRITICAL), wildcard_action (HIGH),
+#                          wildcard_resource (HIGH), passrole_unrestricted (CRITICAL),
+#                          assumerole_unrestricted (HIGH), privesc_policy_mutation (CRITICAL),
+#                          privesc_lambda_passrole (CRITICAL), dangerous_s3_combo (HIGH),
+#                          dangerous_ec2_passrole (HIGH), dangerous_lambda_combo (HIGH)
+#
+#   PartnerBucketPolicy
+#     resource policy   Principal AWS 210987654321 with an sts:ExternalId condition
+#                       -> cross_account_principal, reduced HIGH -> MEDIUM by AC10
+#                       -> cross_service_missing_condition (HIGH): ExternalId is not
+#                          one of aws:SourceAccount / aws:SourceArn / aws:PrincipalOrgID
+#
+#   PublicInvokePermission
+#     lambda permission Principal "*" -> principal_star (CRITICAL)
+#
+#   ScopedRole
+#     trust policy      service principal bounded by aws:SourceAccount
+#     inline policy     one named action on one literal ARN
+#                       -> no findings; present so the fixture also shows what the
+#                          detectors leave alone
+Description: Template with intentionally dangerous IAM policies, used as detector test data.
+
+Resources:
+  AdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: Everything
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
+
+  PartnerBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: shared-bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: "210987654321"
+            Action: s3:GetObject
+            Resource: arn:aws:s3:::shared-bucket/exports
+            Condition:
+              StringEquals:
+                sts:ExternalId: partner-shared-secret-reference
+
+  PublicInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: app-function
+      Action: lambda:InvokeFunction
+      Principal: "*"
+
+  ScopedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: ReadOneQueue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:GetQueueAttributes
+                Resource: arn:aws:sqs:us-east-1:123456789012:app-queue
+                Condition:
+                  StringEquals:
+                    aws:SourceAccount: !Ref AWS::AccountId

@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "category": "encryption",
+  "normalized_category": "Encryption",
+  "default": {
+    "finding_type": "Security",
+    "severity": "HIGH"
+  },
+  "rules": {
+    "s3_bucket_encryption": {
+      "severity": "HIGH",
+      "why_it_matters": "A bucket without server-side encryption stores objects unencrypted at rest, so the data is readable to anyone who obtains access to the underlying storage or to a copy of the objects.",
+      "recommendation": "Add a BucketEncryption property with a ServerSideEncryptionConfiguration entry, using SSEAlgorithm AES256 or aws:kms."
+    },
+    "rds_storage_encrypted": {
+      "severity": "HIGH",
+      "why_it_matters": "Storage encryption on an RDS DB instance cannot be enabled in place after creation, so an unencrypted instance keeps its data, snapshots and read replicas unencrypted for the whole life of the resource.",
+      "recommendation": "Set StorageEncrypted to true, and set KmsKeyId when a customer managed key is required."
+    }
+  }
+}

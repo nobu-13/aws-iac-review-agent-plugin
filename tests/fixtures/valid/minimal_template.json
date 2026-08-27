@@ -1,0 +1,40 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Minimal valid JSON CloudFormation Template used to verify that JSON and YAML inputs are accepted equally.",
+  "Resources": {
+    "DataBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "Tags": [
+          {
+            "Key": "Environment",
+            "Value": "production"
+          }
+        ]
+      }
+    }
+  },
+  "Outputs": {
+    "DataBucketName": {
+      "Description": "Name of the created bucket.",
+      "Value": {
+        "Ref": "DataBucket"
+      }
+    }
+  }
+}

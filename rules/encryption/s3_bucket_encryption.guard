@@ -1,0 +1,14 @@
+# rules/encryption/s3_bucket_encryption.guard
+#
+# Category: encryption
+# Requirement: 5.2, 5.3
+#
+# Reports S3 buckets that do not declare server-side encryption. The rule is
+# skipped when the Template contains no S3 bucket.
+
+let s3_buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_bucket_encryption when %s3_buckets !empty {
+  %s3_buckets.Properties.BucketEncryption exists
+    << Server-side encryption is not configured on this S3 bucket. Add a BucketEncryption property with a ServerSideEncryptionConfiguration entry (for example SSEAlgorithm AES256 or aws:kms). >>
+}

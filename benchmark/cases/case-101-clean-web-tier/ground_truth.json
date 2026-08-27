@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-101-clean-web-tier",
+  "template": "template.yaml",
+  "description": "A clean web tier, used as a negative case: nothing in it is a deliberate defect, and the expected outcome is no finding at all. EdgeSecurityGroup admits HTTPS from one documented address range (203.0.113.0/24, RFC 5737) rather than 0.0.0.0/0 or ::/0. ApplicationSecurityGroup admits the edge group by SourceSecurityGroupId and no address range at all, through a separate AWS::EC2::SecurityGroupIngress resource so that the two groups do not reference each other circularly. AlarmTopic is encrypted with the AWS managed SNS key. ApplicationLogGroup declares a 90 day retention window and retains on delete and replace. Both security groups and the topic carry Environment and Owner tags, which is what the tagging rule asks of the types it covers. The template declares no IAM resource and no policy document: the deterministic IAM detectors report the shape of a policy, and an unconditioned AWS service principal in a trust policy is reported HIGH even where the service does not honour the recommended condition keys (examples/README.md records that case), so a template meant to be clean by construction does not go there. The resource types are chosen to differ from examples/, so this case measures false positives on rules the examples never reach.",
+  "authored_before_review": true,
+  "expected_finding_count": 0,
+  "expected_findings": [],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

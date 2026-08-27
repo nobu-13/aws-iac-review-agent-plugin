@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "category": "backup",
+  "normalized_category": "Backup",
+  "default": {
+    "finding_type": "BestPractice",
+    "severity": "MEDIUM"
+  },
+  "rules": {
+    "rds_backup_retention": {
+      "severity": "MEDIUM",
+      "why_it_matters": "A BackupRetentionPeriod of 0 disables automated backups, and a window shorter than seven days leaves no recovery point for a problem that is noticed a few days late.",
+      "recommendation": "Set BackupRetentionPeriod to at least 7 so that point in time recovery covers a full week."
+    },
+    "rds_deletion_protection": {
+      "severity": "MEDIUM",
+      "why_it_matters": "DeletionProtection defaults to false, so an accidental stack update or stack delete can remove the instance and its automated backups.",
+      "recommendation": "Set DeletionProtection to true on the DB instance."
+    }
+  }
+}

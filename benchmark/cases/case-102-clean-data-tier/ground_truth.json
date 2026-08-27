@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-102-clean-data-tier",
+  "template": "template.yaml",
+  "description": "A clean data tier, used as a negative case: nothing in it is a deliberate defect, and the expected outcome is no finding at all. OrdersDatabase satisfies every bundled rule that applies to an RDS instance -- StorageEncrypted: true, a 14 day BackupRetentionPeriod, DeletionProtection: true, PubliclyAccessible: false in a private subnet group, Environment and Owner tags -- and its master password is created and rotated by RDS in Secrets Manager rather than declared, so the template contains no credential. SessionTable enables server-side encryption and point-in-time recovery and is tagged. OrderEventQueue is encrypted with the AWS managed SQS key and redrives to OrderEventDeadLetterQueue, which is encrypted and tagged on the same terms. Every stateful resource retains or snapshots on delete and replace. The template declares no IAM resource and no policy document, for the reason case-101 records: the deterministic IAM detectors report the shape of a policy, so a clean case avoids policy shapes that are reported for reasons the reader has to argue away. Between them these three resource types cover the encryption, backup, public access and tagging rule categories on stored data, none of which examples/ exercises.",
+  "authored_before_review": true,
+  "expected_finding_count": 0,
+  "expected_findings": [],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

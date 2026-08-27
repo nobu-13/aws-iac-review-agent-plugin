@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Fixture for iacreview.iam.locate: contains exactly one site of each of the
+# nine PolicyKind values (Task 13.1 completion condition).
+#
+#   AppExecutionRole      trust_policy, inline_role_policy, permissions_boundary
+#   AppManagedPolicy      managed_policy
+#   AppStandalonePolicy   standalone_policy
+#   AppUser               inline_user_policy
+#   AppGroup              inline_group_policy
+#   AppBucketPolicy       resource_policy
+#   AppInvokePermission   lambda_permission
+#
+# Every policy here is intentionally narrow. Detector fixtures with intentionally
+# dangerous policies belong under benchmark/, not here.
+Description: Template covering all nine IAM policy site kinds.
+
+Resources:
+  AppExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      PermissionsBoundary: arn:aws:iam::123456789012:policy/AppBoundary
+      Policies:
+        - PolicyName: ReadAppBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: arn:aws:s3:::app-bucket/*
+
+  AppManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: AppManagedPolicy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: logs:PutLogEvents
+            Resource: arn:aws:logs:us-east-1:123456789012:log-group:/app:*
+
+  AppStandalonePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: AppStandalonePolicy
+      Roles:
+        - !Ref AppExecutionRole
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: sqs:SendMessage
+            Resource: arn:aws:sqs:us-east-1:123456789012:app-queue
+
+  AppUser:
+    Type: AWS::IAM::User
+    Properties:
+      UserName: app-user
+      Policies:
+        - PolicyName: DescribeAppQueue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:GetQueueAttributes
+                Resource: arn:aws:sqs:us-east-1:123456789012:app-queue
+
+  AppGroup:
+    Type: AWS::IAM::Group
+    Properties:
+      GroupName: app-group
+      Policies:
+        - PolicyName: ListAppBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:ListBucket
+                Resource: arn:aws:s3:::app-bucket
+
+  AppBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: app-bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
+            Resource: arn:aws:s3:::app-bucket/AWSLogs/*
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+
+  AppInvokePermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: app-function
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId

@@ -1,0 +1,297 @@
+# Continuous integration for aws-iac-review-agent-plugin.
+#
+# Four gates, and every one of them fails the workflow when it fails. A gate is
+# never made advisory: no `|| true`, and no `continue-on-error` on a gate.
+#
+#   1. the test suite, with a line coverage floor of 80 percent
+#      (Requirement 12 AC1), on three Python versions and two operating systems
+#      (design.md, Portability Design; Requirement 10 AC3)
+#   2. the benchmark in `combined` mode, which exits non-zero when a category is
+#      FAIL because a deterministic expectation went undetected
+#      (Requirement 11 AC7)
+#   3. a secret scan over the repository (Requirement 9 AC1)
+#   4. the commit order of every benchmark Ground_Truth against its Template
+#      (Requirement 11 AC14, AC15)
+#
+# Plus one job that re-runs the determinism property with a randomized hash
+# seed, because a property about byte-identical stdout is only worth as much as
+# the hash randomization it survives (Requirement 16 AC11).
+#
+# And one advisory job: `ruff` and `mypy` (Requirement 16 AC5, and design.md's
+# Dependency Strategy, which recommends both without making either required).
+# It is `continue-on-error: true`, so its findings are a report and not a
+# verdict. Everything above stays a gate.
+#
+# Actions are pinned by commit SHA with the tag in a trailing comment. Only
+# first-party `actions/*` are used, so there is one publisher to trust, and the
+# SHA means a moved tag cannot change what runs.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Read-only. Nothing in this workflow writes to the repository, publishes a
+# package or touches an AWS account (steering/security.md: the plugin is
+# read-only by default, and its CI has no more authority than it does).
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Pinned rather than floating (steering/tech.md). The floors these have to
+  # clear live in `iacreview/toolcheck.py`; `tests/unit/test_ci.py` reads them
+  # from there and fails if a pin here drops below one.
+  CFN_LINT_VERSION: "1.46.0"
+  PYYAML_SPEC: "PyYAML>=6.0"
+  PYTEST_SPEC: "pytest>=7.0"
+  PYTEST_COV_SPEC: "pytest-cov>=4.0"
+  HYPOTHESIS_SPEC: "hypothesis==6.141.1"
+  # The `lint` extra of `pyproject.toml`, mirrored here so the advisory job
+  # installs the versions a contributor is told to install. `tests/unit/test_ci.py`
+  # compares the two. Neither is installed by a gate job: a machine with neither
+  # available still runs every gate, which is what "not a required dependency"
+  # has to mean in practice.
+  RUFF_SPEC: "ruff==0.8.6"
+  MYPY_SPEC: "mypy==1.14.1"
+
+defaults:
+  run:
+    # Explicit, so a step behaves the same on the Linux and macOS runners.
+    shell: bash
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      # A failure on one combination should not hide the result of the others:
+      # "does this break on 3.9 only, or on macOS only" is the question this
+      # matrix exists to answer.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: ["3.9", "3.11", "3.13"]
+        exclude:
+          # `macos-latest` is arm64 and upstream publishes no darwin-arm64
+          # CPython 3.9 (actions/python-versions carries darwin-x64 only for the
+          # current 3.9 patch releases), so `setup-python` cannot provide it.
+          # The combination is not dropped: it is moved to the Intel macOS image
+          # below, where a 3.9 build exists. Coverage of "3.9 on macOS" is kept
+          # rather than silently skipped.
+          - os: macos-latest
+            python-version: "3.9"
+        include:
+          - os: macos-15-intel
+            python-version: "3.9"
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python dependencies
+        # The run-time dependency (PyYAML) plus the `dev` extra of
+        # `pyproject.toml`, plus cfn-lint. cfn-lint is installed with pip
+        # because that is what its own documentation and
+        # `iacreview.toolcheck.TOOL_REQUIREMENTS` prescribe on both operating
+        # systems; the plugin calls it as a subprocess, so it does not matter
+        # that it shares this interpreter.
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            "${PYYAML_SPEC}" \
+            "${PYTEST_SPEC}" \
+            "${PYTEST_COV_SPEC}" \
+            "${HYPOTHESIS_SPEC}" \
+            "cfn-lint==${CFN_LINT_VERSION}"
+
+      - name: Install cfn-guard
+        # Pinned version, digest verified. See the script's docstring for why
+        # neither the upstream curl-into-shell installer nor Homebrew is used.
+        #
+        # Installed under RUNNER_TEMP rather than in the checkout: the test suite
+        # and the benchmark both walk the repository tree, and a 6 MB binary
+        # sitting in it is a difference between what CI reviews and what a
+        # contributor reviews.
+        run: |
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 .github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Report tool versions
+        # Recorded in the log so that a result that differs between two runs can
+        # be attributed. The AWS CDK CLI is deliberately absent: it is required
+        # only by `--confirm-cdk-synth` (Requirement 10 AC1), and the tests that
+        # need it skip themselves when it is missing.
+        run: |
+          python3 --version
+          cfn-lint --version
+          cfn-guard --version
+
+      - name: Run the test suite with the coverage floor
+        # Requirement 12 AC1. The sources are the ones
+        # `[tool.coverage.run] source` declares in `pyproject.toml`; below 80
+        # percent, pytest-cov exits non-zero and this job fails.
+        run: |
+          python3 -m pytest \
+            --cov=iacreview \
+            --cov=benchmark/harness \
+            --cov-fail-under=80
+
+      - name: Run the benchmark
+        # Requirement 11 AC7. Exit 9 means a category is FAIL because a
+        # deterministic expectation was not detected; exit 10 means a case could
+        # not be measured. Both are non-zero and both fail this job.
+        run: |
+          python3 benchmark/harness/run_benchmark.py \
+            --cases benchmark/cases \
+            --mode combined
+
+  determinism:
+    # Property 14 (design.md, Correctness Properties) asserts that stdout is a
+    # function of the input alone. `PYTHONHASHSEED=random` is the condition that
+    # makes it a real claim: with a fixed seed, an accidental dependency on a
+    # set or dict iteration order would pass. Task 23.7 requires this to be run
+    # as a separate job.
+    name: determinism (PYTHONHASHSEED=random)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      PYTHONHASHSEED: random
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            "${PYYAML_SPEC}" \
+            "${PYTEST_SPEC}" \
+            "${PYTEST_COV_SPEC}" \
+            "${HYPOTHESIS_SPEC}" \
+            "cfn-lint==${CFN_LINT_VERSION}"
+
+      - name: Install cfn-guard
+        run: |
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 .github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run the determinism property with a randomized hash seed
+        run: |
+          python3 -m pytest tests/property/test_prop_determinism.py
+
+  repository-hygiene:
+    # Two repository-wide checks. They depend on neither the operating system
+    # nor the Python version, so they run once rather than six times; and one of
+    # them needs history the matrix jobs have no use for.
+    name: repository hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out the repository with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The Ground_Truth order check reads the commit that added each file.
+          # The default shallow checkout has no such commit for a file that was
+          # added before the tip, and the check exits 3 rather than passing on
+          # incomplete data.
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Scan the repository for secrets
+        # Requirement 9 AC1. Standard library only, so it needs no dependency
+        # installed above.
+        run: |
+          python3 .github/scripts/scan_secrets.py
+
+      - name: Check Ground_Truth commit order
+        # Requirement 11 AC14, AC15: every ground_truth.json entered the
+        # repository in the same commit as its template, or in an earlier one.
+        run: |
+          python3 .github/scripts/check_ground_truth_order.py \
+            --cases benchmark/cases
+
+  lint:
+    # Advisory. design.md's Dependency Strategy recommends `ruff` and `mypy` and
+    # deliberately keeps both out of the required dependencies: Requirement 16
+    # AC5 asks for type annotations, which can be written without a type checker
+    # installed, and CONTRIBUTING.md tells a contributor the same thing.
+    #
+    # `continue-on-error: true` is what makes that true of CI rather than only of
+    # the documentation. A finding here annotates the run; it does not fail the
+    # workflow, and it cannot block a change that passes the four gates.
+    #
+    # The alternative -- `|| true` inside the steps -- was not used. It would
+    # discard the exit codes, so the job would report success whether the tools
+    # found something or not, and the log would be the only record. Here the
+    # steps keep their real status and the *job* is declared advisory, which is
+    # visible in this file rather than buried in a shell fragment.
+    name: lint (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          # One version, not the matrix: both tools read the target version from
+          # `pyproject.toml` (`[tool.mypy] python_version`), so running them six
+          # times would repeat one answer.
+          python-version: "3.11"
+
+      - name: Install the lint tools
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            "${RUFF_SPEC}" \
+            "${MYPY_SPEC}"
+
+      - name: Report tool versions
+        run: |
+          ruff --version
+          mypy --version
+
+      - name: Run ruff
+        # Repository-wide, which is wider than the `ruff check iacreview` of
+        # CONTRIBUTING.md: the shipped package is the part that has to be clean,
+        # and the rest is worth reporting on.
+        #
+        # `continue-on-error` on this step as well as on the job, so a style
+        # finding does not abort the job and hide the type report below. Without
+        # it, a failed step skips the steps after it and one run would answer
+        # only one of the two questions.
+        continue-on-error: true
+        run: |
+          ruff check .
+
+      - name: Run mypy
+        # Scoped to the shipped package. `tests/` uses a `sys.path` bootstrap and
+        # dynamic fixture construction that a type checker reads as errors
+        # without those errors saying anything about the plugin.
+        run: |
+          mypy iacreview

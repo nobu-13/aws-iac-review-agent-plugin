@@ -1,0 +1,19 @@
+#!/bin/sh
+# A cfn-lint below the minimum supported version (toolcheck: 1.0.0).
+#
+# 0.83.0 is a real cfn-lint release from the 0.x series, whose JSON output uses
+# a different Rule object shape. require_known_tool must refuse it with
+# ToolVersionError before any analysis runs (Requirement 15 AC6), so every path
+# other than --version exits non-zero: reaching them would mean the version
+# gate let an unsupported tool through, and a silent success would hide that.
+#
+# POSIX sh so the script still runs with PATH set to this directory alone; see
+# ../cfn-lint-crash/cfn-lint. Arguments are compared, never evaluated.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "cfn-lint 0.83.0"
+        exit 0
+    fi
+done
+echo "fake cfn-lint 0.83.0: should not have been invoked past the version gate" >&2
+exit 1

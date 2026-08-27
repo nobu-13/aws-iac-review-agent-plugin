@@ -1,0 +1,44 @@
+# Input template used to capture cfnguard_violations.json from cfn-guard 3.2.1.
+#
+# Regenerate the fixture with:
+#   cfn-guard validate --data tests/fixtures/tool_output/cfnguard_violations_input.yaml \
+#     --rules rules --output-format json --type CFNTemplate --show-summary none
+#
+# It deliberately violates nine of the eleven bundled rules so that one capture
+# exercises every clause shape cfn-guard emits: Unary/UnResolved (a missing
+# property), Binary/UnResolved (a missing property in a comparison), and
+# Binary/Resolved (a property present with a non-compliant value).
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Intentionally non-compliant template. Not an example to copy.
+Resources:
+  PlainBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: plain-bucket
+  OpenSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: open to the world
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: Owner
+          Value: platform
+  PublicDb:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      AllocatedStorage: '20'
+      PubliclyAccessible: true
+      StorageEncrypted: false
+      Tags:
+        - Key: Environment
+          Value: dev
+        - Key: Owner
+          Value: platform

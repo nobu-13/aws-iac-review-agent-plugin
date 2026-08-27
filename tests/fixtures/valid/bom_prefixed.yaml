@@ -1,0 +1,12 @@
+﻿# Prefixed with a UTF-8 BOM. Accepted: PyYAML treats a leading BOM as
+# encoding metadata, so this Template reviews normally. Kept beside the
+# JSON case to show the asymmetry is the parser's, not the plugin's.
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256

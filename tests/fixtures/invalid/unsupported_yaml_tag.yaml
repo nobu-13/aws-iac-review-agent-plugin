@@ -1,0 +1,11 @@
+# Carries a YAML tag that is not on the CloudFormation short-form allowlist of
+# iacreview.yamlcfn. The loader registers each permitted tag explicitly rather
+# than accepting any tag through add_multi_constructor, so an unknown one raises
+# a ConstructorError instead of being silently constructed into some value the
+# review would then reason about (design.md, "Template 内容を評価しない").
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Frobnicate data-bucket

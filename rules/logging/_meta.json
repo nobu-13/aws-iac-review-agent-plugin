@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "category": "logging",
+  "normalized_category": "Logging",
+  "default": {
+    "finding_type": "Security",
+    "severity": "MEDIUM"
+  },
+  "rules": {
+    "s3_access_logging": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Without server access logging there is no record of who read or wrote objects in the bucket, so an unauthorized access cannot be reconstructed after the fact.",
+      "recommendation": "Add a LoggingConfiguration with a DestinationBucketName that points at a dedicated log bucket. If the bucket is itself the log destination, record the exception instead of enabling recursive logging."
+    },
+    "cloudtrail_enabled": {
+      "severity": "HIGH",
+      "why_it_matters": "A trail that is not started records no API activity, and a trail without log file validation gives no way to detect tampering with delivered log files, so the audit trail cannot be relied on during an investigation.",
+      "recommendation": "Set IsLogging to true and EnableLogFileValidation to true on the trail."
+    }
+  }
+}

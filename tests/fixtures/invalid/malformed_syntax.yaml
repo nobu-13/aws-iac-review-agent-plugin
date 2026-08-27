@@ -1,0 +1,6 @@
+# Intentionally malformed YAML: the flow sequence on the last line is never
+# closed, so PyYAML raises a scanner/parser error carrying a problem_mark.
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties: [BucketName, "data-bucket"

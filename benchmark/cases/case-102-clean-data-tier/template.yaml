@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-102-clean-data-tier/template.yaml
+#
+# CLEAN BY DESIGN. This is a negative benchmark case: it carries no deliberate
+# defect, and the review is expected to report nothing about it. A HIGH or
+# CRITICAL finding from a deterministic Source here is a false positive, which is
+# the measurement this case exists for.
+#
+# It is a benchmark case rather than an example. examples/ holds the templates a
+# reader is invited to copy; this one is measured, and it covers the stateful
+# resource types the examples do not: an RDS instance, a DynamoDB table and an
+# SQS queue. Between them they exercise every bundled rule category that applies
+# to stored data -- encryption, backup, public access and tagging -- with all of
+# them satisfied.
+#
+# What makes it clean, rule by rule:
+#
+#   OrdersDatabase   StorageEncrypted: true (rules/encryption/), a 14 day
+#                    BackupRetentionPeriod and DeletionProtection: true
+#                    (rules/backup/), PubliclyAccessible: false in a private
+#                    subnet group (rules/public-access/), and Environment plus
+#                    Owner tags (rules/tagging/). Its master password is created
+#                    and rotated by RDS in Secrets Manager, so no credential is
+#                    written here.
+#   SessionTable     server-side encryption and point-in-time recovery enabled,
+#                    and tagged.
+#   OrderEventQueue  encrypted with the AWS managed SQS key, with a dead letter
+#                    queue so that a message failing repeatedly is kept rather
+#                    than lost, and tagged.
+#   OrderEventDeadLetterQueue
+#                    encrypted and tagged on the same terms as the queue it
+#                    serves.
+#
+# As in case-101 the template declares no IAM resource and no policy document, so
+# the deterministic IAM detectors have nothing to examine. Access to these
+# resources is granted by whatever stack consumes the exported ARNs, and is
+# reviewed there.
+
+Description: >-
+  Benchmark case 102. A correctly configured data tier: an encrypted, backed up,
+  private RDS instance, an encrypted DynamoDB table with point-in-time recovery,
+  and an encrypted queue with a dead letter queue. Used as a negative case.
+
+Parameters:
+  DatabaseSubnetGroupName:
+    Type: String
+    Description: >-
+      Name of an existing DB subnet group of private subnets. The subnet group is
+      what keeps the instance off the internet; PubliclyAccessible: false below
+      states the same intent explicitly.
+    MinLength: 1
+
+Resources:
+  OrdersDatabase:
+    Type: AWS::RDS::DBInstance
+    # A database outlives the stack that declared it. Snapshot on both delete and
+    # replace, so a stack operation cannot discard the data.
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.small
+      Engine: postgres
+      AllocatedStorage: "20"
+      StorageType: gp3
+      StorageEncrypted: true
+      MasterUsername: orders_admin
+      # No password is written down: RDS creates and rotates one in Secrets
+      # Manager. A published template carries no credential of any shape.
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      PubliclyAccessible: false
+      MultiAZ: true
+      BackupRetentionPeriod: 14
+      DeletionProtection: true
+      CopyTagsToSnapshot: true
+      AutoMinorVersionUpgrade: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-102
+
+  SessionTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # TableName is deliberately absent, so two stacks of this template do not
+      # collide on a global name.
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+      SSESpecification:
+        # Encryption at rest with the AWS managed key for DynamoDB.
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: ExpiresAt
+        Enabled: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-102
+
+  OrderEventQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      KmsDataKeyReusePeriodSeconds: 300
+      MessageRetentionPeriod: 345600
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrderEventDeadLetterQueue.Arn
+        maxReceiveCount: 5
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-102
+
+  OrderEventDeadLetterQueue:
+    Type: AWS::SQS::Queue
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      KmsMasterKeyId: alias/aws/sqs
+      KmsDataKeyReusePeriodSeconds: 300
+      # Two weeks, so a message that failed has time to be investigated.
+      MessageRetentionPeriod: 1209600
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-102
+
+Outputs:
+  OrdersDatabaseEndpoint:
+    Description: Endpoint of the orders database.
+    Value: !GetAtt OrdersDatabase.Endpoint.Address
+
+  SessionTableName:
+    Description: Name of the session table.
+    Value: !Ref SessionTable
+
+  OrderEventQueueArn:
+    Description: ARN of the order event queue.
+    Value: !GetAtt OrderEventQueue.Arn
+
+  OrderEventDeadLetterQueueArn:
+    Description: ARN of the dead letter queue.
+    Value: !GetAtt OrderEventDeadLetterQueue.Arn

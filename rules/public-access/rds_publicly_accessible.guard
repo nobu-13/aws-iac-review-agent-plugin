@@ -1,0 +1,16 @@
+# rules/public-access/rds_publicly_accessible.guard
+#
+# Category: public-access
+# Requirement: 5.2, 5.3
+#
+# Reports RDS DB instances that explicitly request a public endpoint. The
+# property is only inspected when it is declared: CloudFormation derives the
+# default from the DB subnet group, so an absent value is not evidence of a
+# public endpoint and reporting it would be a guess.
+
+let rds_db_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' ]
+
+rule rds_publicly_accessible when %rds_db_instances !empty {
+  %rds_db_instances[ Properties.PubliclyAccessible exists ].Properties.PubliclyAccessible == false
+    << This RDS DB instance requests a public endpoint. Set PubliclyAccessible to false and place the instance in private subnets, then reach it through a bastion host, VPN or Direct Connect. >>
+}

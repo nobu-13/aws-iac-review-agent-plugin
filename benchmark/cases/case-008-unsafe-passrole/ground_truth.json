@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-008-unsafe-passrole",
+  "template": "template.yaml",
+  "description": "Two unsafe iam:PassRole grants, neither of which any bundled cfn-guard rule reaches. ArtifactPublisherPolicy is a standalone AWS::IAM::Policy allowing iam:PassRole on the wildcarded role ARN arn:aws:iam::123456789012:role/deploy/*, so every role under that path can be passed; this is the wildcarded-ARN shape of passrole_unrestricted, where case-001 covers the bare Resource \"*\" shape in an inline role policy. InstanceLauncherRole holds ec2:RunInstances and a named, iam:PassedToService-scoped iam:PassRole in one document: each statement is defensible alone, and together they let the holder read the passed role's credentials from instance metadata, which is dangerous_ec2_passrole. rules/iam/iam_policy_no_star_star.guard covers AWS::IAM::Policy but only matches Action \"*\" with Resource \"*\", so it is silent on both resources -- the reason both expectations are attributed to IAM Review alone. The role's trust policy is deliberately correct, a service principal bounded by aws:SourceAccount, so that privesc_broad_trust and cross_service_missing_condition do not add a second IAM defect that would merge into the same finding. The template declares no S3 bucket, no RDS instance and no taggable resource type, so no other bundled rule applies.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "ArtifactPublisherPolicy",
+      "normalized_category": "IAM",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["IAM Review"],
+      "note": "iam:PassRole on the wildcarded role ARN arn:aws:iam::123456789012:role/deploy/*. Reported by passrole_unrestricted, which recognises a wildcarded role ARN as leaving the grant unbounded, and additionally by wildcard_resource and sensitive_prefix_without_condition on the same statement; all three are IAM findings on this resource, so they merge into this one entry and CRITICAL comes from passrole_unrestricted."
+    },
+    {
+      "resource": "InstanceLauncherRole",
+      "normalized_category": "IAM",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["IAM Review"],
+      "note": "ec2:RunInstances and iam:PassRole allowed in the same inline policy document, reported by dangerous_ec2_passrole. The PassRole grant names a single role and carries an iam:PassedToService condition, so passrole_unrestricted and sensitive_prefix_without_condition do not fire on it; wildcard_resource does fire on the wildcarded instance ARN of the RunInstances statement, and merges into this entry at the same HIGH severity."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

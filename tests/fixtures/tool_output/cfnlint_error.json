@@ -1,0 +1,34 @@
+[
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Error",
+    "Location": {
+      "Start": { "LineNumber": 24, "ColumnNumber": 7 },
+      "End": { "LineNumber": 24, "ColumnNumber": 41 },
+      "Path": ["Resources", "AppBucket", "Properties", "BucketName"]
+    },
+    "Message": "Property BucketName should be of type String",
+    "Rule": {
+      "Id": "E3002",
+      "ShortDescription": "Resource properties are invalid",
+      "Description": "Making sure that resources properties are properly configured",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint/blob/main/docs/rules.md#E3002"
+    }
+  },
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Error",
+    "Location": {
+      "Start": { "LineNumber": 0, "ColumnNumber": 0 },
+      "End": { "LineNumber": 0, "ColumnNumber": 0 },
+      "Path": []
+    },
+    "Message": "Template format error: unsupported structure",
+    "Rule": {
+      "Id": "E0000",
+      "ShortDescription": "Parsing error found when parsing the template",
+      "Description": "Checks for JSON/YAML formatting errors in your template",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint/blob/main/docs/rules.md#E0000"
+    }
+  }
+]

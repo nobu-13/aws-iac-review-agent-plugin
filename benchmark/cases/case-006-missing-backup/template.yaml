@@ -1,0 +1,111 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-006-missing-backup/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   LedgerDatabase     BackupRetentionPeriod: 0, which is how RDS spells "no
+#                      automated backups". There is no recovery point at all.
+#   ReportingDatabase  BackupRetentionPeriod: 3, a window that expires before a
+#                      problem noticed at the end of a week can be recovered
+#                      from.
+#
+# Both are reported by the ">= 7 days" clause of
+# rules/backup/rds_backup_retention.guard. The rule's other clause, the one
+# requiring the property to be present, is not exercised here on purpose: an
+# absent BackupRetentionPeriod also draws an informational cfn-lint finding, and a
+# case reports only what its Ground_Truth declares, so covering that clause would
+# tie this case to the installed cfn-lint rule catalogue.
+#
+# Both instances are otherwise correctly configured, and deliberately so: storage
+# encryption on, deletion protection on, no public endpoint, Environment and Owner
+# tags. Deletion protection matters here because it is the other rule in the
+# backup category, and the report merges findings on resource plus category -- an
+# instance missing both would produce one finding rather than two and the case
+# would no longer isolate the retention window. Missing deletion protection is
+# measured by case-010 instead. The master password is managed by RDS in Secrets
+# Manager rather than written here: a benchmark template is published, so it
+# carries no credential of any shape.
+
+Description: >-
+  Benchmark case 006. Two RDS DB instances with no usable automated backup
+  window: one with automated backups switched off, the other with a retention
+  period shorter than a week.
+
+Parameters:
+  DatabaseSubnetGroupName:
+    Type: String
+    Description: >-
+      Name of an existing DB subnet group of private subnets for both database
+      instances.
+    MinLength: 1
+
+Resources:
+  LedgerDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      AllocatedStorage: "20"
+      # Zero days of automated backups, which is how RDS spells "switched off".
+      # This is the defect: there is no recovery point at all, so a bad write or
+      # a bad migration is permanent.
+      #
+      # The property is stated rather than omitted deliberately. Omitting it
+      # produces the same effective defect and reaches the same Guard clause, but
+      # it also provokes cfn-lint's informational "BackupRetentionPeriod is a
+      # required property" rule, and a case reports only what its Ground_Truth
+      # declares. Declaring that finding would tie the case to the installed
+      # cfn-lint rule catalogue rather than to the backup rule it measures.
+      BackupRetentionPeriod: 0
+      StorageEncrypted: true
+      MasterUsername: ledger_admin
+      # No password is written down: RDS creates and rotates one in Secrets
+      # Manager. Benchmark templates carry no credential of any shape.
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      PubliclyAccessible: false
+      DeletionProtection: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-006
+
+  ReportingDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      AllocatedStorage: "20"
+      # Three days of automated backups. This is the defect: a problem noticed on
+      # Monday cannot be recovered from a state before the previous Friday.
+      BackupRetentionPeriod: 3
+      StorageEncrypted: true
+      MasterUsername: reporting_admin
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      PubliclyAccessible: false
+      DeletionProtection: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-006
+
+Outputs:
+  LedgerDatabaseEndpoint:
+    Description: Endpoint of the instance with automated backups switched off.
+    Value: !GetAtt LedgerDatabase.Endpoint.Address
+
+  ReportingDatabaseEndpoint:
+    Description: Endpoint of the instance with a three day retention window.
+    Value: !GetAtt ReportingDatabase.Endpoint.Address

@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# examples/minimal-s3/template.yaml
+#
+# The smallest S3 bucket this plugin's bundled rules consider well configured:
+# encrypted at rest, closed to public access, logging its access somewhere else,
+# and tagged with an owner. Every property below exists because one of the rules
+# in rules/ asks for it, and nothing else is here.
+#
+# Reviewed with:
+#
+#   python3 skills/iac-review/scripts/run_iac_review.py \
+#     --target examples/minimal-s3/template.yaml
+#
+# It is a clean sample, not a benchmark case: templates carrying deliberate
+# defects live under benchmark/cases/ instead.
+
+Description: >-
+  A single encrypted, private, access-logged S3 bucket. Used as the clean
+  reference template for aws-iac-review-agent-plugin.
+
+Parameters:
+  AccessLogBucketName:
+    Type: String
+    Description: >-
+      Name of an existing bucket that receives this bucket's server access logs.
+      A log destination has to be a different bucket: a bucket that logs to
+      itself writes log objects that generate further log objects. Its bucket
+      policy must allow logging.s3.amazonaws.com to write there.
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+    ConstraintDescription: must be a valid S3 bucket name.
+
+  EnvironmentName:
+    Type: String
+    Description: Value of the Environment tag.
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+  OwnerName:
+    Type: String
+    Description: >-
+      Value of the Owner tag: the team or account answerable for this bucket.
+    MinLength: 1
+
+Resources:
+  DocumentBucket:
+    Type: AWS::S3::Bucket
+    # A bucket holding documents outlives the stack that declared it, and an
+    # emptied bucket cannot be recovered. Retain on both delete and replace.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # BucketName is deliberately absent. CloudFormation generates a unique
+      # name, which keeps the bucket replaceable and avoids a global name clash.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            # Cuts the number of KMS-style key requests S3 makes for the bucket.
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucketName
+        LogFilePrefix: !Sub "${AWS::StackName}/DocumentBucket/"
+      VersioningConfiguration:
+        Status: Enabled
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Owner
+          Value: !Ref OwnerName
+
+Outputs:
+  DocumentBucketName:
+    Description: Name of the created bucket.
+    Value: !Ref DocumentBucket
+
+  DocumentBucketArn:
+    Description: ARN of the created bucket.
+    Value: !GetAtt DocumentBucket.Arn

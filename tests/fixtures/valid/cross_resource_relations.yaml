@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Fixture for skills/cloudformation-review/scripts/extract_facts.py (Task 18.5).
+#
+# The facts this Template is meant to yield are written down here before the
+# extractor's output was ever read, so the expectation comes from the Template
+# rather than from the tool.
+#
+#   Parameters
+#     EnvironmentName    default "development", used only inside Conditions, so
+#                        no resource references it
+#     LogBucketName      default present, referenced by DataBucket
+#     DatabasePassword   NoEcho with a default, so both the default and the
+#                        allowed values must be redacted in the facts file
+#     AppSubnetId        no default, referenced by AppFunction
+#
+#   Conditions
+#     IsProduction       reproduced unevaluated; AppFunction is conditional on it
+#
+#   Reference graph (resource -> resource only)
+#     AppExecutionRole -> DataBucket   Fn::Sub, attribute Arn
+#     AppFunction      -> AppExecutionRole  Fn::GetAtt, attribute Arn
+#     AppFunction      -> DataBucket   Ref
+#
+#   DependsOn
+#     AppFunction -> DataBucket
+#
+#   Availability properties
+#     AppFunction.Properties.VpcConfig.SubnetIds with one element, which is the
+#     single-AZ signal the Agent is expected to reason about (this script does
+#     not judge it)
+#
+#   Deterministic IAM findings (they reach deterministic_findings_summary)
+#     AppExecutionRole   one Informational / INFO unresolvable_value, because the
+#                        Fn::Sub resource ARN cannot be resolved without deploy
+#                        time values. No Security finding: this fixture is
+#                        facts-extraction test data, and every policy in it is
+#                        intentionally narrow and bounded by a Condition.
+Description: Template wiring a bucket, a role and a function together, used as facts-extraction test data.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: development
+    AllowedValues:
+      - development
+      - production
+    Description: Deployment environment this stack represents.
+
+  LogBucketName:
+    Type: String
+    Default: app-access-logs
+    Description: Name of an existing bucket that receives server access logs.
+
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Default: replace-before-deploying
+    AllowedValues:
+      - replace-before-deploying
+    Description: Placeholder credential parameter; the facts file must not repeat its default.
+
+  AppSubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: Subnet the function is attached to.
+
+Conditions:
+  IsProduction:
+    Fn::Equals:
+      - Ref: EnvironmentName
+      - production
+
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: LogBucketName
+        LogFilePrefix: data-bucket/
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+
+  AppExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: ReadDataBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !Sub "${DataBucket.Arn}/data.json"
+                Condition:
+                  StringEquals:
+                    aws:ResourceAccount: !Ref AWS::AccountId
+
+  AppFunction:
+    Type: AWS::Lambda::Function
+    Condition: IsProduction
+    DependsOn: DataBucket
+    Properties:
+      FunctionName: app-function
+      Handler: index.handler
+      Runtime: python3.11
+      Role: !GetAtt AppExecutionRole.Arn
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref DataBucket
+      VpcConfig:
+        SubnetIds:
+          - !Ref AppSubnetId
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return {"ok": True}

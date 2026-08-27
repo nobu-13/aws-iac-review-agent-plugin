@@ -1,0 +1,130 @@
+{
+  "schema_version": "1.0.0",
+  "categories": [
+    "IAM", "Encryption", "PublicAccess", "Logging", "Tagging",
+    "Availability", "Backup", "NetworkSecurity", "DataProtection",
+    "TemplateQuality", "Other"
+  ],
+  "notes": {
+    "public_access_vs_network_security": "Reachability from the internet (0.0.0.0/0) or from all AWS accounts (Principal \"*\") maps to PublicAccess. Other network boundary design issues map to NetworkSecurity.",
+    "severity_axis": "Severity is comparable only among Findings sharing the same FindingType.",
+    "blocks_deployment": "Surveyed against the cfn-lint 1.46.0 rule catalogue. A rule is marked only when the condition it reports is decidable from the Template alone and makes a successful deployment impossible. The criteria, the surveyed population, and the deliberate exclusions are recorded in docs/finding-schema.md.",
+    "security_relevant": "Surveyed against the 66 Warning and Informational rules of the cfn-lint 1.46.0 catalogue. A rule is marked only when the state it reports, on its own, exposes a credential or widens access beyond what the Template appears to grant. Rules that only concern template quality, durability, or deprecation are not marked. The criteria, the evidence per rule, and the deliberate exclusions are recorded in docs/finding-schema.md."
+  },
+
+  "cfnlint": {
+    "level_defaults": {
+      "Error":         { "finding_type": "Validity",      "severity": "HIGH" },
+      "Warning":       { "finding_type": "BestPractice",  "severity": "MEDIUM" },
+      "Informational": { "finding_type": "Informational", "severity": "LOW" }
+    },
+    "default": { "category": "TemplateQuality" },
+    "prefix_rules": [
+      { "prefix": "E0", "category": "TemplateQuality", "blocks_deployment": true },
+      { "prefix": "E1", "category": "TemplateQuality", "blocks_deployment": true },
+      { "prefix": "E2", "category": "TemplateQuality" },
+      { "prefix": "E3", "category": "TemplateQuality" },
+      { "prefix": "E4", "category": "TemplateQuality" },
+      { "prefix": "E6", "category": "TemplateQuality" },
+      { "prefix": "E7", "category": "TemplateQuality" },
+      { "prefix": "E8", "category": "TemplateQuality" },
+      { "prefix": "W",  "category": "TemplateQuality" },
+      { "prefix": "I",  "category": "TemplateQuality" }
+    ],
+    "rule_overrides": {
+      "W3037": {
+        "category": "IAM",
+        "security_relevant": true,
+        "why_it_matters": "An invalid or malformed IAM action prevents the policy from granting the intended access, or grants access that was not intended.",
+        "recommendation": "Correct the IAM action name to a valid service action."
+      },
+      "W2501": {
+        "category": "DataProtection",
+        "security_relevant": true,
+        "why_it_matters": "A parameter that carries a credential value should be declared NoEcho so that it is not displayed in the console or API responses.",
+        "recommendation": "Set NoEcho: true on the parameter."
+      },
+      "W1011": {
+        "category": "DataProtection",
+        "security_relevant": true,
+        "why_it_matters": "A hardcoded secret value in a template is stored in plaintext in the template and in CloudFormation history.",
+        "recommendation": "Use a dynamic reference to Secrets Manager or SSM Parameter Store."
+      },
+
+      "W1051": {
+        "category": "DataProtection",
+        "security_relevant": true,
+        "why_it_matters": "A property that expects the ARN of a secret received a dynamic reference that resolves to the secret value itself, so the plaintext secret is stored in the resource configuration instead of a pointer to it.",
+        "recommendation": "Pass the ARN of the secret, for example through Ref on an AWS::SecretsManager::Secret resource, instead of a {{resolve:secretsmanager:...}} dynamic reference."
+      },
+      "W2010": {
+        "category": "DataProtection",
+        "security_relevant": true,
+        "why_it_matters": "NoEcho does not mask a parameter value used in Metadata, Outputs, or resource Metadata, so the value is returned in plaintext by DescribeStacks and shown in the console to anyone who can read the stack.",
+        "recommendation": "Remove the reference to the NoEcho parameter from Metadata and Outputs, and pass the value only to the resource property that consumes it."
+      },
+      "W3663": {
+        "category": "IAM",
+        "security_relevant": true,
+        "why_it_matters": "A Lambda permission whose SourceArn carries no account ID, such as an S3 bucket ARN, can be satisfied by a resource of that name in any AWS account, so an account other than the intended one is able to invoke the function.",
+        "recommendation": "Set SourceAccount to the account ID that owns the calling resource, in addition to SourceArn."
+      },
+      "W3687": {
+        "category": "NetworkSecurity",
+        "security_relevant": true,
+        "why_it_matters": "FromPort and ToPort are ignored for an IpProtocol other than tcp, udp, or icmp, so a security group rule that appears to allow one port range actually allows every port reachable through that protocol.",
+        "recommendation": "Set IpProtocol to tcp, udp, or icmp when a port range is intended, or remove FromPort and ToPort so that the wider access is explicit and reviewable."
+      },
+
+      "E3002": {
+        "category": "TemplateQuality",
+        "blocks_deployment": false
+      },
+
+      "E2002": { "blocks_deployment": true },
+      "E2003": { "blocks_deployment": true },
+      "E2010": { "blocks_deployment": true },
+
+      "E3001": { "blocks_deployment": true },
+      "E3003": { "blocks_deployment": true },
+      "E3004": { "blocks_deployment": true },
+      "E3005": { "blocks_deployment": true },
+      "E3006": { "blocks_deployment": true },
+      "E3007": { "blocks_deployment": true },
+      "E3010": { "blocks_deployment": true },
+      "E3015": { "blocks_deployment": true },
+      "E3035": { "blocks_deployment": true },
+      "E3036": { "blocks_deployment": true },
+      "E3038": { "blocks_deployment": true },
+      "E3055": { "blocks_deployment": true },
+
+      "E6002": { "blocks_deployment": true },
+      "E6004": { "blocks_deployment": true },
+      "E6005": { "blocks_deployment": true },
+      "E6010": { "blocks_deployment": true },
+
+      "E7010": { "blocks_deployment": true },
+
+      "E8002": { "blocks_deployment": true },
+      "E8003": { "blocks_deployment": true },
+      "E8004": { "blocks_deployment": true },
+      "E8005": { "blocks_deployment": true },
+      "E8006": { "blocks_deployment": true },
+      "E8007": { "blocks_deployment": true }
+    }
+  },
+
+  "cfnguard": {
+    "rule_categories": {
+      "encryption":    "Encryption",
+      "public-access": "PublicAccess",
+      "iam":           "IAM",
+      "logging":       "Logging",
+      "backup":        "Backup",
+      "tagging":       "Tagging"
+    },
+    "rule_overrides": {
+      "security_group_open_ingress": { "category": "NetworkSecurity" }
+    }
+  }
+}

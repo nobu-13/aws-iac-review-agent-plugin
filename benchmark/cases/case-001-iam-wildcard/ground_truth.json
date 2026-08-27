@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-001-iam-wildcard",
+  "template": "template.yaml",
+  "description": "Two IAM resources granting wildcard permissions. AdministratorManagedPolicy is an AWS::IAM::ManagedPolicy whose only statement allows Action \"*\" on Resource \"*\"; the managed policy shape is chosen so that the defect is reachable by rules/iam/iam_policy_no_star_star.guard as well as by the deterministic IAM detectors. DeploymentRole is an AWS::IAM::Role with an inline policy allowing iam:PassRole on Resource \"*\", and a trust policy admitting a service principal with no bounding Condition; the Guard rule does not cover inline role policies, so that resource is reached by the IAM detectors alone. The template declares no S3 bucket, no RDS instance and no taggable resource type, so no other bundled rule applies.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "AdministratorManagedPolicy",
+      "normalized_category": "IAM",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard", "IAM Review"],
+      "note": "Action \"*\" with Resource \"*\" in the managed policy document. Reported by the iam_policy_no_star_star Guard rule and by the star_action_star_resource, wildcard_action and wildcard_resource IAM detectors, which merge into one IAM finding on this resource."
+    },
+    {
+      "resource": "DeploymentRole",
+      "normalized_category": "IAM",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["IAM Review"],
+      "note": "iam:PassRole on Resource \"*\" in the inline policy, plus an unconditioned service principal in the trust policy. Both defects are IAM findings on the same resource, so they merge into this one entry; CRITICAL comes from passrole_unrestricted."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

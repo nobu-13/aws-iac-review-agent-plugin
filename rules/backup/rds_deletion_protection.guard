@@ -1,0 +1,14 @@
+# rules/backup/rds_deletion_protection.guard
+#
+# Category: backup
+# Requirement: 5.2, 5.3
+#
+# Reports RDS DB instances without deletion protection. The property defaults to
+# false, so an absent value is reported as a violation.
+
+let rds_db_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' ]
+
+rule rds_deletion_protection when %rds_db_instances !empty {
+  %rds_db_instances.Properties.DeletionProtection == true
+    << Deletion protection is not enabled on this RDS DB instance. Set DeletionProtection to true so that the instance cannot be deleted by an accidental stack update or delete. >>
+}

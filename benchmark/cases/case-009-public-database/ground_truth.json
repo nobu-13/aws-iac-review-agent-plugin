@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-009-public-database",
+  "template": "template.yaml",
+  "description": "Two RDS DB instances that explicitly request a public endpoint. CustomerDatabase declares PubliclyAccessible: true while also declaring a DB subnet group of private subnets, so the template contradicts itself and the property decides the outcome. TelemetryDatabase declares the same property on a different engine, which shows the defect belongs to the request and not to postgres. rules/public-access/rds_publicly_accessible.guard only inspects the property where it is declared, because CloudFormation otherwise derives the default from the subnet group and an absent value is not evidence of a public endpoint; both instances therefore declare it. Both are otherwise correctly configured: storage encryption enabled, a seven day backup retention window, deletion protection enabled, and Environment and Owner tags. No security group is declared, deliberately: an ingress rule open to 0.0.0.0/0 is the NetworkSecurity defect case-005 measures, and one here would make this case measure two categories at once. The master password is managed by RDS rather than declared, so the template contains no credential.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "CustomerDatabase",
+      "normalized_category": "PublicAccess",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "PubliclyAccessible: true on the DB instance, reported by the rds_publicly_accessible Guard rule. Severity CRITICAL comes from the per-rule entry in rules/public-access/_meta.json rather than from that category's HIGH default."
+    },
+    {
+      "resource": "TelemetryDatabase",
+      "normalized_category": "PublicAccess",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "PubliclyAccessible: true on the second DB instance, reported by the same rds_publicly_accessible Guard rule. Two separate resources, so two findings: deduplication merges on resource plus category and these differ in the resource."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

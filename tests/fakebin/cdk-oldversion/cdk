@@ -1,0 +1,20 @@
+#!/bin/sh
+# A CDK CLI below the minimum supported version (toolcheck: 2.0.0).
+#
+# CDK v1 reached end of support and its synthesized output differs, so
+# require_known_tool must refuse 1.99.0 with ToolVersionError before any project
+# code is executed (Requirement 15 AC6). Every path other than --version exits
+# non-zero: reaching them would mean the version gate let a v1 CLI through, and
+# with `cdk synth` that would mean running untrusted project code the plugin
+# had already decided not to run.
+#
+# POSIX sh so the script still runs with PATH set to this directory alone; see
+# ../cdk-crash/cdk. Arguments are compared, never evaluated.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "1.99.0 (build fake)"
+        exit 0
+    fi
+done
+echo "fake cdk 1.99.0: should not have been invoked past the version gate" >&2
+exit 1

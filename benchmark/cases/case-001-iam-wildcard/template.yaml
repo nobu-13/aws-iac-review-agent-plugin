@@ -1,0 +1,77 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-001-iam-wildcard/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   AdministratorManagedPolicy  an Allow statement combining Action "*" with
+#                               Resource "*". Reachable by both cfn-guard
+#                               (rules/iam/iam_policy_no_star_star.guard, which
+#                               covers AWS::IAM::ManagedPolicy) and the
+#                               deterministic IAM detectors.
+#   DeploymentRole              iam:PassRole on Resource "*" in an inline role
+#                               policy, and a service principal in the trust
+#                               policy with no bounding Condition. The Guard rule
+#                               does not cover inline role policies, so this
+#                               resource is reached by the IAM detectors alone.
+#
+# Everything else is deliberately unremarkable: no S3 bucket, no RDS instance and
+# no taggable resource type, so the encryption, logging, public-access, backup and
+# tagging rules have nothing to say about this case and the measurement stays on
+# the IAM category.
+
+Description: >-
+  Benchmark case 001. Two IAM resources granting wildcard permissions: a managed
+  policy allowing every action on every resource, and a role that may pass any
+  role in the account.
+
+Resources:
+  # One statement, and it is the whole account: Action "*" on Resource "*".
+  AdministratorManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: Grants every action on every resource.
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AllowEverything
+            Effect: Allow
+            Action: "*"
+            Resource: "*"
+
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # A service principal with no aws:SourceAccount or aws:SourceArn condition:
+      # nothing bounds which of that service's resources may assume the role.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: PassAnyRole
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # iam:PassRole on "*" hands any role in the account to any service
+              # this identity can start.
+              - Sid: PassAnyRoleToAnyService
+                Effect: Allow
+                Action: iam:PassRole
+                Resource: "*"
+
+Outputs:
+  AdministratorManagedPolicyArn:
+    Description: ARN of the managed policy carrying the wildcard statement.
+    Value: !Ref AdministratorManagedPolicy
+
+  DeploymentRoleArn:
+    Description: ARN of the role that may pass any role.
+    Value: !GetAtt DeploymentRole.Arn

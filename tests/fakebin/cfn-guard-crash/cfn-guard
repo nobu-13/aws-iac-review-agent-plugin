@@ -1,0 +1,24 @@
+#!/bin/sh
+# A cfn-guard that answers --version normally and then fails.
+#
+# Exit 255 with empty stdout and the explanation on stderr, which is what
+# cfn-guard 3.2.1 was measured to do for an unparsable template and for a
+# missing rules directory (docs/architecture.md, cases c and d). An invented
+# code such as 1 would work equally well -- interpret_guard_result branches on
+# whether stdout parses, never on the value -- but a fake that reproduces a
+# measured failure keeps the fixture and the documentation describing the same
+# tool. Empty stdout is the part that matters: it is what makes this a
+# tool_error rather than a clean run (Requirement 5 AC6, AC7).
+#
+# POSIX sh, not python3, because tests point PATH at this directory *only*.
+# /bin/sh is an absolute interpreter path; a `#!/usr/bin/env python3` script
+# would exit 127 without running a line. Arguments are compared, never
+# evaluated: nothing here executes its input.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "cfn-guard 3.2.1"
+        exit 0
+    fi
+done
+echo "Error occurred The fake cfn-guard always fails" >&2
+exit 255

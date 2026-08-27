@@ -1,0 +1,44 @@
+[project]
+name = "aws-iac-review-agent-plugin"
+requires-python = ">=3.9"
+dependencies = ["PyYAML>=6.0"]
+
+[project.optional-dependencies]
+# Test-only. The plugin's run-time dependency is PyYAML alone (Requirement 16
+# AC3), and nothing under ``iacreview/`` or ``skills/`` imports any of these.
+# ``hypothesis`` is pinned exactly: a property-based test that drew from a
+# different generator version would be a different test, and steering/tech.md
+# asks for pinned versions rather than open ranges.
+dev = ["pytest>=7.0", "pytest-cov>=4.0", "hypothesis==6.141.1"]
+# Advisory. design.md's Dependency Strategy keeps these out of the required set:
+# CI runs them in a `continue-on-error` job and treats the output as a warning,
+# and CONTRIBUTING.md tells a contributor the same. Nothing in `dev` or in
+# `dependencies` needs them, so a machine with neither installed can still run
+# every gate. Pinned exactly, like `hypothesis`: a lint result that moves with an
+# upstream release is a result nobody can reproduce, and a new rule turning up in
+# a minor version would look like a defect introduced by the change under review.
+# Kept on one line, as `dev` is, because `tests/unit/test_ci.py` reads these
+# arrays with a single-line regular expression (no `tomllib` on Python 3.9).
+lint = ["ruff==0.8.6", "mypy==1.14.1"]
+
+[tool.mypy]
+# The floor `requires-python` declares, not whichever interpreter happens to run
+# mypy. Without this, CI (3.11) and a contributor on 3.9 would be told different
+# things about the same code, and the version that matters is the lowest.
+python_version = "3.9"
+
+[[tool.mypy.overrides]]
+# PyYAML ships no inline types and mypy's stubs for it are a separate
+# distribution. Adding `types-PyYAML` would mean one more pinned dependency for
+# a job that is advisory by design, so the import is treated as untyped instead.
+# The consequence is understood: calls into `yaml` are unchecked, and
+# `iacreview/yamlcfn.py` is where that loss lands.
+module = ["yaml", "yaml.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.coverage.run]
+source = ["iacreview", "benchmark/harness"]

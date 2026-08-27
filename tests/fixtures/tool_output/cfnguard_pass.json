@@ -1,0 +1,100 @@
+{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "rds_backup_retention"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "rds_deletion_protection"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "rds_storage_encrypted"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "PASS",
+  "not_compliant": [],
+  "not_applicable": [],
+  "compliant": [
+    "s3_bucket_encryption"
+  ]
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "iam_policy_no_star_star"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "cloudtrail_enabled"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "PASS",
+  "not_compliant": [],
+  "not_applicable": [],
+  "compliant": [
+    "s3_access_logging"
+  ]
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "rds_publicly_accessible"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "PASS",
+  "not_compliant": [],
+  "not_applicable": [],
+  "compliant": [
+    "s3_public_access_block"
+  ]
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "SKIP",
+  "not_compliant": [],
+  "not_applicable": [
+    "security_group_open_ingress"
+  ],
+  "compliant": []
+}{
+  "name": "tests/fixtures/valid/minimal_compliant_template.yaml",
+  "metadata": {},
+  "status": "PASS",
+  "not_compliant": [],
+  "not_applicable": [],
+  "compliant": [
+    "required_tags"
+  ]
+}

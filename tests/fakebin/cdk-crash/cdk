@@ -1,0 +1,25 @@
+#!/bin/sh
+# A CDK CLI that answers --version normally and then fails to synthesize.
+#
+# Exit 1 with the error on stderr is what `cdk synth` does when the project's
+# own code raises. synth_if_confirmed must turn that into a ToolExecutionError
+# carrying the head of stderr, and must not fall back to any other way of
+# obtaining a template (Requirement 8 AC7).
+#
+# Nothing is written to ./cdk.out, which is the other half of that assertion: a
+# test can pre-populate cdk.out with a stale template and confirm the failed
+# synth is not reported as a review of it.
+#
+# POSIX sh, not python3, because tests point PATH at this directory *only*.
+# /bin/sh is an absolute interpreter path; a `#!/usr/bin/env python3` script
+# would exit 127 without running a line. Arguments are compared, never
+# evaluated: nothing here executes its input.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "2.150.0 (build fake)"
+        exit 0
+    fi
+done
+echo "Error: Cannot find asset at /nonexistent" >&2
+echo "    at Object.synth (fake cdk)" >&2
+exit 1

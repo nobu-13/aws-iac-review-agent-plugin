@@ -1,0 +1,40 @@
+# rules/tagging/required_tags.guard
+#
+# Category: tagging
+# Requirement: 5.2, 5.3
+#
+# Reports resources that are missing the ownership tags this rule set treats as
+# mandatory: Environment and Owner. The resource type list is deliberately
+# explicit rather than "every resource", because many CloudFormation resource
+# types do not accept a Tags property at all and flagging those would be a false
+# positive. Extend the list when a new taggable type needs coverage.
+
+let taggable_resources = Resources.*[
+  Type IN [
+    'AWS::S3::Bucket',
+    'AWS::RDS::DBInstance',
+    'AWS::EC2::Instance',
+    'AWS::EC2::SecurityGroup',
+    'AWS::EC2::Volume',
+    'AWS::DynamoDB::Table',
+    'AWS::Lambda::Function',
+    'AWS::SNS::Topic',
+    'AWS::SQS::Queue'
+  ]
+]
+
+rule required_tags when %taggable_resources !empty {
+  %taggable_resources.Properties.Tags exists
+    << This resource carries no tags. Add a Tags list that includes at least Environment and Owner so that cost allocation and ownership can be resolved. >>
+
+  # The key checks use `some` so that one matching entry in the list satisfies
+  # the clause. A filter such as `Tags[ Key == 'Environment' ] !empty` would
+  # resolve to an empty query and be treated as satisfied instead.
+  %taggable_resources[ Properties.Tags exists ].Properties {
+    some Tags[*].Key == 'Environment'
+      << The Environment tag is missing on this resource. Add a Tags entry with Key Environment and a value such as production, staging or development. >>
+
+    some Tags[*].Key == 'Owner'
+      << The Owner tag is missing on this resource. Add a Tags entry with Key Owner that identifies the team or account responsible for the resource. >>
+  }
+}

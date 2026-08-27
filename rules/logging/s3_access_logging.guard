@@ -1,0 +1,15 @@
+# rules/logging/s3_access_logging.guard
+#
+# Category: logging
+# Requirement: 5.2, 5.3
+#
+# Reports S3 buckets that do not send server access logs anywhere. A bucket that
+# is itself the log destination will also be reported; that case is a deliberate
+# design decision rather than a rule gap, so the message explains the exception.
+
+let s3_buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_access_logging when %s3_buckets !empty {
+  %s3_buckets.Properties.LoggingConfiguration exists
+    << Server access logging is not configured on this S3 bucket. Add a LoggingConfiguration with a DestinationBucketName that points at a dedicated log bucket. If this bucket is the log destination itself, record the exception instead of enabling recursive logging. >>
+}

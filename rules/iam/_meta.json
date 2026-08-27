@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "category": "iam",
+  "normalized_category": "IAM",
+  "default": {
+    "finding_type": "Security",
+    "severity": "HIGH"
+  },
+  "rules": {
+    "iam_policy_no_star_star": {
+      "severity": "CRITICAL",
+      "why_it_matters": "An Allow statement that combines Action \"*\" with Resource \"*\" grants every API action on every resource in the account, which removes any boundary between the attached principal and full administrative access.",
+      "recommendation": "Replace Action \"*\" with the specific API actions the principal needs, and replace Resource \"*\" with the ARNs those actions apply to."
+    }
+  }
+}

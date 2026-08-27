@@ -1,0 +1,19 @@
+# rules/backup/rds_backup_retention.guard
+#
+# Category: backup
+# Requirement: 5.2, 5.3
+#
+# Reports RDS DB instances with no automated backup retention, or with a
+# retention window shorter than seven days. Seven days is the threshold this
+# rule set treats as the minimum recoverable window; adjust the comparison if an
+# organization mandates a different value.
+
+let rds_db_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' ]
+
+rule rds_backup_retention when %rds_db_instances !empty {
+  %rds_db_instances.Properties.BackupRetentionPeriod exists
+    << Automated backups are not configured on this RDS DB instance. Set BackupRetentionPeriod to at least 7 so that point in time recovery is available. A value of 0 disables automated backups. >>
+
+  %rds_db_instances[ Properties.BackupRetentionPeriod exists ].Properties.BackupRetentionPeriod >= 7
+    << The backup retention window on this RDS DB instance is shorter than 7 days. Raise BackupRetentionPeriod to at least 7 so that point in time recovery covers a full week. >>
+}

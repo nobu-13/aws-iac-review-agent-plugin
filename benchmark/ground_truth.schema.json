@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Benchmark Ground_Truth",
+  "description": "One benchmark case's expected review outcome. Written from the defects deliberately placed in the case template, before any review is run, and never derived from review output. benchmark/README.md states the methodology rules; benchmark/harness/metrics.py consumes the fields defined here.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "case_id",
+    "template",
+    "description",
+    "authored_before_review",
+    "expected_finding_count",
+    "expected_findings",
+    "expected_findings_agent_only",
+    "expected_findings_human_review"
+  ],
+  "properties": {
+    "schema_version": {
+      "description": "Version of this Ground_Truth format, independent of the plugin version and of the Review_Report schema_version. Bumped per semver when a field is added, removed, or changes meaning.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "case_id": {
+      "description": "Identifier of the case, equal to the name of the directory holding this file. 001-099 are defect cases, 101-199 are clean cases used as negative tests.",
+      "type": "string",
+      "pattern": "^case-[0-9]{3}-[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "template": {
+      "description": "Reviewed template, as a file name relative to the case directory. No path separators: a Ground_Truth file describes its own directory and nothing outside it.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*\\.(yaml|yml|json|template|template\\.json)$"
+    },
+    "description": {
+      "description": "What the template contains and which defects were placed in it, in prose. Read by a human deciding whether the expected findings below are the right expectations.",
+      "type": "string",
+      "minLength": 1
+    },
+    "authored_before_review": {
+      "description": "Declaration that these expectations were written before the review pipeline was run against the template. Always true: a case whose expectations were reverse-engineered from review output measures nothing, so there is no legal way to record that state. The declaration is not machine-verifiable; CI checks it indirectly by requiring ground_truth.json to appear in the same commit as template.yaml or earlier.",
+      "const": true
+    },
+    "expected_finding_count": {
+      "description": "Number of entries in expected_findings. Counted at the report's granularity: one finding per resource per Normalized_Category (see benchmark/README.md). Stated redundantly so that an expectation dropped by a careless edit is visible; tests assert the two agree.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "expected_findings": {
+      "description": "Findings the review is expected to report for this template. Order is significant only for tie-breaking: when two entries share a match key, the harness consumes actual findings in the order written here.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectedFinding"
+      }
+    },
+    "expected_findings_agent_only": {
+      "description": "Reserved for a future benchmark mode in which agent findings are the subject of measurement rather than a fixed fixture. Required, and empty in v0.1, so that adding the mode does not change this format. No maxItems constraint is imposed, so a future mode can populate it without a schema change.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectedFinding"
+      }
+    },
+    "expected_findings_human_review": {
+      "description": "Reserved for a future benchmark mode measuring findings only a human reviewer is expected to reach. Required, and empty in v0.1, so that adding the mode does not change this format. No maxItems constraint is imposed, so a future mode can populate it without a schema change.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/expectedFinding"
+      }
+    }
+  },
+  "$defs": {
+    "expectedFinding": {
+      "description": "One expected finding, at the report's granularity: one resource, one Normalized_Category. Several distinct problems of the same category on the same resource are one entry, because the report merges them into one finding.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resource",
+        "normalized_category",
+        "finding_type",
+        "severity",
+        "detection_class",
+        "detected_by",
+        "note"
+      ],
+      "properties": {
+        "resource": {
+          "description": "Logical ID of the resource the finding is about, or null for a template-level finding. Part of the match key; null compares as the empty string.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Za-z0-9]+$"
+        },
+        "normalized_category": {
+          "description": "Expected Finding.Normalized_Category. Part of the match key. The closed set is the categories array of iacreview/category_map.json.",
+          "$ref": "#/$defs/normalizedCategory"
+        },
+        "finding_type": {
+          "description": "Expected Finding.FindingType. Part of the match key.",
+          "$ref": "#/$defs/findingType"
+        },
+        "severity": {
+          "description": "Expected Finding.Severity. Deliberately not part of the match key: a severity mismatch is measured as Severity Accuracy, so that it does not also count as a missed detection.",
+          "$ref": "#/$defs/severity"
+        },
+        "confidence": {
+          "description": "Expected Finding.Confidence, when the case means to pin it. Optional: it follows from detection_class unless stated (deterministic implies Confirmed, agent-dependent implies Likely, the strongest confidence an agent finding may carry). Together with finding_type this expresses the four finding classes the security policy distinguishes: a confirmed issue is Confirmed, a likely risk is Likely, a contextual recommendation is Contextual, and an informational note is finding_type Informational.",
+          "$ref": "#/$defs/confidence"
+        },
+        "detection_class": {
+          "description": "Whether reaching this finding requires agent reasoning. deterministic findings are held to a 100% detection rate; agent-dependent findings are measured and reported without a pass/fail threshold.",
+          "enum": [
+            "deterministic",
+            "agent-dependent"
+          ]
+        },
+        "detected_by": {
+          "description": "Sources expected to report this finding. Used to filter expectations when the harness runs a single-Source mode; a finding several Sources reach lists all of them.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        },
+        "note": {
+          "description": "Which defect in the template this entry stands for, in prose. Not compared against Finding text: matching is by resource, FindingType and Normalized_Category, never by description string equality.",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "normalizedCategory": {
+      "description": "Closed Normalized_Category set. Kept identical to the categories array of iacreview/category_map.json; a test fails if the two drift apart.",
+      "enum": [
+        "IAM",
+        "Encryption",
+        "PublicAccess",
+        "Logging",
+        "Tagging",
+        "Availability",
+        "Backup",
+        "NetworkSecurity",
+        "DataProtection",
+        "TemplateQuality",
+        "Other"
+      ]
+    },
+    "findingType": {
+      "description": "Permitted FindingType values, as defined by iacreview.finding.FINDING_TYPES.",
+      "enum": [
+        "Validity",
+        "Security",
+        "BestPractice",
+        "Informational"
+      ]
+    },
+    "severity": {
+      "description": "Permitted Severity values, as defined by iacreview.finding.SEVERITIES. Severity is comparable only among findings sharing a FindingType.",
+      "enum": [
+        "CRITICAL",
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "INFO"
+      ]
+    },
+    "confidence": {
+      "description": "Permitted Confidence values, as defined by iacreview.finding.CONFIDENCES.",
+      "enum": [
+        "Confirmed",
+        "Likely",
+        "Contextual"
+      ]
+    },
+    "source": {
+      "description": "Permitted Source values, as defined by iacreview.finding.SOURCES.",
+      "enum": [
+        "cfn-lint",
+        "cfn-guard",
+        "IAM Review",
+        "Agent Review"
+      ]
+    }
+  }
+}

@@ -1,0 +1,10 @@
+# A YAML tag that PyYAML's unsafe loaders would turn into a call to os.system.
+# Requirement 9 AC7 forbids executing anything a Template embeds, and the
+# control is that iacreview.yamlcfn derives its loader from SafeLoader, which
+# refuses the tag outright: nothing here is ever constructed, so the file is
+# inert. It is kept as a fixture because "the plugin rejects this" is worth
+# asserting on a committed input rather than on one a test happens to write.
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DataBucket:
+    Type: !!python/object/apply:os.system ["echo pwned"]

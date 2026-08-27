@@ -1,0 +1,5 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Parses cleanly as JSON but the Resources mapping is empty, so there is nothing to review.",
+  "Resources": {}
+}

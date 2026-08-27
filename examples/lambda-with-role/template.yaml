@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# examples/lambda-with-role/template.yaml
+#
+# A Lambda function with an execution role that grants one action on one
+# resource. Written to show what "least privilege" looks like in a template that
+# still deploys and runs:
+#
+#   * the workload permission is one action on one fully qualified ARN, built
+#     from pseudo parameters so no account ID is written down;
+#   * log delivery comes from the AWS managed policy
+#     AWSLambdaBasicExecutionRole, the baseline AWS provides for it. Hand-writing
+#     those permissions requires a log stream ARN ending in `*`, because stream
+#     names are chosen at invocation time -- and this plugin reports any `*` in a
+#     Resource (`wildcard_resource`, MEDIUM). The managed policy keeps that
+#     tradeoff visible in one place instead of spreading it across the template;
+#   * the log group is declared with a retention period, so logs expire.
+#
+# Reviewed with:
+#
+#   python3 skills/iac-review/scripts/run_iac_review.py \
+#     --target examples/lambda-with-role/template.yaml
+#
+# The review reports one HIGH finding on the trust policy, merging three
+# detections. It is expected, it is explained in examples/README.md, and it is
+# asserted on in tests/integration/test_examples.py. The short version: the trust
+# policy is the one AWS documents for a Lambda execution role, and the
+# deterministic IAM detectors report an unconditioned service principal without
+# knowing whether the service honours a condition that would bound it. Do not add
+# a Condition here to silence them -- Lambda checks that it can assume the role
+# when the function is created, and a condition Lambda does not populate makes
+# the role unassumable.
+
+Description: >-
+  A Lambda function whose execution role allows one SSM parameter read and
+  nothing else. Used as a clean reference template for
+  aws-iac-review-agent-plugin.
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Description: Value of the Environment tag.
+    Default: development
+    AllowedValues:
+      - development
+      - staging
+      - production
+
+  OwnerName:
+    Type: String
+    Description: >-
+      Value of the Owner tag: the team or account answerable for this function.
+    MinLength: 1
+
+  LogRetentionInDays:
+    Type: Number
+    Description: How long to keep the function's logs.
+    Default: 30
+    AllowedValues: [1, 3, 5, 7, 14, 30, 60, 90, 180, 365]
+
+Resources:
+  # Declared rather than left to Lambda: a log group created implicitly on first
+  # invocation keeps its logs forever, and is not deleted with the stack.
+  ReportWriterLogGroup:
+    Type: AWS::Logs::LogGroup
+    # Stated rather than defaulted: cfn-lint reports a stateful resource with no
+    # explicit policy (I3011). Function logs belong to the function, so they go
+    # when it goes.
+    DeletionPolicy: Delete
+    UpdateReplacePolicy: Delete
+    Properties:
+      LogGroupName: !Sub "/aws/lambda/${AWS::StackName}-report-writer"
+      RetentionInDays: !Ref LogRetentionInDays
+
+  ReportWriterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      # The trust policy AWS documents for a Lambda execution role. See the
+      # header comment before changing it.
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - !Sub "arn:${AWS::Partition}:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+      Policies:
+        - PolicyName: ReadReportDestination
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              # One action, one parameter. The ARN carries no literal account ID
+              # and no `*`: AWS::Partition, AWS::Region and AWS::AccountId are
+              # supplied by CloudFormation at deploy time.
+              - Effect: Allow
+                Action: ssm:GetParameter
+                Resource: !Sub >-
+                  arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/example/report-writer/destination
+
+  ReportWriterFunction:
+    Type: AWS::Lambda::Function
+    # Without this the function may be invoked before the log group exists, and
+    # Lambda would create an unmanaged one with no retention period.
+    DependsOn: ReportWriterLogGroup
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}-report-writer"
+      Description: Reads one SSM parameter and returns it.
+      Runtime: python3.13
+      Handler: index.handler
+      Role: !GetAtt ReportWriterRole.Arn
+      Timeout: 10
+      MemorySize: 128
+      # Inline so the example needs no build step and no S3 upload. Real
+      # deployments should package their code instead.
+      Code:
+        ZipFile: |
+          import os
+
+          import boto3
+
+          NAME = "/example/report-writer/destination"
+          ssm = boto3.client("ssm")
+
+
+          def handler(event, context):
+              parameter = ssm.get_parameter(Name=NAME)
+              return {"destination": parameter["Parameter"]["Value"]}
+      Environment:
+        Variables:
+          ENVIRONMENT: !Ref EnvironmentName
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentName
+        - Key: Owner
+          Value: !Ref OwnerName
+
+Outputs:
+  ReportWriterFunctionArn:
+    Description: ARN of the created function.
+    Value: !GetAtt ReportWriterFunction.Arn
+
+  ReportWriterRoleArn:
+    Description: ARN of the function's execution role.
+    Value: !GetAtt ReportWriterRole.Arn

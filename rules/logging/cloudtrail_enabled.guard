@@ -1,0 +1,18 @@
+# rules/logging/cloudtrail_enabled.guard
+#
+# Category: logging
+# Requirement: 5.2, 5.3
+#
+# Reports CloudTrail trails that are declared but not started, and trails without
+# log file validation. The rule is skipped when the Template declares no trail,
+# because a single Template is not expected to own the account level trail.
+
+let cloudtrail_trails = Resources.*[ Type == 'AWS::CloudTrail::Trail' ]
+
+rule cloudtrail_enabled when %cloudtrail_trails !empty {
+  %cloudtrail_trails.Properties.IsLogging == true
+    << This CloudTrail trail is declared but logging is not started. Set IsLogging to true so that API activity is recorded from the moment the stack is created. >>
+
+  %cloudtrail_trails.Properties.EnableLogFileValidation == true
+    << Log file validation is not enabled on this CloudTrail trail. Set EnableLogFileValidation to true so that tampering with delivered log files can be detected. >>
+}

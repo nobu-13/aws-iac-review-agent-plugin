@@ -1,0 +1,7 @@
+[
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Error",
+    "Message": "truncated before the Rule object was closed",
+    "Rule": {
+      "Id": "E3002",

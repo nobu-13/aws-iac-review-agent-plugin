@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "category": "public-access",
+  "normalized_category": "PublicAccess",
+  "default": {
+    "finding_type": "Security",
+    "severity": "HIGH"
+  },
+  "rules": {
+    "s3_public_access_block": {
+      "severity": "CRITICAL",
+      "why_it_matters": "Without a public access block, a later bucket policy or ACL change can expose object data to the internet, and the bucket carries no account level guard against that change.",
+      "recommendation": "Add a PublicAccessBlockConfiguration with BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls and RestrictPublicBuckets all set to true."
+    },
+    "security_group_open_ingress": {
+      "severity": "HIGH",
+      "normalized_category": "NetworkSecurity",
+      "why_it_matters": "An ingress rule open to 0.0.0.0/0 or ::/0 exposes the attached instances to the entire internet, so every listening port on those instances is reachable from any source address.",
+      "recommendation": "Restrict CidrIp or CidrIpv6 to the source ranges that require access, or reference a source security group instead of a CIDR."
+    },
+    "rds_publicly_accessible": {
+      "severity": "CRITICAL",
+      "why_it_matters": "A publicly accessible database endpoint is reachable from the internet and only protected by network ACLs and database credentials.",
+      "recommendation": "Set PubliclyAccessible to false, place the instance in private subnets, and reach it through a bastion host, VPN or Direct Connect."
+    }
+  }
+}

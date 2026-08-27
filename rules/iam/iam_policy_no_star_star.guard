@@ -1,0 +1,30 @@
+# rules/iam/iam_policy_no_star_star.guard
+#
+# Category: iam
+# Requirement: 5.2, 5.3
+#
+# Reports Allow statements that combine Action "*" with Resource "*" in a
+# managed or standalone IAM policy document. Action and Resource may be either a
+# scalar or a list in CloudFormation, so both shapes are matched.
+#
+# Limitation: only the list form of Statement is matched. A policy document that
+# declares Statement as a single mapping is legal but rare in CloudFormation, and
+# Guard filters do not apply to a mapping.
+#
+# The iam-review Skill performs the same check with wider coverage (inline role
+# policies, trust policies, resource policies, single mapping Statements).
+# Overlapping Findings from the two Sources are merged by deduplication.
+
+let iam_policy_documents = Resources.*[
+  Type IN [ 'AWS::IAM::Policy', 'AWS::IAM::ManagedPolicy' ]
+  Properties.PolicyDocument.Statement exists
+]
+
+rule iam_policy_no_star_star when %iam_policy_documents !empty {
+  %iam_policy_documents.Properties.PolicyDocument.Statement[
+    Effect == 'Allow'
+    some Action[*] == '*'
+    some Resource[*] == '*'
+  ] empty
+    << An Allow statement grants every action on every resource. Replace Action "*" with the specific API actions the principal needs, and replace Resource "*" with the ARNs those actions apply to. >>
+}

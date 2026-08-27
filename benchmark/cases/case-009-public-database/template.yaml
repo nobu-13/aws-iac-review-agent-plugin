@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-009-public-database/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   CustomerDatabase   PubliclyAccessible: true on an instance that also declares a
+#                      DB subnet group of private subnets. The two settings
+#                      contradict each other, and the property wins: RDS assigns a
+#                      public endpoint.
+#   TelemetryDatabase  PubliclyAccessible: true on a second engine, which shows the
+#                      defect is a property of the request rather than of postgres.
+#
+# Both are reported by rules/public-access/rds_publicly_accessible.guard. The rule
+# only inspects the property when it is declared, because CloudFormation otherwise
+# derives the default from the subnet group and an absent value is not evidence of
+# a public endpoint -- so both instances declare it explicitly, which is what the
+# rule is written to catch.
+#
+# Both instances are otherwise correctly configured: storage encryption on, a seven
+# day backup window, deletion protection on, Environment and Owner tags. No
+# security group is declared, deliberately: an ingress rule open to 0.0.0.0/0 is
+# the NetworkSecurity defect case-005 measures, and including one here would make
+# this case measure two categories instead of one. The master password is managed
+# by RDS in Secrets Manager rather than written here: a benchmark template is
+# published, so it carries no credential of any shape.
+
+Description: >-
+  Benchmark case 009. Two RDS DB instances that request a public endpoint, one of
+  them while sitting in a subnet group of private subnets.
+
+Parameters:
+  DatabaseSubnetGroupName:
+    Type: String
+    Description: >-
+      Name of an existing DB subnet group of private subnets. Both instances use
+      it, which is what makes the public endpoint request a contradiction rather
+      than a consistent design.
+    MinLength: 1
+
+Resources:
+  CustomerDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      AllocatedStorage: "20"
+      # A public endpoint on a database holding customer records. This is the
+      # defect: the instance is reachable from the internet and protected only by
+      # security group rules and database credentials.
+      PubliclyAccessible: true
+      StorageEncrypted: true
+      MasterUsername: customer_admin
+      # No password is written down: RDS creates and rotates one in Secrets
+      # Manager. Benchmark templates carry no credential of any shape.
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-009
+
+  TelemetryDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      AllocatedStorage: "20"
+      # The same defect on a different engine. This is the defect.
+      PubliclyAccessible: true
+      StorageEncrypted: true
+      MasterUsername: telemetry_admin
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-009
+
+Outputs:
+  CustomerDatabaseEndpoint:
+    Description: Public endpoint of the customer database.
+    Value: !GetAtt CustomerDatabase.Endpoint.Address
+
+  TelemetryDatabaseEndpoint:
+    Description: Public endpoint of the telemetry database.
+    Value: !GetAtt TelemetryDatabase.Endpoint.Address

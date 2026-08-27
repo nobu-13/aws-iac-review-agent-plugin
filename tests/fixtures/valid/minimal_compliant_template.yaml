@@ -1,0 +1,39 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Minimal valid CloudFormation template used as a clean baseline fixture. It
+  intentionally satisfies every bundled Guard rule that applies to it, so a rule
+  firing against this Template indicates a false positive.
+
+Parameters:
+  AccessLogBucketName:
+    Type: String
+    Description: Name of an existing S3 bucket that receives server access logs.
+
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName:
+          Ref: AccessLogBucketName
+        LogFilePrefix: data-bucket/
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+
+Outputs:
+  DataBucketName:
+    Description: Name of the created bucket.
+    Value:
+      Ref: DataBucket

@@ -1,0 +1,23 @@
+[
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Informational",
+    "Location": {
+      "Start": { "LineNumber": 12, "ColumnNumber": 5 },
+      "End": { "LineNumber": 18, "ColumnNumber": 3 },
+      "Path": ["Resources", "AppBucket"]
+    },
+    "Message": "Consider adding a DeletionPolicy to this stateful resource",
+    "Rule": {
+      "Id": "I3013",
+      "ShortDescription": "Check resources with UpdateReplacePolicy/DeletionPolicy have both",
+      "Description": "The default action when replacing/removing a resource is to delete it",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint/blob/main/docs/rules.md#I3013"
+    }
+  },
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Informational",
+    "Rule": { "Id": "I9999" }
+  }
+]

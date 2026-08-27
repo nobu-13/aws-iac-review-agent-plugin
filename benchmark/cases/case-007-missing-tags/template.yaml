@@ -1,0 +1,92 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-007-missing-tags/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   IngestionQueue  Properties but no Tags list at all, so the resource can be
+#                   attributed to neither an environment nor a team.
+#   AlertTopic      tagged, but only with Owner: the Environment tag is missing.
+#   SessionTable    tagged, but only with Environment: the Owner tag is missing.
+#
+# The queue and the table declare DeletionPolicy and UpdateReplacePolicy, which is
+# not part of any defect: cfn-lint reports an informational finding on a stateful
+# resource that declares neither, and a case may report nothing its Ground_Truth
+# does not declare.
+#
+# All three are reported by rules/tagging/required_tags.guard, one per clause: the
+# "Tags exists" clause and the two `some Tags[*].Key` clauses. The three resource
+# types are chosen because no other bundled rule covers a queue, a topic or a
+# DynamoDB table, so the measurement stays on the tagging category. An S3 bucket
+# or an RDS instance would have been the obvious thing to tag, and would have
+# dragged the encryption, logging, public-access and backup rules into the case
+# with it.
+
+Description: >-
+  Benchmark case 007. Three taggable resources that cannot be attributed to an
+  environment or an owner: one carries no tags, and the other two carry one of
+  the two required tags each.
+
+Resources:
+  IngestionQueue:
+    Type: AWS::SQS::Queue
+    # Declared so that cfn-lint's informational "DeletionPolicy is a required
+    # property" rule stays quiet on this stateful resource. A case reports only
+    # what its Ground_Truth declares, and an informational finding here would
+    # make the case depend on which cfn-lint rule catalogue is installed instead
+    # of on the tagging rule it exists to measure.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # Tags is deliberately absent. This is the defect. Properties itself is
+      # present, so the resource is a plain "no tags" case rather than a resource
+      # with no configuration at all.
+      MessageRetentionPeriod: 345600
+      SqsManagedSseEnabled: true
+
+  AlertTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Benchmark case 007 alerts
+      # Owner is present and Environment is deliberately missing. This is the
+      # defect: the resource has an owner but belongs to no stated environment,
+      # so a production topic cannot be told from a development one.
+      Tags:
+        - Key: Owner
+          Value: benchmark-case-007
+
+  SessionTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+      # Environment is present and Owner is deliberately missing. This is the
+      # defect: the table belongs to a stated environment but names no team to
+      # contact during an incident.
+      Tags:
+        - Key: Environment
+          Value: production
+
+Outputs:
+  IngestionQueueUrl:
+    Description: URL of the untagged queue.
+    Value: !Ref IngestionQueue
+
+  AlertTopicArn:
+    Description: ARN of the topic missing its Environment tag.
+    Value: !Ref AlertTopic
+
+  SessionTableName:
+    Description: Name of the table missing its Owner tag.
+    Value: !Ref SessionTable

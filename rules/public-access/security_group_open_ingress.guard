@@ -1,0 +1,21 @@
+# rules/public-access/security_group_open_ingress.guard
+#
+# Category: public-access
+# Requirement: 5.2, 5.3
+#
+# Reports inline ingress rules that accept traffic from any address. Only
+# entries that actually declare a CIDR are inspected, so entries built on
+# SourceSecurityGroupId or SourcePrefixListId are left alone.
+#
+# Limitation: standalone AWS::EC2::SecurityGroupIngress resources are not
+# covered by this rule in v0.1.
+
+let security_groups = Resources.*[ Type == 'AWS::EC2::SecurityGroup' ]
+
+rule security_group_open_ingress when %security_groups !empty {
+  %security_groups[ Properties.SecurityGroupIngress exists ].Properties.SecurityGroupIngress[ CidrIp exists ].CidrIp != "0.0.0.0/0"
+    << An ingress rule allows traffic from 0.0.0.0/0. Restrict CidrIp to the specific source ranges that require access, or reference a source security group. >>
+
+  %security_groups[ Properties.SecurityGroupIngress exists ].Properties.SecurityGroupIngress[ CidrIpv6 exists ].CidrIpv6 != "::/0"
+    << An ingress rule allows traffic from ::/0. Restrict CidrIpv6 to the specific source ranges that require access, or reference a source security group. >>
+}

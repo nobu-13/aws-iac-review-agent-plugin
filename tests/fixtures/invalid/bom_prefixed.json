@@ -1,0 +1,9 @@
+﻿{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Prefixed with a UTF-8 BOM, which json.loads refuses.",
+  "Resources": {
+    "DataBucket": {
+      "Type": "AWS::S3::Bucket"
+    }
+  }
+}

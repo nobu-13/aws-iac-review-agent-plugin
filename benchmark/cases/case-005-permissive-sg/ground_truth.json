@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-005-permissive-sg",
+  "template": "template.yaml",
+  "description": "Two security groups accepting traffic from the whole internet. WebServerSecurityGroup has an SSH ingress rule open to 0.0.0.0/0 and an HTTPS ingress rule open to ::/0, one defect per address family; both are NetworkSecurity findings on the same resource, so they merge into one expected finding. DatabaseSecurityGroup exposes the PostgreSQL port to 0.0.0.0/0, which is the same defect on a port that should never be reachable from outside the VPC. Both groups carry Environment and Owner tags so the tagging rule stays quiet, and the template declares no other resource type any bundled rule covers.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "WebServerSecurityGroup",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "An SSH ingress rule with CidrIp 0.0.0.0/0 and an HTTPS ingress rule with CidrIpv6 ::/0. Both clauses of the security_group_open_ingress Guard rule fail on the same resource in the same category, so they merge into this one entry. The category is NetworkSecurity rather than PublicAccess because the rule carries that override in rules/public-access/_meta.json."
+    },
+    {
+      "resource": "DatabaseSecurityGroup",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "A PostgreSQL ingress rule with CidrIp 0.0.0.0/0, reported by the security_group_open_ingress Guard rule."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

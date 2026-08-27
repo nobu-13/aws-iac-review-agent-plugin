@@ -1,0 +1,229 @@
+#!/usr/bin/env python3
+"""A fake ``cfn-guard`` for integration tests, configured through a JSON file.
+
+The sibling of ``../cfn-lint``, and configured the same way. It exists for the
+same reason: a test that asserts on cfn-guard's Findings needs a *known*
+payload. Real cfn-guard's output depends on its version -- the JSON record
+stream, the clause vocabulary and the exit codes have all changed between
+releases -- so an assertion on them would fail on the next upstream release for
+reasons having nothing to do with this plugin.
+
+It also lets a test reach outcomes real cfn-guard cannot be talked into
+producing on demand: every exit code in the ``docs/architecture.md`` table
+(``0``, ``19``, ``255``, ``5``), a non-zero exit with unparsable stdout, a
+``--version`` that answers with no version at all, and a hang.
+
+Why this lives in ``cfn-guard-configured/`` rather than beside ``../cfn-lint``
+-----------------------------------------------------------------------------
+
+A file named ``cfn-guard`` directly in ``tests/fakebin/`` would shadow the real
+cfn-guard for every existing test that puts ``tests/fakebin`` first on ``PATH``
+to fake cfn-lint (``fake_lint_path`` in
+``tests/integration/test_skill_iac_review.py`` does exactly that, then appends
+the real cfn-guard's directory). Those tests need a fake cfn-lint and a *real*
+cfn-guard at the same time. Keeping this fake one directory down means a test
+opts into it by naming that directory, and no test gets it by accident.
+``tests/unit/test_fakebin.py`` asserts that ``tests/fakebin/`` holds no
+top-level ``cfn-guard``, so the reason above cannot be undone silently.
+
+Imitated surface
+----------------
+
+``--version``
+    Prints ``cfn-guard <version>`` on stdout and exits 0, which is what
+    :func:`iacreview.toolcheck.require_tool` parses.
+
+anything else
+    Prints the configured results payload on stdout and exits 0 when no record
+    carries a violation, 19 otherwise -- the code cfn-guard 3.2.1 was measured
+    to return for rule violations. Nothing in the plugin branches on the value
+    (:func:`iacreview.cfnguard.interpret_guard_result` classifies on whether
+    stdout parses), so the number is faithfulness to the measurement rather
+    than something the plugin depends on.
+
+Configuration
+-------------
+
+From ``$TMPDIR/fake-cfn-guard.json``, if that file exists. An absent file, or an
+absent ``TMPDIR``, means every default below.
+
+===================  ========================================================
+``version``          Version in the ``--version`` banner. Default ``3.2.1``.
+``version_text``     Verbatim ``--version`` stdout, replacing the formatted
+                     banner. ``""`` produces an empty banner, which is how the
+                     :data:`~iacreview.toolcheck.UNKNOWN_VERSION` path is
+                     reached.
+``version_stderr``   Text written to stderr on ``--version``.
+``version_exit``     Exit code of ``--version``. Default 0.
+``version_sleep_s``  Seconds to sleep before answering ``--version``.
+``results_text``     Printed verbatim as the results payload. Default is one
+                     record reporting one compliant rule. Verbatim rather than
+                     re-serialized, so a test can feed malformed JSON through
+                     the same channel.
+``stderr``           Text written to stderr before exiting.
+``exit_code``        Exit code, overriding the computed one. Use it for the
+                     measured failure codes (255 for an unparsable template or
+                     a missing rules directory, 5 for a ``.guard`` file that
+                     fails to parse), which cfn-guard pairs with *empty*
+                     stdout -- set ``results_text`` to ``""`` as well.
+``sleep_s``          Seconds to sleep before answering a normal invocation.
+                     A large value produces a hang; prefer
+                     ``../cfn-guard-timeout/`` when no other configuration is
+                     needed, since it needs no ``TMPDIR``.
+``log_argv``         When true, the received arguments are written as a JSON
+                     array to ``$TMPDIR/fake-cfn-guard-argv.json``, so a test
+                     can assert the exact command line the plugin built.
+===================  ========================================================
+
+Why a file in ``TMPDIR`` and not ``FAKE_CFN_GUARD_*`` environment variables:
+:mod:`iacreview.proc` passes children an explicit environment allowlist
+(``INHERITED_ENV_VARS``) so that AWS credentials in the parent environment cannot
+reach a static analyzer. Arbitrary variables are dropped by design and would
+never arrive here. ``TMPDIR`` is on that allowlist, so pointing it at a per-test
+directory is the supported way to hand this script something it can find.
+
+This script writes nothing and reads nothing but its own configuration file, and
+never evaluates an argument it was given.
+"""
+
+import json
+import os
+import sys
+import time
+
+DEFAULT_VERSION = "3.2.1"
+
+#: One record, the shape cfn-guard emits per evaluated rule file: a real rule
+#: name from ``rules/`` reported as compliant, so a clean run has non-zero
+#: ``rules_evaluated`` without any violation to normalize.
+DEFAULT_RESULTS = json.dumps(
+    {
+        "name": "fake-cfn-guard",
+        "metadata": {},
+        "status": "PASS",
+        "not_compliant": [],
+        "not_applicable": [],
+        "compliant": ["s3_bucket_encryption"],
+    },
+    indent=2,
+)
+
+CONFIG_FILENAME = "fake-cfn-guard.json"
+ARGV_LOG_FILENAME = "fake-cfn-guard-argv.json"
+
+#: Exit code cfn-guard 3.2.1 was measured to return for rule violations
+#: (docs/architecture.md, case b). It carries no count.
+VIOLATIONS_EXIT = 19
+
+
+def _tmpdir():
+    """Return the configured temporary directory, or ``None``."""
+    return os.environ.get("TMPDIR") or None
+
+
+def _config():
+    """Read the configuration file, or return an empty configuration."""
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        return {}
+    path = os.path.join(tmpdir, CONFIG_FILENAME)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        config = json.load(handle)
+    if not isinstance(config, dict):
+        raise SystemExit("fake cfn-guard: {0} must hold a JSON object".format(path))
+    return config
+
+
+def _log_argv(config, arguments):
+    """Record the received arguments when the configuration asks for it."""
+    if not config.get("log_argv"):
+        return
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        raise SystemExit("fake cfn-guard: log_argv requires TMPDIR to be set")
+    with open(os.path.join(tmpdir, ARGV_LOG_FILENAME), "w", encoding="utf-8") as h:
+        json.dump(list(arguments), h)
+
+
+def _sleep(config, key):
+    """Sleep for the configured number of seconds, if any."""
+    seconds = config.get(key)
+    if seconds:
+        time.sleep(float(seconds))
+
+
+def _iter_records(payload):
+    """Yield the record objects in ``payload``, or nothing if it is not readable.
+
+    cfn-guard writes one pretty-printed JSON object per evaluated rule file with
+    no separator and no enclosing array, so the stream is decoded incrementally,
+    the same way :func:`iacreview.cfnguard.parse_records` decodes it.
+    """
+    decoder = json.JSONDecoder()
+    index = 0
+    length = len(payload)
+    while index < length:
+        while index < length and payload[index].isspace():
+            index += 1
+        if index >= length:
+            return
+        try:
+            value, index = decoder.raw_decode(payload, index)
+        except ValueError:
+            return
+        if isinstance(value, list):
+            for item in value:
+                yield item
+        else:
+            yield value
+
+
+def _computed_exit(payload):
+    """Return the exit code cfn-guard would pair with ``payload``.
+
+    An unparsable or empty payload yields 0: the exit code is then whatever the
+    test configured explicitly. Guessing a failure code from text that is not
+    the expected structure would invent a claim this script cannot support, and
+    the measured failure cases pair their codes with empty stdout, so a test
+    reaching for them sets both fields anyway.
+    """
+    for record in _iter_records(payload):
+        if isinstance(record, dict) and record.get("not_compliant"):
+            return VIOLATIONS_EXIT
+    return 0
+
+
+def main(argv):
+    config = _config()
+    _log_argv(config, argv)
+
+    if "--version" in argv:
+        _sleep(config, "version_sleep_s")
+        banner = config.get("version_text")
+        if banner is None:
+            banner = "cfn-guard {0}\n".format(config.get("version", DEFAULT_VERSION))
+        sys.stdout.write(banner)
+        version_stderr = config.get("version_stderr")
+        if version_stderr:
+            sys.stderr.write(version_stderr)
+        return int(config.get("version_exit", 0))
+
+    _sleep(config, "sleep_s")
+
+    payload = config.get("results_text", DEFAULT_RESULTS)
+    sys.stdout.write(payload)
+
+    stderr_text = config.get("stderr")
+    if stderr_text:
+        sys.stderr.write(stderr_text)
+
+    override = config.get("exit_code")
+    if override is not None:
+        return int(override)
+    return _computed_exit(payload)
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

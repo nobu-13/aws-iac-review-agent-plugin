@@ -1,0 +1,50 @@
+# Python bytecode / caches
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Test / coverage artifacts
+.pytest_cache/
+.hypothesis/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build / packaging artifacts (the plugin ships as a directory, not a wheel)
+build/
+dist/
+*.egg-info/
+
+# CDK generated output (synthesized templates are inputs, never committed)
+cdk.out/
+node_modules/
+
+# Local review output
+*.review.json
+review-report.json
+
+# Credentials and local secrets must never be committed
+.env
+.env.*
+*.pem
+*.key
+credentials
+credentials.json
+
+# Editor / OS noise
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# MCP configuration is user-local; the plugin ships without one (Requirement 1 AC7)
+mcp.json

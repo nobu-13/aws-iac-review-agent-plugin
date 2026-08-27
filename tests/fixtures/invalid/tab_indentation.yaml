@@ -1,0 +1,9 @@
+# Indented with a TAB character on the Resources child line. YAML forbids tabs
+# in indentation, so PyYAML raises a ScannerError with a problem_mark. The case
+# exists because a tab is invisible in most editors and in most diffs: a user
+# hitting it needs the line and column the report carries, not a bare "invalid
+# YAML".
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+	DataBucket:
+    Type: AWS::S3::Bucket

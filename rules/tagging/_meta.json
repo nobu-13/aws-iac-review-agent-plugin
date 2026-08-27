@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "category": "tagging",
+  "normalized_category": "Tagging",
+  "default": {
+    "finding_type": "BestPractice",
+    "severity": "LOW"
+  },
+  "rules": {
+    "required_tags": {
+      "severity": "LOW",
+      "why_it_matters": "A resource without Environment and Owner tags cannot be attributed to a team or an environment, which slows down cost allocation and leaves no owner to contact during an incident.",
+      "recommendation": "Add a Tags list that includes at least Environment and Owner on the resource."
+    }
+  }
+}

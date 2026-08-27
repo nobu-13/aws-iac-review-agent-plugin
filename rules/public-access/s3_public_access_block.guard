@@ -1,0 +1,27 @@
+# rules/public-access/s3_public_access_block.guard
+#
+# Category: public-access
+# Requirement: 5.2, 5.3
+#
+# Reports S3 buckets without a PublicAccessBlockConfiguration, and buckets that
+# declare one but leave any of the four settings disabled. The settings are only
+# inspected when the configuration block exists, so a bucket that is missing it
+# entirely produces a single violation rather than five.
+
+let s3_buckets = Resources.*[ Type == 'AWS::S3::Bucket' ]
+
+rule s3_public_access_block when %s3_buckets !empty {
+  %s3_buckets.Properties.PublicAccessBlockConfiguration exists
+    << Public access is not blocked on this S3 bucket. Add a PublicAccessBlockConfiguration with BlockPublicAcls, BlockPublicPolicy, IgnorePublicAcls and RestrictPublicBuckets all set to true. >>
+
+  %s3_buckets[ Properties.PublicAccessBlockConfiguration exists ].Properties.PublicAccessBlockConfiguration {
+    BlockPublicAcls == true
+      << BlockPublicAcls is not enabled on this S3 bucket. Set it to true so that public ACLs cannot be attached to the bucket or its objects. >>
+    BlockPublicPolicy == true
+      << BlockPublicPolicy is not enabled on this S3 bucket. Set it to true so that a bucket policy granting public access cannot be applied. >>
+    IgnorePublicAcls == true
+      << IgnorePublicAcls is not enabled on this S3 bucket. Set it to true so that any existing public ACL is ignored. >>
+    RestrictPublicBuckets == true
+      << RestrictPublicBuckets is not enabled on this S3 bucket. Set it to true so that cross-account access through a public bucket policy is restricted. >>
+  }
+}

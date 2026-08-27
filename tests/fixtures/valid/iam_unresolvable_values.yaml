@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# Fixture for the IAM Source's coverage-gap disclosures (Task 13.4).
+#
+# Every value here is deliberately beyond static resolution, so the expectation
+# is written from the Template rather than read back from the review output:
+#
+#   ImportingRole
+#     inline policy   Resource is Fn::ImportValue
+#                     -> unresolvable_value, intrinsic "Fn::ImportValue"
+#     inline policy   Resource is a Ref to a parameter that has a Default and no
+#                     AllowedValues; the Default is deliberately not substituted
+#                     -> unresolvable_value, intrinsic "Ref"
+#
+#   MalformedRole
+#     inline policy   PolicyDocument written as a JSON string instead of a
+#                     mapping -> malformed_policy_document
+#
+# Nothing here is dangerous once resolved, so a Confirmed Security finding on
+# this Template would be a false positive. Dangerous policies live in
+# tests/fixtures/security/iam_dangerous_policies.yaml.
+Description: Template whose IAM values cannot be resolved statically.
+
+Parameters:
+  TargetQueueArn:
+    Type: String
+    Default: arn:aws:sqs:us-east-1:123456789012:app-queue
+    Description: Queue the role may read. Overridable at deploy time.
+
+Resources:
+  ImportingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: ReadImportedBucket
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: s3:GetObject
+                Resource: !ImportValue SharedBucketObjectsArn
+                Condition:
+                  StringEquals:
+                    aws:SourceAccount: !Ref AWS::AccountId
+        - PolicyName: ReadParameterizedQueue
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: sqs:GetQueueAttributes
+                Resource: !Ref TargetQueueArn
+                Condition:
+                  StringEquals:
+                    aws:SourceAccount: !Ref AWS::AccountId
+
+  MalformedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+            Condition:
+              StringEquals:
+                aws:SourceAccount: !Ref AWS::AccountId
+      Policies:
+        - PolicyName: WrittenAsAString
+          PolicyDocument: '{"Version": "2012-10-17", "Statement": []}'

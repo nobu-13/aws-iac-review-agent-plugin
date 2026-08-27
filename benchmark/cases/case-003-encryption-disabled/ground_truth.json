@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-003-encryption-disabled",
+  "template": "template.yaml",
+  "description": "Encryption at rest missing on the two resource types the bundled rules cover. ArchiveBucket declares no BucketEncryption property at all. AnalyticsDatabase declares StorageEncrypted: false, the explicit form of the same defect, on a property RDS cannot change in place after creation. Both resources are otherwise correctly configured: the bucket blocks public access, logs its access elsewhere and is tagged; the database sits in a private subnet group with PubliclyAccessible: false, a seven day backup retention window, deletion protection, and the same tags. The master password is managed by RDS rather than declared, so the template contains no credential.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "ArchiveBucket",
+      "normalized_category": "Encryption",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No BucketEncryption property on the bucket, reported by the s3_bucket_encryption Guard rule."
+    },
+    {
+      "resource": "AnalyticsDatabase",
+      "normalized_category": "Encryption",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "StorageEncrypted: false on the DB instance, reported by the rds_storage_encrypted Guard rule."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-007-missing-tags",
+  "template": "template.yaml",
+  "description": "Ownership tags missing in the three shapes rules/tagging/required_tags.guard distinguishes. IngestionQueue declares Properties but no Tags list, so it fails the \"Tags exists\" clause. AlertTopic carries an Owner tag and no Environment tag, and SessionTable carries an Environment tag and no Owner tag, so each fails one of the two key clauses. The resource types -- an SQS queue, an SNS topic and a DynamoDB table -- are chosen because no other bundled rule covers them, so the case measures the tagging category alone; a bucket or a DB instance would have pulled the encryption, logging, public-access and backup rules in with it. Nothing in the template is otherwise misconfigured: the queue enables SQS managed server-side encryption, and the table declares an on-demand billing mode with a single hash key.",
+  "authored_before_review": true,
+  "expected_finding_count": 3,
+  "expected_findings": [
+    {
+      "resource": "IngestionQueue",
+      "normalized_category": "Tagging",
+      "finding_type": "BestPractice",
+      "severity": "LOW",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No Tags list on the queue, which fails the \"Tags exists\" clause of the required_tags Guard rule. The two key clauses are filtered out for this resource, so it produces one finding rather than three. FindingType BestPractice and Severity LOW come from rules/tagging/_meta.json."
+    },
+    {
+      "resource": "AlertTopic",
+      "normalized_category": "Tagging",
+      "finding_type": "BestPractice",
+      "severity": "LOW",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No Tags entry with Key Environment on the topic, which fails the `some Tags[*].Key == 'Environment'` clause of the required_tags Guard rule. The Owner tag is present, so the other key clause is satisfied."
+    },
+    {
+      "resource": "SessionTable",
+      "normalized_category": "Tagging",
+      "finding_type": "BestPractice",
+      "severity": "LOW",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No Tags entry with Key Owner on the table, which fails the `some Tags[*].Key == 'Owner'` clause of the required_tags Guard rule. The Environment tag is present, so the other key clause is satisfied."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

@@ -1,0 +1,88 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-005-permissive-sg/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   WebServerSecurityGroup  SSH open to 0.0.0.0/0 and HTTPS open to ::/0. One
+#                           defect per address family, both on the same resource,
+#                           so the review reports them as one finding.
+#   DatabaseSecurityGroup   the PostgreSQL port open to 0.0.0.0/0, on a group that
+#                           should only admit the web tier.
+#
+# Both are reported by rules/public-access/security_group_open_ingress.guard, whose
+# Normalized_Category is overridden to NetworkSecurity in
+# rules/public-access/_meta.json. Both groups are tagged, so the tagging rule stays
+# quiet and the measurement stays on network security.
+
+Description: >-
+  Benchmark case 005. Two security groups whose ingress rules accept traffic from
+  any address on the internet.
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC the security groups belong to.
+
+Resources:
+  WebServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Web tier security group with unrestricted ingress.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # Administrative access from any IPv4 address on the internet.
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: "0.0.0.0/0"
+          Description: SSH from anywhere.
+        # The same defect over IPv6, which a rule matching only CidrIp would miss.
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIpv6: "::/0"
+          Description: HTTPS from anywhere.
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: "0.0.0.0/0"
+          Description: Outbound HTTPS to AWS service endpoints.
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-005
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Database tier security group with unrestricted ingress.
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        # A database port reachable from the internet. The source should be the
+        # web tier's security group, not a CIDR.
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          CidrIp: "0.0.0.0/0"
+          Description: PostgreSQL from anywhere.
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-005
+
+Outputs:
+  WebServerSecurityGroupId:
+    Description: ID of the web tier security group.
+    Value: !Ref WebServerSecurityGroup
+
+  DatabaseSecurityGroupId:
+    Description: ID of the database tier security group.
+    Value: !Ref DatabaseSecurityGroup

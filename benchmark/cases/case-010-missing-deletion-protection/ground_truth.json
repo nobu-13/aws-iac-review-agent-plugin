@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-010-missing-deletion-protection",
+  "template": "template.yaml",
+  "description": "Deletion protection missing in both shapes it can take. OrdersDatabase declares no DeletionProtection property, which defaults to false, and InventoryDatabase declares DeletionProtection: false. rules/backup/rds_deletion_protection.guard requires the value to be true rather than merely present, so both produce the same finding. Both instances declare DeletionPolicy and UpdateReplacePolicy: Snapshot, which is not a mitigation: those attributes make CloudFormation take a final snapshot when it removes or replaces the instance, whereas DeletionProtection refuses the delete call itself, including one issued outside CloudFormation. Both are otherwise correctly configured: storage encryption enabled, a seven day backup retention window, PubliclyAccessible: false in a private DB subnet group, and Environment and Owner tags. The backup window is set deliberately rather than incidentally: rds_backup_retention is the other rule in the backup category, and the report merges on resource plus category, so an instance missing both would collapse into one finding and the case would stop isolating deletion protection. That defect is measured by case-006. The master password is managed by RDS rather than declared, so the template contains no credential.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "OrdersDatabase",
+      "normalized_category": "Backup",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No DeletionProtection property on the DB instance, reported by the rds_deletion_protection Guard rule, whose clause requires the value to be true and therefore fails on an absent property. FindingType BestPractice and Severity MEDIUM come from rules/backup/_meta.json."
+    },
+    {
+      "resource": "InventoryDatabase",
+      "normalized_category": "Backup",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "DeletionProtection: false on the DB instance, the explicit form of the same defect, reported by the same rds_deletion_protection Guard rule."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

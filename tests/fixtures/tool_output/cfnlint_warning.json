@@ -1,0 +1,43 @@
+[
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Warning",
+    "Location": {
+      "Start": { "LineNumber": 61, "ColumnNumber": 11 },
+      "End": { "LineNumber": 61, "ColumnNumber": 34 },
+      "Path": [
+        "Resources",
+        "AppRole",
+        "Properties",
+        "Policies",
+        0,
+        "PolicyDocument",
+        "Statement",
+        0,
+        "Action"
+      ]
+    },
+    "Message": "IAM action s3:GetObjectss does not exist",
+    "Rule": {
+      "Id": "W3037",
+      "ShortDescription": "Check IAM Resource Policies for allowed actions",
+      "Description": "IAM Resource Policies actions should exist",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint/blob/main/docs/rules.md#W3037"
+    }
+  },
+  {
+    "Filename": "templates/app.yaml",
+    "Level": "Warning",
+    "Location": {
+      "Start": { "LineNumber": 12, "ColumnNumber": 5 },
+      "Path": ["Resources", "AppBucket"]
+    },
+    "Message": "Specifying an explicit name prevents updates that require replacement",
+    "Rule": {
+      "Id": "W3011",
+      "ShortDescription": "Check DeletionPolicy on resources",
+      "Description": "Ensure resources have a DeletionPolicy when appropriate",
+      "Source": "https://github.com/aws-cloudformation/cfn-lint/blob/main/docs/rules.md#W3011"
+    }
+  }
+]

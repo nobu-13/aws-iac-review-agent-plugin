@@ -1,0 +1,31 @@
+# cfn-guard 3.2.1 stdout in its default single-line-summary format,
+# captured by omitting --output-format json:
+#   cfn-guard validate --data tests/fixtures/tool_output/cfnguard_violations_input.yaml \
+#     --rules rules/encryption/s3_bucket_encryption.guard --type CFNTemplate --show-summary none
+# It stands in for any non-zero run whose stdout is not the expected JSON
+# structure, which interpret_guard_result must classify as a tool error
+# rather than as rule violations (Requirement 5 AC7).
+Evaluating data tests/fixtures/tool_output/cfnguard_violations_input.yaml against rules s3_bucket_encryption.guard
+Number of non-compliant resources 1
+Resource = PlainBucket {
+  Type      = AWS::S3::Bucket
+  Rule = s3_bucket_encryption {
+    ALL {
+      Check =  %s3_buckets[*].Properties.BucketEncryption EXISTS   {
+        Message = Server-side encryption is not configured on this S3 bucket. Add a BucketEncryption property with a ServerSideEncryptionConfiguration entry (for example SSEAlgorithm AES256 or aws:kms).
+        RequiredPropertyError {
+          PropertyPath = /Resources/PlainBucket/Properties[L:16,C:6]
+          MissingProperty = BucketEncryption
+          Reason = Could not find key BucketEncryption inside struct at path /Resources/PlainBucket/Properties[L:16,C:6]
+          Code:
+               14.  PlainBucket:
+               15.    Type: AWS::S3::Bucket
+               16.    Properties:
+               17.      BucketName: plain-bucket
+               18.  OpenSg:
+               19.    Type: AWS::EC2::SecurityGroup
+        }
+      }
+    }
+  }
+}

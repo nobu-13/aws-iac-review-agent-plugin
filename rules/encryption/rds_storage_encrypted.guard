@@ -1,0 +1,14 @@
+# rules/encryption/rds_storage_encrypted.guard
+#
+# Category: encryption
+# Requirement: 5.2, 5.3
+#
+# Reports RDS DB instances whose storage encryption is absent or disabled. The
+# rule is skipped when the Template contains no RDS DB instance.
+
+let rds_db_instances = Resources.*[ Type == 'AWS::RDS::DBInstance' ]
+
+rule rds_storage_encrypted when %rds_db_instances !empty {
+  %rds_db_instances.Properties.StorageEncrypted == true
+    << Storage encryption is not enabled on this RDS DB instance. Set StorageEncrypted to true, and set KmsKeyId when a customer managed key is required. Encryption at rest cannot be enabled in place after the instance is created. >>
+}

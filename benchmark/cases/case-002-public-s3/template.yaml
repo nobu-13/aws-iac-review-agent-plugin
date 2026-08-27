@@ -1,0 +1,80 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-002-public-s3/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   PublicAssetBucket        no PublicAccessBlockConfiguration, so nothing stops a
+#                            bucket policy or an ACL from exposing the objects.
+#                            Reported by rules/public-access/s3_public_access_block.guard.
+#   PublicAssetBucketPolicy  a resource policy granting Principal "*" read access
+#                            to every object, which is the exposure the missing
+#                            public access block would otherwise have prevented.
+#                            Reported by the deterministic IAM detectors.
+#
+# The bucket is otherwise correctly configured -- encrypted, access-logged, tagged
+# -- so the encryption, logging and tagging rules stay quiet and the measurement
+# stays on public access.
+
+Description: >-
+  Benchmark case 002. An S3 bucket with no public access block, carrying a bucket
+  policy that grants read access to every principal.
+
+Parameters:
+  AccessLogBucketName:
+    Type: String
+    Description: >-
+      Name of an existing bucket that receives this bucket's server access logs.
+      A log destination has to be a different bucket, so it is supplied as a
+      parameter rather than declared here.
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+    ConstraintDescription: must be a valid S3 bucket name.
+
+Resources:
+  PublicAssetBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # PublicAccessBlockConfiguration is deliberately absent. This is the defect.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucketName
+        LogFilePrefix: !Sub "${AWS::StackName}/PublicAssetBucket/"
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-002
+
+  PublicAssetBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref PublicAssetBucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          # Principal "*" on a resource policy admits anonymous callers, and no
+          # Condition narrows who is admitted.
+          - Sid: PublicReadForEveryObject
+            Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "${PublicAssetBucket.Arn}/*"
+
+Outputs:
+  PublicAssetBucketName:
+    Description: Name of the bucket with no public access block.
+    Value: !Ref PublicAssetBucket

@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+"""A fake ``cdk`` for integration tests, configured through a JSON file.
+
+The sibling of ``../cfn-lint`` and ``../cfn-guard-configured/cfn-guard``, and
+configured the same way. It exists so that the ``--confirm-cdk-synth`` path of
+:func:`iacreview.cdk.synth_if_confirmed` can be exercised without a Node
+toolchain, an ``npm install``, or a real CDK app -- none of which a test of this
+plugin should require, and the last of which would mean executing project code
+inside the test suite.
+
+What it imitates is narrow, because the plugin reads almost nothing of what the
+CDK CLI produces: it does not parse ``cdk synth``'s stdout at all. The only
+output that matters is the *files* left in ``cdk.out/``, which
+:func:`iacreview.cdk.find_synthesized_templates` then enumerates. So this fake's
+central job is to write ``cdk.out/<name>.template.json``.
+
+Why this lives in ``cdk-configured/`` rather than beside ``../cfn-lint``
+-----------------------------------------------------------------------
+
+A file named ``cdk`` directly in ``tests/fakebin/`` would shadow a real CDK CLI
+for every existing test that puts ``tests/fakebin`` first on ``PATH`` to fake
+cfn-lint. No test needs a real ``cdk`` today, but a fake that silently wins that
+race on a contributor's machine is the kind of thing that is discovered only
+when a result stops making sense. Keeping it one directory down means a test
+opts into it by naming the directory. ``tests/unit/test_fakebin.py`` asserts that
+``tests/fakebin/`` holds no top-level ``cdk``, so that reason cannot be undone
+silently.
+
+Imitated surface
+----------------
+
+``--version``
+    Prints ``<version> (build <hash>)`` on stdout and exits 0, which is the shape
+    the real CLI uses and which
+    :func:`iacreview.toolcheck.require_tool` parses.
+
+``synth`` (or anything else)
+    Writes the configured templates into ``./cdk.out/`` relative to the current
+    working directory -- which :func:`iacreview.cdk.synth_if_confirmed` has set
+    to the project directory -- then prints the configured stdout and exits.
+
+Configuration
+-------------
+
+From ``$TMPDIR/fake-cdk.json``, if that file exists. An absent file, or an absent
+``TMPDIR``, means every default below.
+
+===================  ========================================================
+``version``          Version in the ``--version`` banner. Default ``2.150.0``.
+``version_text``     Verbatim ``--version`` stdout, replacing the formatted
+                     banner. ``""`` produces an empty banner, which is how the
+                     :data:`~iacreview.toolcheck.UNKNOWN_VERSION` path is
+                     reached.
+``version_stderr``   Text written to stderr on ``--version``.
+``version_exit``     Exit code of ``--version``. Default 0.
+``version_sleep_s``  Seconds to sleep before answering ``--version``.
+``templates``        Object mapping a filename to the text written into
+                     ``cdk.out/``. Default is one reviewable, rule-compliant
+                     Template named ``FakeStack.template.json``. An empty object
+                     writes nothing, which is how "the synth succeeded but
+                     produced no reviewable Template" is reached. Text rather
+                     than a nested object, so a test can write a *malformed*
+                     Template through the same channel.
+``results_text``     Printed verbatim on stdout. Default ``""``. The real CLI
+                     prints the assembled Template here; the plugin ignores it,
+                     and this key exists so a test can prove that.
+``stderr``           Text written to stderr before exiting.
+``exit_code``        Exit code. Default 0.
+``sleep_s``          Seconds to sleep before answering a normal invocation.
+                     A large value produces a hang; prefer ``../cdk-timeout/``
+                     when no other configuration is needed, since it needs no
+                     ``TMPDIR``.
+``log_argv``         When true, the received arguments are written as a JSON
+                     array to ``$TMPDIR/fake-cdk-argv.json``, so a test can
+                     assert the exact command line the plugin built.
+===================  ========================================================
+
+Why a file in ``TMPDIR`` and not ``FAKE_CDK_*`` environment variables:
+:mod:`iacreview.proc` passes children an explicit environment allowlist
+(``INHERITED_ENV_VARS``) so that AWS credentials in the parent environment cannot
+reach an external tool. Arbitrary variables are dropped by design and would never
+arrive here. ``TMPDIR`` is on that allowlist, so pointing it at a per-test
+directory is the supported way to hand this script something it can find.
+
+Where this script is allowed to write
+-------------------------------------
+
+Only into ``./cdk.out/``, and only to a plain filename ending in
+``.template.json``. A key holding a path separator, a ``..`` component, a drive
+letter or a leading ``/`` is refused rather than sanitized, and the assembled
+path is confirmed to still resolve inside ``cdk.out`` before it is opened. A fake
+is still code in this repository: steering/security.md's path rules apply to it
+as much as to the plugin, and a fake that could be talked into writing outside
+its directory would be a worse hazard than the tool it stands in for, because
+tests hand it inputs no reviewer looks at twice.
+"""
+
+import json
+import os
+import sys
+import time
+
+DEFAULT_VERSION = "2.150.0"
+
+#: CDK's cloud assembly directory, and the suffix
+#: :func:`iacreview.cdk.find_synthesized_templates` collects.
+OUTPUT_DIRECTORY = "cdk.out"
+TEMPLATE_SUFFIX = ".template.json"
+
+#: A Template that parses, holds a resource, and satisfies every bundled Guard
+#: rule that applies to it -- the same posture as
+#: ``tests/fixtures/valid/minimal_compliant_template.yaml``. A default that
+#: violated rules would make every cdk test that only cares about "a Template
+#: was synthesized and reviewed" also depend on the rule set.
+DEFAULT_TEMPLATE = json.dumps(
+    {
+        "AWSTemplateFormatVersion": "2010-09-09",
+        "Description": "Synthesized by the fake cdk in tests/fakebin.",
+        "Resources": {
+            "FakeStackBucket": {
+                "Type": "AWS::S3::Bucket",
+                "Properties": {
+                    "BucketEncryption": {
+                        "ServerSideEncryptionConfiguration": [
+                            {
+                                "ServerSideEncryptionByDefault": {
+                                    "SSEAlgorithm": "AES256"
+                                }
+                            }
+                        ]
+                    },
+                    "PublicAccessBlockConfiguration": {
+                        "BlockPublicAcls": True,
+                        "BlockPublicPolicy": True,
+                        "IgnorePublicAcls": True,
+                        "RestrictPublicBuckets": True,
+                    },
+                    "LoggingConfiguration": {
+                        "DestinationBucketName": "fake-access-logs",
+                        "LogFilePrefix": "fake-stack/",
+                    },
+                    "Tags": [
+                        {"Key": "Environment", "Value": "production"},
+                        {"Key": "Owner", "Value": "platform-team"},
+                    ],
+                },
+            }
+        },
+    },
+    indent=1,
+)
+
+DEFAULT_TEMPLATES = {"FakeStack" + TEMPLATE_SUFFIX: DEFAULT_TEMPLATE}
+
+CONFIG_FILENAME = "fake-cdk.json"
+ARGV_LOG_FILENAME = "fake-cdk-argv.json"
+
+
+def _tmpdir():
+    """Return the configured temporary directory, or ``None``."""
+    return os.environ.get("TMPDIR") or None
+
+
+def _config():
+    """Read the configuration file, or return an empty configuration."""
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        return {}
+    path = os.path.join(tmpdir, CONFIG_FILENAME)
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        config = json.load(handle)
+    if not isinstance(config, dict):
+        raise SystemExit("fake cdk: {0} must hold a JSON object".format(path))
+    return config
+
+
+def _log_argv(config, arguments):
+    """Record the received arguments when the configuration asks for it."""
+    if not config.get("log_argv"):
+        return
+    tmpdir = _tmpdir()
+    if tmpdir is None:
+        raise SystemExit("fake cdk: log_argv requires TMPDIR to be set")
+    with open(os.path.join(tmpdir, ARGV_LOG_FILENAME), "w", encoding="utf-8") as h:
+        json.dump(list(arguments), h)
+
+
+def _sleep(config, key):
+    """Sleep for the configured number of seconds, if any."""
+    seconds = config.get(key)
+    if seconds:
+        time.sleep(float(seconds))
+
+
+def _safe_template_name(name):
+    """Return ``name`` if it is a plain Template filename, else fail.
+
+    Refused rather than sanitized: a rewritten name would let a test believe it
+    had written one file while another was created.
+    """
+    if not isinstance(name, str) or not name:
+        raise SystemExit("fake cdk: template names must be non-empty strings")
+    if not name.endswith(TEMPLATE_SUFFIX):
+        raise SystemExit(
+            "fake cdk: template name must end with {0}: {1!r}".format(
+                TEMPLATE_SUFFIX, name
+            )
+        )
+    if os.path.basename(name) != name or os.path.isabs(name):
+        raise SystemExit(
+            "fake cdk: template name must be a plain filename: {0!r}".format(name)
+        )
+    if os.sep in name or (os.altsep and os.altsep in name) or name.startswith("."):
+        raise SystemExit(
+            "fake cdk: template name must be a plain filename: {0!r}".format(name)
+        )
+    return name
+
+
+def _write_templates(templates):
+    """Write ``templates`` into ``./cdk.out``, creating the directory if needed."""
+    if not isinstance(templates, dict):
+        raise SystemExit("fake cdk: templates must be a JSON object")
+
+    output_root = os.path.realpath(os.path.join(os.getcwd(), OUTPUT_DIRECTORY))
+    if not templates:
+        # No directory is created for an empty mapping: "nothing was
+        # synthesized" and "an empty cdk.out exists" are different states, and
+        # find_synthesized_templates distinguishes them.
+        return
+    os.makedirs(output_root, exist_ok=True)
+
+    for name, text in sorted(templates.items()):
+        target = os.path.join(output_root, _safe_template_name(name))
+        # Belt and braces after the name check: confirm the assembled path is
+        # still inside cdk.out before anything is opened for writing.
+        if os.path.dirname(os.path.realpath(target)) != output_root:
+            raise SystemExit(
+                "fake cdk: refusing to write outside {0}: {1!r}".format(
+                    OUTPUT_DIRECTORY, name
+                )
+            )
+        if not isinstance(text, str):
+            raise SystemExit(
+                "fake cdk: template content must be a string: {0!r}".format(name)
+            )
+        with open(target, "w", encoding="utf-8") as handle:
+            handle.write(text)
+
+
+def main(argv):
+    config = _config()
+    _log_argv(config, argv)
+
+    if "--version" in argv:
+        _sleep(config, "version_sleep_s")
+        banner = config.get("version_text")
+        if banner is None:
+            banner = "{0} (build fake)\n".format(
+                config.get("version", DEFAULT_VERSION)
+            )
+        sys.stdout.write(banner)
+        version_stderr = config.get("version_stderr")
+        if version_stderr:
+            sys.stderr.write(version_stderr)
+        return int(config.get("version_exit", 0))
+
+    _sleep(config, "sleep_s")
+    _write_templates(config.get("templates", DEFAULT_TEMPLATES))
+
+    sys.stdout.write(config.get("results_text", ""))
+
+    stderr_text = config.get("stderr")
+    if stderr_text:
+        sys.stderr.write(stderr_text)
+
+    return int(config.get("exit_code", 0))
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

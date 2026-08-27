@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-002-public-s3",
+  "template": "template.yaml",
+  "description": "An S3 bucket exposed to the internet in two ways. PublicAssetBucket declares no PublicAccessBlockConfiguration, so nothing at the bucket level prevents a policy or an ACL from making its objects public. PublicAssetBucketPolicy then does exactly that: an Allow statement with Principal \"*\" granting s3:GetObject on every object, with no Condition. The bucket is otherwise correctly configured -- server-side encryption, server access logging to a parameterised destination bucket, Environment and Owner tags -- so the encryption, logging and tagging rules have nothing to report and the case measures public access only.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "PublicAssetBucket",
+      "normalized_category": "PublicAccess",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["cfn-guard"],
+      "note": "No PublicAccessBlockConfiguration on the bucket, reported by the s3_public_access_block Guard rule."
+    },
+    {
+      "resource": "PublicAssetBucketPolicy",
+      "normalized_category": "IAM",
+      "finding_type": "Security",
+      "severity": "CRITICAL",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": ["IAM Review"],
+      "note": "Principal \"*\" granted s3:GetObject on every object in the bucket policy, with no Condition. Reported by the principal_star IAM detector; the category is IAM because that is the category every Layer 1 IAM detector assigns."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

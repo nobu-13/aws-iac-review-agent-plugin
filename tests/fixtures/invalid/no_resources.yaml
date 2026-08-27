@@ -1,0 +1,10 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  Parses cleanly as YAML but declares no Resources section, so it is not a
+  reviewable CloudFormation Template.
+Parameters:
+  BucketName:
+    Type: String
+Outputs:
+  Placeholder:
+    Value: none

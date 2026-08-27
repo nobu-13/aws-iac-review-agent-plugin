@@ -1,0 +1,100 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-003-encryption-disabled/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   ArchiveBucket      no BucketEncryption, so objects are stored unencrypted at
+#                      rest. Reported by rules/encryption/s3_bucket_encryption.guard.
+#   AnalyticsDatabase  StorageEncrypted: false, which cannot be changed in place
+#                      after the instance is created. Reported by
+#                      rules/encryption/rds_storage_encrypted.guard.
+#
+# Both resources are otherwise correctly configured. In particular the database
+# declares BackupRetentionPeriod, DeletionProtection and PubliclyAccessible, and
+# both resources carry Environment and Owner tags, so the backup, public-access and
+# tagging rules stay quiet and the measurement stays on encryption. The master
+# password is managed by RDS in Secrets Manager rather than written here: a
+# benchmark template is published, so it carries no credential of any shape.
+
+Description: >-
+  Benchmark case 003. An S3 bucket with no server-side encryption and an RDS DB
+  instance with storage encryption switched off.
+
+Parameters:
+  AccessLogBucketName:
+    Type: String
+    Description: >-
+      Name of an existing bucket that receives the archive bucket's server access
+      logs.
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+    ConstraintDescription: must be a valid S3 bucket name.
+
+  DatabaseSubnetGroupName:
+    Type: String
+    Description: >-
+      Name of an existing DB subnet group of private subnets for the analytics
+      database.
+    MinLength: 1
+
+Resources:
+  ArchiveBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # BucketEncryption is deliberately absent. This is the defect.
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref AccessLogBucketName
+        LogFilePrefix: !Sub "${AWS::StackName}/ArchiveBucket/"
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-003
+
+  AnalyticsDatabase:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceClass: db.t3.micro
+      Engine: postgres
+      AllocatedStorage: "20"
+      # Storage encryption is deliberately switched off. This is the defect.
+      StorageEncrypted: false
+      MasterUsername: analytics_admin
+      # No password is written down: RDS creates and rotates one in Secrets
+      # Manager. Benchmark templates carry no credential of any shape.
+      ManageMasterUserPassword: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroupName
+      PubliclyAccessible: false
+      BackupRetentionPeriod: 7
+      DeletionProtection: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-003
+
+Outputs:
+  ArchiveBucketName:
+    Description: Name of the unencrypted bucket.
+    Value: !Ref ArchiveBucket
+
+  AnalyticsDatabaseEndpoint:
+    Description: Endpoint of the unencrypted database.
+    Value: !GetAtt AnalyticsDatabase.Endpoint.Address

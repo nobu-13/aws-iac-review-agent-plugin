@@ -1,0 +1,111 @@
+aws-iac-review-agent-plugin
+Copyright 2026 aws-iac-review-agent-plugin maintainers
+
+This product is licensed under the Apache License, Version 2.0. The full text is
+in the LICENSE file at the root of this distribution, and plugin.json declares
+the same license as "Apache-2.0".
+
+No source file in this package carries a license header. Apache-2.0 does not
+require one, and v0.1 keeps the license statement in LICENSE and NOTICE only.
+
+
+===============================================================================
+Third-party components
+===============================================================================
+
+Nothing below is bundled, vendored, or redistributed by this package. Each
+component is either a dependency the user installs separately with pip, or an
+external command-line tool the user installs and this plugin invokes as a
+subprocess. This section is therefore informational: because no third-party
+code is redistributed here, none of these licenses places a redistribution
+obligation on this package. It is recorded so that a reader can see the full
+set of software a review run touches without having to read the code.
+
+Each license below was read from the metadata of the version observed in this
+project's development environment, and the observed version is named where the
+upstream license has changed across major versions. Copyright holders are not
+reproduced: attribution is by project name and upstream location, which is
+where the authoritative notice lives.
+
+
+Declared Python dependencies
+----------------------------
+
+PyYAML
+    License   : MIT
+    Role      : the sole run-time dependency (Requirement 16 AC3). Parses
+                CloudFormation YAML, including the intrinsic-function short
+                forms, through the plugin's own SafeLoader subclass.
+    Upstream  : https://github.com/yaml/pyyaml
+    Bundled   : no. Installed by the user with "pip install PyYAML".
+
+pytest
+    License   : MIT
+    Role      : development and test only, via the "dev" extra of
+                pyproject.toml. Not imported by iacreview/ or skills/.
+    Upstream  : https://github.com/pytest-dev/pytest
+    Bundled   : no.
+
+pytest-cov
+    License   : MIT
+    Role      : development and test only, via the "dev" extra. Measures
+                coverage, including in Skill subprocesses.
+    Upstream  : https://github.com/pytest-dev/pytest-cov
+    Bundled   : no.
+
+Hypothesis
+    License   : MPL-2.0
+    Role      : development and test only, via the "dev" extra. Drives the
+                property-based tests under tests/property/.
+    Upstream  : https://github.com/HypothesisWorks/hypothesis
+    Bundled   : no.
+
+
+External command-line tools
+---------------------------
+
+These are executed as separate processes with argument arrays. This plugin
+reads their output and normalizes it; it does not link against them or copy
+any part of them.
+
+cfn-lint
+    License   : MIT-0 (MIT No Attribution), as declared by cfn-lint 1.46.0.
+                Releases before the 1.x series were licensed Apache-2.0.
+    Role      : deterministic CloudFormation syntax and resource specification
+                checks.
+    Upstream  : https://github.com/aws-cloudformation/cfn-lint
+    Bundled   : no. The user installs it; the plugin reports a missing tool
+                rather than fetching one.
+
+cloudformation-guard (cfn-guard)
+    License   : Apache-2.0, as declared by cfn-guard 3.2.1.
+    Role      : evaluates the policy rules under rules/ against a template.
+    Upstream  : https://github.com/aws-cloudformation/cloudformation-guard
+    Bundled   : no. The rules under rules/ are original to this project and
+                are covered by this package's own license.
+
+AWS CDK CLI (aws-cdk)
+    License   : Apache-2.0.
+    Role      : optional. Runs "cdk synth" to obtain a template from CDK
+                source, and only when the user passes --confirm-cdk-synth.
+    Upstream  : https://github.com/aws/aws-cdk-cli
+    Bundled   : no.
+
+
+Specifications
+--------------
+
+Agent Plugins 1.0.0
+    Role      : the packaging specification plugin.json conforms to. The schema
+                URL in plugin.json is a reference, not a fetched resource; no
+                schema document is copied into this package.
+    Upstream  : https://agent-plugins.org
+
+
+Trademarks
+----------
+
+AWS, Amazon Web Services, CloudFormation, and CDK are trademarks of Amazon.com,
+Inc. or its affiliates. This project is not affiliated with, endorsed by, or
+sponsored by Amazon Web Services. Section 6 of the Apache License grants no
+trademark rights.

@@ -1,0 +1,32 @@
+#!/bin/sh
+# A cfn-guard that answers --version at once and then never returns.
+#
+# --version is answered immediately on purpose. VERSION_CHECK_TIMEOUT_S is 10
+# seconds and a caller cannot shrink it through the Source API, so hanging the
+# banner too would add 10 seconds of real waiting to every test and would make
+# the run time out for a reason other than the one under test. Hanging only the
+# rule evaluation lets a test shrink the Source timeout and observe
+# ToolTimeoutError, which interpret_guard_result classifies as KIND_TIMEOUT.
+#
+# `exec` matters: it replaces this shell with sleep, so the process
+# subprocess.run kills on timeout *is* the sleep. Without it the shell is the
+# direct child, and iacreview.proc documents that grandchildren it spawned are
+# not tracked -- a `sleep 999` would survive every test run.
+#
+# PATH is set before that exec because the caller's PATH is this directory alone,
+# which is the whole point of the scenario -- and it therefore does not resolve
+# `sleep`, so the exec would fail with 127 and the fake would look fast rather
+# than hung. Naming the standard system directories here states the one external
+# command this script depends on.
+#
+# POSIX sh so the script still runs with PATH set to this directory alone; see
+# ../cfn-guard-crash/cfn-guard. Arguments are compared, never evaluated.
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "cfn-guard 3.2.1"
+        exit 0
+    fi
+done
+PATH=/usr/bin:/bin
+export PATH
+exec sleep 999

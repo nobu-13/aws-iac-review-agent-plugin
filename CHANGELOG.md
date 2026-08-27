@@ -1,0 +1,105 @@
+# Changelog
+
+All notable changes to `aws-iac-review-agent-plugin` are recorded in this file.
+
+The format follows [Keep a Changelog][keep-a-changelog], and this project follows
+[Semantic Versioning][semver]. The version a release entry names is the `version`
+field of `plugin.json`. The manifest is the plugin's public interface, so it is
+the single place the version is declared and this file quotes it; the two are
+checked against each other by `tests/unit/test_root_docs.py`.
+
+## What is recorded here
+
+This file records changes that a user of the plugin can observe. Five kinds of
+change are always recorded, because each one can break a caller that was working
+before:
+
+- **Breaking changes.** Any change to the command-line interface of a Skill
+  script, to the exit code table, or to the shape of the report on stdout.
+- **Finding schema changes.** The report envelope and the Finding are versioned
+  together as `schema_version` (`iacreview.report.SCHEMA_VERSION`). A change to a
+  field, or to one of the five closed value sets, is recorded here, and a
+  breaking one bumps MAJOR. The normalized category vocabulary belongs to this
+  group: `iacreview/category_map.json` carries its own `schema_version`, and
+  because every Finding names a category from its closed `categories` set, adding
+  a category, removing one, or moving a rule from one to another changes what a
+  caller reads out of a report. Changes to that file are recorded here with its
+  new `schema_version`.
+- **Skill changes.** A Skill added, removed or renamed, and any change to the
+  arguments, the output or the documented limitations of one.
+- **Dependency changes.** A change to the run-time Python dependencies, or to the
+  minimum supported version of Python, cfn-lint, cfn-guard or the AWS CDK CLI.
+  Development and test dependencies are not recorded here.
+- **Security fixes.** What the defect allowed, and which regression test now pins
+  it. Details that would help exploit an unpatched installation are left out.
+
+Every release heading links to the tag of that release. A release tag is the
+version with a `v` prefix, so `0.1.0` is tagged `v0.1.0`.
+
+Each release entry groups its changes under the six Keep a Changelog change
+types, and under those six only: `Added`, `Changed`, `Deprecated`, `Removed`,
+`Fixed` and `Security`. A change type with nothing under it is omitted rather
+than kept as an empty heading, which is why the first release below carries
+`Added` alone.
+
+## [Unreleased]
+
+Nothing yet.
+
+## [0.1.0] - 2026-08-27
+
+The first release. It is read-only by default: it reads templates, runs external
+analysis tools, and writes one JSON report to stdout. It creates, changes and
+deletes nothing in AWS, and applies no fix on its own.
+
+### Added
+
+- **Agent Plugins 1.0.0 manifest.** `plugin.json` declares the plugin name,
+  version, description, license and keywords. No `mcp.json` ships in v0.1; MCP is
+  documented under `docs/mcp/` as an optional integration rather than a
+  dependency.
+- **Five Skills, one concern each.** `cfn-lint-review` and `cfn-guard-review` wrap
+  the two external analysers, `iam-review` runs the plugin's own IAM detectors and
+  extracts policies for an agent to reason over, `cloudformation-review` extracts
+  template facts for the same purpose, and `iac-review` runs the deterministic
+  sources together and merges agent-produced findings into one report.
+- **Deterministic core (`iacreview/`).** Template discovery and parsing for
+  CloudFormation YAML and JSON, including the short-form intrinsic tags plain
+  YAML rejects; adapters that turn cfn-lint and cfn-guard output into Findings;
+  IAM detectors; normalization, deduplication and a stable ordering; the report
+  envelope; the exit code table; workspace path containment; and PATH resolution
+  with a minimum-version check for each external tool.
+- **A single normalized Finding shape.** Every Finding, from every source, carries
+  the same 13 fields with the same five closed value sets, so findings from
+  different sources are comparable and can be deduplicated. The report envelope
+  emits `schema_version` `1.0.0`, and `iacreview/category_map.json` declares
+  `schema_version` `1.0.0` for the 11-value normalized category vocabulary and
+  the rule-to-category mappings. `docs/finding-schema.md` is the reference.
+- **11 cfn-guard rules across six categories.** `rules/` ships `encryption/`,
+  `iam/`, `logging/`, `public-access/`, `backup/` and `tagging/`, each with a
+  `_meta.json` that records one entry per `.guard` file. A caller can add its own
+  rule directory on top of the bundled ones with `--rules-dir`.
+- **Benchmark harness with 12 cases.** `benchmark/harness/` scores a review
+  against ground truth authored ahead of any review output, and
+  `benchmark/cases/` holds 10 cases with deliberate defects and 2 clean cases
+  that a review should leave alone. `benchmark/ground_truth.schema.json` fixes the
+  ground-truth shape and `docs/benchmark-methodology.md` describes the method.
+- **Opt-in CDK synthesis.** A CDK project is only synthesized when
+  `--confirm-cdk-synth` is passed. Without it the plugin reports what it would
+  run and stops, because `cdk synth` executes project code and this release does
+  not sandbox it. Already-synthesized templates need no flag.
+- **Examples and documentation.** `examples/` holds small working templates and a
+  walkthrough of the synthesized-output path. `docs/` holds the architecture,
+  the security model, the benchmark methodology, the Finding schema reference,
+  the Kiro Power notes and the optional MCP configuration. `README.md`,
+  `CONTRIBUTING.md`, `LICENSE` and `NOTICE` are at the root.
+- **Test suite.** Unit, integration, negative, property-based and regression
+  tests, run with `python3 -m pytest`. Neither cfn-lint nor cfn-guard has to be
+  installed to run it: stub executables under `tests/fakebin/` drive the adapters
+  through their success, crash, timeout, too-old and missing paths, and the tests
+  that call a real tool are skipped when it is absent.
+
+[keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
+[semver]: https://semver.org/spec/v2.0.0/
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.1.0

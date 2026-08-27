@@ -1,0 +1,82 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+# benchmark/cases/case-004-logging-disabled/template.yaml
+#
+# DELIBERATELY DEFECTIVE. Do not deploy this template, and do not copy it into a
+# real stack. It exists to be reviewed. The clean, copyable samples are under
+# examples/.
+#
+# Deliberate defects, one per resource:
+#
+#   UploadBucket  no LoggingConfiguration, so there is no record of who read or
+#                 wrote its objects. Reported by
+#                 rules/logging/s3_access_logging.guard.
+#   AuditTrail    IsLogging: false and no EnableLogFileValidation: a trail that is
+#                 declared but never started, and whose delivered files could not
+#                 be checked for tampering if it were. Two defects on one
+#                 resource in one category, so the review reports them as one
+#                 finding. Reported by rules/logging/cloudtrail_enabled.guard.
+#
+# The bucket is otherwise correctly configured -- encrypted, closed to public
+# access, tagged -- so the encryption, public-access and tagging rules stay quiet
+# and the measurement stays on logging.
+
+Description: >-
+  Benchmark case 004. An S3 bucket with no server access logging and a CloudTrail
+  trail that is declared but not started.
+
+Parameters:
+  TrailLogBucketName:
+    Type: String
+    Description: >-
+      Name of an existing bucket that receives the trail's log files. Its bucket
+      policy must allow cloudtrail.amazonaws.com to write there.
+    MinLength: 3
+    MaxLength: 63
+    AllowedPattern: "[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]"
+    ConstraintDescription: must be a valid S3 bucket name.
+
+Resources:
+  UploadBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      # LoggingConfiguration is deliberately absent. This is the defect.
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+            BucketKeyEnabled: true
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: benchmark-case-004
+
+  AuditTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties:
+      S3BucketName: !Ref TrailLogBucketName
+      S3KeyPrefix: !Sub "${AWS::StackName}/audit"
+      # The trail records nothing until IsLogging is true, and
+      # EnableLogFileValidation is deliberately absent. These are the defects.
+      IsLogging: false
+      IncludeGlobalServiceEvents: true
+      IsMultiRegionTrail: true
+
+Outputs:
+  UploadBucketName:
+    Description: Name of the bucket with no access logging.
+    Value: !Ref UploadBucket
+
+  AuditTrailArn:
+    Description: ARN of the trail that is not started.
+    Value: !GetAtt AuditTrail.Arn
