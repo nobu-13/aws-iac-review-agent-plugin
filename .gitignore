@@ -51,3 +51,6 @@ mcp.json
 
 # Kiro development files (specs, steering) - not part of the plugin
 .kiro/
+
+# Local sample files - not part of the plugin package
+sample/
