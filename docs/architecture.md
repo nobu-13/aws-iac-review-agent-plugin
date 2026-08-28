@@ -439,12 +439,12 @@ below is what this project measured, not a contract cfn-guard offers.
 | --- | --- |
 | cfn-guard version observed | **3.2.1** (`cfn-guard --version`) |
 | Platform | macOS (arm64) |
-| Rule set | the 11 bundled `.guard` files under `rules/` |
+| Rule set | the 35 bundled `.guard` files under `rules/` |
 | Command | `cfn-guard validate --data <template> --rules <dir> --output-format json --type CFNTemplate --show-summary none` |
 
 | # | Case | Exit code | stdout | stderr |
 | --- | --- | --- | --- | --- |
-| a | Every applicable rule passes | `0` | 11 JSON records, one per rule file, `status` `PASS` or `SKIP`, all `not_compliant` empty | empty |
+| a | Every applicable rule passes | `0` | 35 JSON records, one per rule file, `status` `PASS` or `SKIP`, all `not_compliant` empty | empty |
 | b | Rule violations | `19` | 11 JSON records, 9 with `status: "FAIL"` and populated `not_compliant` | empty |
 | c | Unparsable template (`--data` is not valid YAML/JSON) | `255` | **empty** | `Error occurred Parser Error when parsing ...`, quoting the head of the data file |
 | d | `--rules` points at a path that does not exist | `255` | **empty** | ``Error occurred The path `<path>` does not exist`` |
@@ -518,7 +518,7 @@ rules_passed         = count of distinct names in compliant
 rules_not_applicable = count of distinct names in not_applicable
 ```
 
-Case a above yields `rules_evaluated = 11`, matching the 11 bundled `.guard`
+Case a above yields `rules_evaluated = 35`, matching the 35 bundled `.guard`
 files, which is the check that this reading is the correct one.
 
 **From rule declarations** (`rules_evaluated_source: "rule declarations"`), used

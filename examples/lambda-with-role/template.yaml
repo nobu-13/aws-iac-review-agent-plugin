@@ -112,6 +112,8 @@ Resources:
       Runtime: python3.13
       Handler: index.handler
       Role: !GetAtt ReportWriterRole.Arn
+      DeadLetterConfig:
+        TargetArn: !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:report-writer-dlq"
       Timeout: 10
       MemorySize: 128
       # Inline so the example needs no build step and no S3 upload. Real

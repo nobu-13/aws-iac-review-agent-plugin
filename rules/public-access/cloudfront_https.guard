@@ -1,0 +1,11 @@
+# rules/public-access/cloudfront_https.guard
+#
+# Category: public-access
+# Reports CloudFront distributions that allow HTTP viewer connections.
+
+let distributions = Resources.*[ Type == 'AWS::CloudFront::Distribution' ]
+
+rule cloudfront_https when %distributions !empty {
+  %distributions.Properties.DistributionConfig.DefaultCacheBehavior.ViewerProtocolPolicy IN ["https-only", "redirect-to-https"]
+    << This CloudFront distribution allows HTTP viewer connections. Set ViewerProtocolPolicy to https-only or redirect-to-https to enforce encrypted connections. >>
+}

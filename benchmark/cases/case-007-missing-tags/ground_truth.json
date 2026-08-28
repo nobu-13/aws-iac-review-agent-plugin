@@ -4,7 +4,7 @@
   "template": "template.yaml",
   "description": "Ownership tags missing in the three shapes rules/tagging/required_tags.guard distinguishes. IngestionQueue declares Properties but no Tags list, so it fails the \"Tags exists\" clause. AlertTopic carries an Owner tag and no Environment tag, and SessionTable carries an Environment tag and no Owner tag, so each fails one of the two key clauses. The resource types -- an SQS queue, an SNS topic and a DynamoDB table -- are chosen because no other bundled rule covers them, so the case measures the tagging category alone; a bucket or a DB instance would have pulled the encryption, logging, public-access and backup rules in with it. Nothing in the template is otherwise misconfigured: the queue enables SQS managed server-side encryption, and the table declares an on-demand billing mode with a single hash key.",
   "authored_before_review": true,
-  "expected_finding_count": 4,
+  "expected_finding_count": 7,
   "expected_findings": [
     {
       "resource": "IngestionQueue",
@@ -52,6 +52,39 @@
         "cfn-guard"
       ],
       "note": "SNS topic without KMS encryption; incidental to the tagging case"
+    },
+    {
+      "resource": "SessionTable",
+      "normalized_category": "DataProtection",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "cfn-guard"
+      ],
+      "note": "DynamoDB without point-in-time recovery"
+    },
+    {
+      "resource": "IngestionQueue",
+      "normalized_category": "Encryption",
+      "finding_type": "Security",
+      "severity": "MEDIUM",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "cfn-guard"
+      ],
+      "note": "SQS without KMS encryption"
+    },
+    {
+      "resource": "SessionTable",
+      "normalized_category": "Encryption",
+      "finding_type": "Security",
+      "severity": "MEDIUM",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "cfn-guard"
+      ],
+      "note": "DynamoDB without customer-managed encryption"
     }
   ],
   "expected_findings_agent_only": [],

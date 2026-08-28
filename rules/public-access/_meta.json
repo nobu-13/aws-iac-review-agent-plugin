@@ -22,6 +22,23 @@
       "severity": "CRITICAL",
       "why_it_matters": "A publicly accessible database endpoint is reachable from the internet and only protected by network ACLs and database credentials.",
       "recommendation": "Set PubliclyAccessible to false, place the instance in private subnets, and reach it through a bastion host, VPN or Direct Connect."
+    },
+    "ec2_imdsv2_required": {
+      "severity": "HIGH",
+      "normalized_category": "DataProtection",
+      "finding_type": "Security",
+      "why_it_matters": "IMDSv1 is the primary vector for credential theft via SSRF against EC2 instances.",
+      "recommendation": "Set MetadataOptions.HttpTokens to required and HttpEndpoint to enabled."
+    },
+    "alb_https_only": {
+      "severity": "HIGH",
+      "why_it_matters": "An HTTP listener without a redirect exposes user traffic to eavesdropping and manipulation.",
+      "recommendation": "Configure the default action as a redirect to HTTPS, or use HTTPS protocol directly."
+    },
+    "cloudfront_https": {
+      "severity": "HIGH",
+      "why_it_matters": "Allowing HTTP viewer connections exposes user traffic to interception on the last mile.",
+      "recommendation": "Set ViewerProtocolPolicy to https-only or redirect-to-https."
     }
   }
 }

@@ -87,7 +87,7 @@ Repository layout:
 plugin.json          the Agent Plugins 1.0.0 manifest
 skills/              five Skills, each with SKILL.md and scripts/
 iacreview/           the shared deterministic library (imported, never installed)
-rules/               11 cfn-guard rules in 6 category directories
+rules/               35 cfn-guard rules in 6 category directories
 benchmark/           12 measured cases, ground truth, and the harness
 examples/            small templates that are meant to pass review
 tests/               unit, integration, negative, regression and property tests
@@ -303,15 +303,24 @@ closed set of 11. The authoritative list is the `categories` array of
 the internet (`0.0.0.0/0`) or from all AWS accounts (`Principal: "*"`) is
 `PublicAccess`; every other network boundary concern is `NetworkSecurity`.
 
-The bundled cfn-guard rules, 11 files in 6 directories:
+The bundled cfn-guard rules, 35 files in 6 directories:
 
 ```text
 rules/
-  encryption/     s3_bucket_encryption, rds_storage_encrypted
+  encryption/     s3_bucket_encryption, rds_storage_encrypted, ebs_volume_encrypted,
+                  sns_topic_encrypted, logs_group_encrypted, sqs_queue_encrypted,
+                  dynamodb_encryption, kinesis_encryption, redshift_encryption,
+                  elasticache_encryption, efs_encryption
   iam/            iam_policy_no_star_star
-  logging/        s3_access_logging, cloudtrail_enabled
-  public-access/  s3_public_access_block, security_group_open_ingress, rds_publicly_accessible
-  backup/         rds_backup_retention, rds_deletion_protection
+  logging/        s3_access_logging, cloudtrail_enabled, logs_retention_set,
+                  alb_access_logging, vpc_flow_logs
+  public-access/  s3_public_access_block, security_group_open_ingress,
+                  rds_publicly_accessible, ec2_imdsv2_required,
+                  alb_https_only, cloudfront_https
+  backup/         rds_backup_retention, rds_deletion_protection, rds_multi_az,
+                  s3_deletion_policy, s3_versioning_enabled, dynamodb_pitr,
+                  secrets_rotation, lambda_dlq, lambda_timeout,
+                  asg_multi_az, ec2_ebs_optimized
   tagging/        required_tags
 ```
 
@@ -513,7 +522,7 @@ reason is in the document named beside it.
 **Coverage**
 
 - **The bundled cfn-guard rules only inspect the resource types they name.** The
-  11 rules cover specific S3, RDS, IAM, CloudTrail and Security Group
+  35 rules cover S3, RDS, IAM, CloudTrail, Security Group, Lambda, DynamoDB, SQS, SNS, EFS, Kinesis, Redshift, ElastiCache, ALB, CloudFront, ASG and EC2
   configurations. A resource type no rule mentions produces no cfn-guard finding,
   which is not evidence that it is well configured. Add your own rules with
   `--rules-dir`.

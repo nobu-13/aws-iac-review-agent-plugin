@@ -21,6 +21,18 @@
       "severity": "LOW",
       "why_it_matters": "Without a retention period, log data accumulates indefinitely, increasing storage costs with no operational benefit for older entries.",
       "recommendation": "Set RetentionInDays to a value appropriate for your compliance and debugging needs (e.g. 30, 90, or 365)."
+    },
+    "alb_access_logging": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Without access logs, investigation of security incidents and performance issues lacks request-level data.",
+      "recommendation": "Enable access logging by adding a LoadBalancerAttribute with access_logs.s3.enabled set to true."
+    },
+    "vpc_flow_logs": {
+      "severity": "MEDIUM",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "Security",
+      "why_it_matters": "Without VPC Flow Logs, there is no record of network traffic patterns for security analysis.",
+      "recommendation": "Add an AWS::EC2::FlowLog resource attached to the VPC."
     }
   }
 }

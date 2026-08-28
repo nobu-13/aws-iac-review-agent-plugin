@@ -1,0 +1,11 @@
+# rules/encryption/sqs_queue_encrypted.guard
+#
+# Category: encryption
+# Reports SQS queues without KMS encryption configured.
+
+let sqs_queues = Resources.*[ Type == 'AWS::SQS::Queue' ]
+
+rule sqs_queue_encrypted when %sqs_queues !empty {
+  %sqs_queues.Properties.KmsMasterKeyId exists
+    << This SQS queue is not encrypted with a customer-managed KMS key. Set KmsMasterKeyId to encrypt messages at rest. >>
+}

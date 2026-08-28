@@ -22,7 +22,7 @@ Finding を折り込み、1 つの JSON `Review_Report` を stdout へ書き出�
 | 機能 | 実現方法 |
 | --- | --- |
 | CloudFormation の構文と resource property のレビュー | cfn-lint。結果は plugin の Finding schema へ正規化される |
-| 組織 policy のレビュー | 同梱の 11 個の `.guard` rule に対する cfn-guard。encryption / public access / logging / tagging / IAM / backup を対象とする |
+| 組織 policy のレビュー | 同梱の 35 個の `.guard` rule に対する cfn-guard。encryption / public access / logging / tagging / IAM / backup / availability / data protection を対象とする |
 | 決定論的な IAM レビュー | wildcard 権限、権限昇格 action、無制限の `iam:PassRole` と `sts:AssumeRole`、confused deputy 条件の欠落、cross-account および wildcard principal を対象とする 15 個の detector |
 | Agent による意味的レビュー | 2 つの Skill (`cloudformation-review`、`iam-review` の layer 2) が決定論的に抽出された事実を推論の入力とし、pipeline が検証してから統合する Finding を生成する |
 | 正規化された 1 つのレポート | すべての Finding が同じ 13 フィールド、11 カテゴリのいずれか 1 つ、検出した source を持つ。等価な Finding は統合される。ID は決定論的に付与される |
@@ -85,7 +85,7 @@ Repository の構成。
 plugin.json          Agent Plugins 1.0.0 の manifest
 skills/              5 つの Skill。それぞれ SKILL.md と scripts/ を持つ
 iacreview/           共有される決定論的ライブラリ (import されるだけで install されない)
-rules/               6 つのカテゴリディレクトリに置かれた 11 個の cfn-guard rule
+rules/               6 つのカテゴリディレクトリに置かれた 35 個の cfn-guard rule
 benchmark/           測定対象の 12 case、ground truth、harness
 examples/            レビューを通ることを意図した小さなテンプレート
 tests/               unit / integration / negative / regression / property test
@@ -296,7 +296,7 @@ Benchmark harness は独自に 9 と 10 を追加する。これは意図的に 
 (`0.0.0.0/0`) またはすべての AWS account (`Principal: "*"`) からの到達可能性は
 `PublicAccess`、それ以外のネットワーク境界の懸念は `NetworkSecurity` である。
 
-同梱の cfn-guard rule は 6 ディレクトリに 11 ファイル。
+同梱の cfn-guard rule は 6 ディレクトリに 35 ファイル。
 
 ```text
 rules/
@@ -486,7 +486,7 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 
 **カバレッジ**
 
-- **同梱の cfn-guard rule は、名前を挙げた resource type だけを検査する。** 11 個の rule が
+- **同梱の cfn-guard rule は、名前を挙げた resource type だけを検査する。** 35 個の rule が
   対象とするのは特定の S3、RDS、IAM、CloudTrail、Security Group の設定である。どの rule も
   言及していない resource type からは cfn-guard の Finding が出ないが、それはその resource が
   適切に設定されている証拠ではない。独自 rule は `--rules-dir` で追加できる。

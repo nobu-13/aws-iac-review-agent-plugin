@@ -1,0 +1,12 @@
+# rules/backup/asg_multi_az.guard
+#
+# Category: backup (Availability override)
+# Reports Auto Scaling Groups configured with only one Availability Zone.
+
+let asgs = Resources.*[ Type == 'AWS::AutoScaling::AutoScalingGroup' ]
+
+rule asg_multi_az when %asgs !empty {
+  %asgs.Properties.AvailabilityZones exists
+  %asgs.Properties.AvailabilityZones[1] exists
+    << This Auto Scaling Group is configured in a single Availability Zone. Distribute instances across at least two AZs by adding multiple entries to AvailabilityZones or using VPCZoneIdentifier with subnets in different AZs. >>
+}

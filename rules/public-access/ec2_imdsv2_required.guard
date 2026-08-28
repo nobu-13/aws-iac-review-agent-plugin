@@ -1,0 +1,12 @@
+# rules/public-access/ec2_imdsv2_required.guard
+#
+# Category: public-access (DataProtection for override)
+# Reports EC2 instances without IMDSv2 enforcement.
+
+let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance' ]
+
+rule ec2_imdsv2_required when %ec2_instances !empty {
+  %ec2_instances.Properties.MetadataOptions exists
+  %ec2_instances.Properties.MetadataOptions.HttpTokens == "required"
+    << IMDSv2 is not enforced on this EC2 instance. Without HttpTokens: required, the instance metadata service is vulnerable to SSRF attacks. Set MetadataOptions.HttpTokens to required. >>
+}

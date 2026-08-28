@@ -574,6 +574,43 @@ _DANGEROUS_LAMBDA_COMBO = DetectorSpec(
 
 #: Every spec, in design.md's table order. :data:`SPECS` and
 #: :data:`DETECTOR_NAMES` are derived from it, so the order is stated once.
+
+_IAM_USER_INLINE_POLICY = DetectorSpec(
+    name="iam_user_inline_policy",
+    finding_type="BestPractice",
+    severity="MEDIUM",
+    category="IAM",
+    why_it_matters="Inline policies on IAM users scatter permissions across individuals rather than centralizing them in groups.",
+    recommendation="Create an IAM group with the required permissions and attach the user to it.",
+)
+
+_ACCESS_KEY_IN_TEMPLATE = DetectorSpec(
+    name="access_key_in_template",
+    finding_type="Security",
+    severity="HIGH",
+    category="IAM",
+    why_it_matters="Long-lived access keys in templates cannot be rotated without a stack update and may be exposed in source control.",
+    recommendation="Use IAM roles instead of access keys. If programmatic access is needed, create keys out-of-band with rotation.",
+)
+
+_IAM_ADMIN_POLICY_ATTACHED = DetectorSpec(
+    name="iam_admin_policy_attached",
+    finding_type="Security",
+    severity="CRITICAL",
+    category="IAM",
+    why_it_matters="AWS-managed administrator policies grant unrestricted access to all services and resources.",
+    recommendation="Replace with a custom policy scoped to the actual actions and resources needed.",
+)
+
+_OVERLY_PERMISSIVE_TRUST = DetectorSpec(
+    name="overly_permissive_trust",
+    finding_type="Security",
+    severity="MEDIUM",
+    category="IAM",
+    why_it_matters="A trust policy without conditions allows any account using the trusted service to assume the role.",
+    recommendation="Add a Condition with aws:SourceAccount or aws:SourceArn to restrict assumption.",
+)
+
 _ALL_SPECS: Tuple[DetectorSpec, ...] = (
     _STAR_ACTION_STAR_RESOURCE,
     _WILDCARD_ACTION,
@@ -590,6 +627,10 @@ _ALL_SPECS: Tuple[DetectorSpec, ...] = (
     _DANGEROUS_S3_COMBO,
     _DANGEROUS_EC2_PASSROLE,
     _DANGEROUS_LAMBDA_COMBO,
+    _IAM_USER_INLINE_POLICY,
+    _ACCESS_KEY_IN_TEMPLATE,
+    _IAM_ADMIN_POLICY_ATTACHED,
+    _OVERLY_PERMISSIVE_TRUST,
 )
 
 #: Detector name -> its specification.
@@ -1959,6 +2000,27 @@ def _is_cross_account_finding(finding: Finding) -> bool:
 #: Findings appear in within one site, which keeps output byte-stable
 #: (Requirement 16 AC11); it has no effect on *which* Findings appear, because
 #: the detectors are independent.
+
+def iam_user_inline_policy(target: PolicyTarget) -> DetectorResult:
+    """Placeholder: IAM users should use groups. Not yet implemented."""
+    return DetectorResult(())
+
+
+def access_key_in_template(target: PolicyTarget) -> DetectorResult:
+    """Placeholder: Access keys in templates. Not yet implemented."""
+    return DetectorResult(())
+
+
+def iam_admin_policy_attached(target: PolicyTarget) -> DetectorResult:
+    """Placeholder: Admin managed policies. Not yet implemented."""
+    return DetectorResult(())
+
+
+def overly_permissive_trust(target: PolicyTarget) -> DetectorResult:
+    """Placeholder: Trust policies without conditions. Not yet implemented."""
+    return DetectorResult(())
+
+
 DETECTORS: Tuple[Detector, ...] = (
     star_action_star_resource,
     wildcard_action,
@@ -1975,6 +2037,10 @@ DETECTORS: Tuple[Detector, ...] = (
     dangerous_s3_combo,
     dangerous_ec2_passrole,
     dangerous_lambda_combo,
+    iam_user_inline_policy,
+    access_key_in_template,
+    iam_admin_policy_attached,
+    overly_permissive_trust,
 )
 
 

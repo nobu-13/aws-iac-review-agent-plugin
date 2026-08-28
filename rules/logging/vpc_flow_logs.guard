@@ -1,0 +1,13 @@
+# rules/logging/vpc_flow_logs.guard
+#
+# Category: logging
+# Reports templates with a VPC but no VPC Flow Logs resource.
+# Note: this checks for the existence of at least one FlowLog resource in the template.
+
+let vpcs = Resources.*[ Type == 'AWS::EC2::VPC' ]
+let flow_logs = Resources.*[ Type == 'AWS::EC2::FlowLog' ]
+
+rule vpc_flow_logs when %vpcs !empty {
+  %flow_logs !empty
+    << This template defines a VPC but no VPC Flow Log. Add an AWS::EC2::FlowLog resource to capture network traffic for security analysis and troubleshooting. >>
+}

@@ -46,6 +46,39 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.2.0] - 2026-08-28
+
+### Added
+
+- **14 new cfn-guard rules** across four categories, bringing the total from 21
+  to 35. New rules cover encryption (Kinesis, Redshift, ElastiCache, EFS, SQS,
+  DynamoDB), logging (ALB access logs, VPC Flow Logs), public access (ALB HTTPS
+  enforcement, CloudFront HTTPS), and availability (DynamoDB PITR, Secrets
+  Manager rotation, Lambda DLQ, Lambda timeout, ASG Multi-AZ, EC2 EBS
+  optimization).
+- **4 IAM detector placeholders** registered in the detector table:
+  `iam_user_inline_policy`, `access_key_in_template`,
+  `iam_admin_policy_attached`, `overly_permissive_trust`. These are structural
+  preparation for v0.3.0; they do not produce findings yet.
+- Extended `required_tags` to cover `AWS::EC2::VPC` and `AWS::EC2::Subnet`.
+- `rds_deletion_protection` re-categorized from Backup to Availability to avoid
+  deduplication collision with `rds_backup_retention`.
+- `s3_versioning_enabled` re-categorized from Backup to DataProtection for the
+  same reason.
+- `ec2_imdsv2_required` rule categorized as DataProtection (Security finding
+  type).
+
+### Changed
+
+- Benchmark now covers 9 categories (added Availability and DataProtection to
+  the exercised set).
+- Total bundled rules: 21 -> 35.
+- Ground truth updated for benchmark cases affected by new rules.
+- `examples/lambda-with-role/template.yaml` now includes a `DeadLetterConfig`
+  and `KmsKeyId` on its log group to satisfy the new rules.
+- `tests/fixtures/valid/minimal_compliant_template.yaml` updated with
+  `DeletionPolicy`, `VersioningConfiguration` to remain compliant.
+
 ## [0.1.0] - 2026-08-27
 
 The first release. It is read-only by default: it reads templates, runs external
@@ -101,5 +134,6 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.1.0

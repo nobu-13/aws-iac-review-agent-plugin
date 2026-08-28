@@ -1,0 +1,11 @@
+# rules/backup/lambda_dlq.guard
+#
+# Category: backup (Availability override)
+# Reports Lambda functions without a Dead Letter Queue configured.
+
+let lambda_functions = Resources.*[ Type == 'AWS::Lambda::Function' ]
+
+rule lambda_dlq when %lambda_functions !empty {
+  %lambda_functions.Properties.DeadLetterConfig exists
+    << This Lambda function has no Dead Letter Queue configured. Add DeadLetterConfig with a TargetArn pointing to an SQS queue or SNS topic so that failed invocations are not lost silently. >>
+}

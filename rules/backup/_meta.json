@@ -28,6 +28,48 @@
       "why_it_matters": "Without versioning, overwritten or accidentally deleted objects cannot be recovered.",
       "recommendation": "Set VersioningConfiguration.Status to Enabled.",
       "normalized_category": "DataProtection"
+    },
+    "rds_multi_az": {
+      "severity": "MEDIUM",
+      "normalized_category": "Availability",
+      "why_it_matters": "A single-AZ RDS instance is a single point of failure; an AZ outage causes downtime.",
+      "recommendation": "Set MultiAZ to true for production workloads."
+    },
+    "dynamodb_pitr": {
+      "severity": "MEDIUM",
+      "normalized_category": "DataProtection",
+      "why_it_matters": "Without PITR, a table can only be restored from manual backups, not to an arbitrary point in time.",
+      "recommendation": "Add PointInTimeRecoverySpecification with PointInTimeRecoveryEnabled: true."
+    },
+    "secrets_rotation": {
+      "severity": "MEDIUM",
+      "normalized_category": "DataProtection",
+      "why_it_matters": "A secret without rotation accumulates exposure risk over its lifetime.",
+      "recommendation": "Add an AWS::SecretsManager::RotationSchedule resource."
+    },
+    "lambda_dlq": {
+      "severity": "MEDIUM",
+      "normalized_category": "Availability",
+      "why_it_matters": "Without a DLQ, failed Lambda invocations are lost with no opportunity for retry or analysis.",
+      "recommendation": "Add DeadLetterConfig with a TargetArn pointing to an SQS queue or SNS topic."
+    },
+    "lambda_timeout": {
+      "severity": "LOW",
+      "normalized_category": "Availability",
+      "why_it_matters": "The default 3-second timeout causes premature termination for any non-trivial workload.",
+      "recommendation": "Set Timeout to a value appropriate for the function (typically 30-300 seconds)."
+    },
+    "asg_multi_az": {
+      "severity": "MEDIUM",
+      "normalized_category": "Availability",
+      "why_it_matters": "An ASG in a single AZ is a single point of failure at the zone level.",
+      "recommendation": "Spread across at least two AZs via AvailabilityZones or VPCZoneIdentifier."
+    },
+    "ec2_ebs_optimized": {
+      "severity": "LOW",
+      "normalized_category": "Availability",
+      "why_it_matters": "Without EBS optimization, I/O throughput competes with network traffic on the same channel.",
+      "recommendation": "Set EbsOptimized to true."
     }
   }
 }

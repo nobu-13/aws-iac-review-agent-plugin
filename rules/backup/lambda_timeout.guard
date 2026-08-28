@@ -1,0 +1,11 @@
+# rules/backup/lambda_timeout.guard
+#
+# Category: backup (Availability override)
+# Reports Lambda functions using the default 3-second timeout.
+
+let lambda_functions = Resources.*[ Type == 'AWS::Lambda::Function' ]
+
+rule lambda_timeout when %lambda_functions !empty {
+  %lambda_functions.Properties.Timeout exists
+    << This Lambda function uses the default 3-second timeout. Set Timeout to a value appropriate for the function's workload to avoid premature termination. >>
+}

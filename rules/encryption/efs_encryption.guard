@@ -1,0 +1,11 @@
+# rules/encryption/efs_encryption.guard
+#
+# Category: encryption
+# Reports EFS file systems without encryption at rest.
+
+let efs_filesystems = Resources.*[ Type == 'AWS::EFS::FileSystem' ]
+
+rule efs_encryption when %efs_filesystems !empty {
+  %efs_filesystems.Properties.Encrypted == true
+    << This EFS file system is not encrypted at rest. Set Encrypted to true and optionally specify a KmsKeyId. >>
+}

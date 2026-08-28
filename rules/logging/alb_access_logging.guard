@@ -1,0 +1,11 @@
+# rules/logging/alb_access_logging.guard
+#
+# Category: logging
+# Reports ALBs/ELBv2 load balancers without access logging enabled.
+
+let load_balancers = Resources.*[ Type == 'AWS::ElasticLoadBalancingV2::LoadBalancer' ]
+
+rule alb_access_logging when %load_balancers !empty {
+  %load_balancers.Properties.LoadBalancerAttributes exists
+    << Access logging is not enabled on this load balancer. Add a LoadBalancerAttribute with Key access_logs.s3.enabled set to true and configure the target S3 bucket. >>
+}

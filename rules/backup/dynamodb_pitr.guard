@@ -1,0 +1,12 @@
+# rules/backup/dynamodb_pitr.guard
+#
+# Category: backup
+# Reports DynamoDB tables without point-in-time recovery enabled.
+
+let dynamodb_tables = Resources.*[ Type == 'AWS::DynamoDB::Table' ]
+
+rule dynamodb_pitr when %dynamodb_tables !empty {
+  %dynamodb_tables.Properties.PointInTimeRecoverySpecification exists
+  %dynamodb_tables.Properties.PointInTimeRecoverySpecification.PointInTimeRecoveryEnabled == true
+    << Point-in-time recovery is not enabled on this DynamoDB table. Add PointInTimeRecoverySpecification with PointInTimeRecoveryEnabled: true to allow recovery to any second in the last 35 days. >>
+}

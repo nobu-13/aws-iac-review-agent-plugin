@@ -1,0 +1,11 @@
+# rules/encryption/redshift_encryption.guard
+#
+# Category: encryption
+# Reports Redshift clusters without encryption at rest.
+
+let redshift_clusters = Resources.*[ Type == 'AWS::Redshift::Cluster' ]
+
+rule redshift_encryption when %redshift_clusters !empty {
+  %redshift_clusters.Properties.Encrypted == true
+    << This Redshift cluster is not encrypted at rest. Set Encrypted to true and specify a KmsKeyId. >>
+}

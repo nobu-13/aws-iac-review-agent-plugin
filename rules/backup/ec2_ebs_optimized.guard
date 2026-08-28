@@ -1,0 +1,11 @@
+# rules/backup/ec2_ebs_optimized.guard
+#
+# Category: backup (BestPractice/LOW)
+# Reports EC2 instances without EBS optimization enabled.
+
+let ec2_instances = Resources.*[ Type == 'AWS::EC2::Instance' ]
+
+rule ec2_ebs_optimized when %ec2_instances !empty {
+  %ec2_instances.Properties.EbsOptimized == true
+    << EBS optimization is not enabled on this EC2 instance. Set EbsOptimized to true for consistent I/O performance. Modern instance types are EBS-optimized by default, but declaring it explicitly documents the intent. >>
+}

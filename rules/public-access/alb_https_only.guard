@@ -1,0 +1,12 @@
+# rules/public-access/alb_https_only.guard
+#
+# Category: public-access
+# Reports ALB listeners using HTTP (port 80) without redirect to HTTPS.
+
+let listeners = Resources.*[ Type == 'AWS::ElasticLoadBalancingV2::Listener' ]
+let http_listeners = %listeners[ Properties.Protocol == 'HTTP' ]
+
+rule alb_https_only when %http_listeners !empty {
+  %http_listeners.Properties.DefaultActions[0].Type == "redirect"
+    << This ALB listener accepts HTTP traffic without redirecting to HTTPS. Configure a redirect action to HTTPS or use HTTPS protocol directly. >>
+}

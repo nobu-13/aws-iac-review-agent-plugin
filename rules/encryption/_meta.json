@@ -31,6 +31,36 @@
       "severity": "MEDIUM",
       "why_it_matters": "CloudWatch Logs data without customer-managed encryption relies solely on service-managed encryption, which may not satisfy compliance requirements.",
       "recommendation": "Set KmsKeyId on the log group to a customer-managed KMS key."
+    },
+    "sqs_queue_encrypted": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Messages in an unencrypted SQS queue can be read by anyone with access to the underlying storage.",
+      "recommendation": "Set KmsMasterKeyId to a KMS key ARN or alias."
+    },
+    "dynamodb_encryption": {
+      "severity": "MEDIUM",
+      "why_it_matters": "Without customer-managed encryption, DynamoDB data relies solely on AWS-owned keys and cannot satisfy compliance requirements that mandate key control.",
+      "recommendation": "Add SSESpecification with SSEEnabled: true and KMSMasterKeyId."
+    },
+    "kinesis_encryption": {
+      "severity": "HIGH",
+      "why_it_matters": "Unencrypted Kinesis streams expose streaming data to anyone with underlying storage access.",
+      "recommendation": "Add StreamEncryption with EncryptionType: KMS and a KeyId."
+    },
+    "redshift_encryption": {
+      "severity": "HIGH",
+      "why_it_matters": "An unencrypted Redshift cluster exposes warehouse data at rest.",
+      "recommendation": "Set Encrypted to true and specify a KmsKeyId."
+    },
+    "elasticache_encryption": {
+      "severity": "HIGH",
+      "why_it_matters": "Without encryption, cached data is exposed in transit and at rest, including session tokens and credentials.",
+      "recommendation": "Set TransitEncryptionEnabled and AtRestEncryptionEnabled to true, and configure an AuthToken."
+    },
+    "efs_encryption": {
+      "severity": "HIGH",
+      "why_it_matters": "An unencrypted EFS file system exposes file data to anyone with underlying storage access.",
+      "recommendation": "Set Encrypted to true and optionally provide a KmsKeyId."
     }
   }
 }

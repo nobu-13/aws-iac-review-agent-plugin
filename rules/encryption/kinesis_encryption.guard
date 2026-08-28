@@ -1,0 +1,12 @@
+# rules/encryption/kinesis_encryption.guard
+#
+# Category: encryption
+# Reports Kinesis streams without server-side encryption.
+
+let kinesis_streams = Resources.*[ Type == 'AWS::Kinesis::Stream' ]
+
+rule kinesis_encryption when %kinesis_streams !empty {
+  %kinesis_streams.Properties.StreamEncryption exists
+  %kinesis_streams.Properties.StreamEncryption.EncryptionType == "KMS"
+    << This Kinesis stream is not encrypted with KMS. Add StreamEncryption with EncryptionType: KMS and a KeyId to encrypt data at rest. >>
+}

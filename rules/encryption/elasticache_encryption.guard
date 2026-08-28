@@ -1,0 +1,12 @@
+# rules/encryption/elasticache_encryption.guard
+#
+# Category: encryption
+# Reports ElastiCache replication groups without encryption in transit and at rest.
+
+let cache_groups = Resources.*[ Type == 'AWS::ElastiCache::ReplicationGroup' ]
+
+rule elasticache_encryption when %cache_groups !empty {
+  %cache_groups.Properties.TransitEncryptionEnabled == true
+  %cache_groups.Properties.AtRestEncryptionEnabled == true
+    << This ElastiCache replication group does not have encryption enabled. Set both TransitEncryptionEnabled and AtRestEncryptionEnabled to true. >>
+}

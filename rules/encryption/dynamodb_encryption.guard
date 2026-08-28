@@ -1,0 +1,12 @@
+# rules/encryption/dynamodb_encryption.guard
+#
+# Category: encryption
+# Reports DynamoDB tables without customer-managed KMS encryption.
+
+let dynamodb_tables = Resources.*[ Type == 'AWS::DynamoDB::Table' ]
+
+rule dynamodb_encryption when %dynamodb_tables !empty {
+  %dynamodb_tables.Properties.SSESpecification exists
+  %dynamodb_tables.Properties.SSESpecification.SSEEnabled == true
+    << This DynamoDB table does not use customer-managed encryption. Add SSESpecification with SSEEnabled: true and a KMSMasterKeyId for full control over the encryption key. >>
+}

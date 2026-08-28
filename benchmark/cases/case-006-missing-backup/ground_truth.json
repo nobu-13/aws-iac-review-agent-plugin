@@ -4,7 +4,7 @@
   "template": "template.yaml",
   "description": "Automated backups left without a usable recovery window on the one resource type the bundled rules cover. LedgerDatabase declares BackupRetentionPeriod: 0, which disables automated backups outright. ReportingDatabase declares BackupRetentionPeriod: 3, a window shorter than the seven days rules/backup/rds_backup_retention.guard treats as the minimum. Both therefore fail the same clause of that rule while carrying materially different defects: no recovery point at all, and a recovery point that expires too soon. The rule's other clause, requiring the property to be present, is deliberately not exercised: an absent BackupRetentionPeriod also draws an informational cfn-lint finding, and a case may report nothing its Ground_Truth does not declare, so covering that clause would tie this case to the installed cfn-lint rule catalogue. Both instances are otherwise correctly configured: storage encryption enabled, deletion protection enabled, PubliclyAccessible: false in a private DB subnet group, and Environment and Owner tags. Deletion protection is enabled deliberately rather than incidentally: it is the other rule in the backup category, and the report merges on resource plus category, so an instance missing both would collapse into one finding and the case would stop isolating the retention window. That defect is measured by case-010. The master password is managed by RDS rather than declared, so the template contains no credential.",
   "authored_before_review": true,
-  "expected_finding_count": 2,
+  "expected_finding_count": 4,
   "expected_findings": [
     {
       "resource": "LedgerDatabase",
@@ -13,7 +13,9 @@
       "severity": "MEDIUM",
       "confidence": "Confirmed",
       "detection_class": "deterministic",
-      "detected_by": ["cfn-guard"],
+      "detected_by": [
+        "cfn-guard"
+      ],
       "note": "BackupRetentionPeriod: 0 on the DB instance, which disables automated backups and fails the \">= 7\" clause of the rds_backup_retention Guard rule. The category's FindingType is BestPractice and its Severity MEDIUM, both from rules/backup/_meta.json."
     },
     {
@@ -23,8 +25,32 @@
       "severity": "MEDIUM",
       "confidence": "Confirmed",
       "detection_class": "deterministic",
-      "detected_by": ["cfn-guard"],
+      "detected_by": [
+        "cfn-guard"
+      ],
       "note": "BackupRetentionPeriod: 3 on the DB instance, which fails the same \">= 7\" clause of the rds_backup_retention Guard rule. The property exists, so the rule's \"property exists\" clause is satisfied and only the window length is reported."
+    },
+    {
+      "resource": "LedgerDatabase",
+      "normalized_category": "Availability",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "cfn-guard"
+      ],
+      "note": "rds_multi_az v0.2.0 rule addition"
+    },
+    {
+      "resource": "ReportingDatabase",
+      "normalized_category": "Availability",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "cfn-guard"
+      ],
+      "note": "rds_multi_az v0.2.0 rule addition"
     }
   ],
   "expected_findings_agent_only": [],
