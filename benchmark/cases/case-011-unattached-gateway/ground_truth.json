@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-011-unattached-gateway",
+  "template": "template.yaml",
+  "description": "An Internet Gateway (AppGateway) is declared but no AWS::EC2::VPCGatewayAttachment references it, so it is unattached: the Network Review Source reports it via igw_not_attached. The public route table (AppRouteTable) has no AWS::EC2::Route giving it a default 0.0.0.0/0 route while an Internet Gateway exists, reported via route_table_no_default_route. Both are relationships between resources that a single-resource cfn-guard rule cannot express; they are detected deterministically by iacreview.netgraph. The template is otherwise complete: the route table is associated with a subnet (so it is not orphaned), a VPC flow log is configured, and every resource carries Environment and Owner tags, so no other deterministic Source fires and the case isolates the two network-topology findings.",
+  "authored_before_review": true,
+  "expected_finding_count": 2,
+  "expected_findings": [
+    {
+      "resource": "AppGateway",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "Network Review"
+      ],
+      "note": "Internet Gateway with no VPCGatewayAttachment, reported by the igw_not_attached detector in iacreview.netgraph."
+    },
+    {
+      "resource": "AppRouteTable",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "Security",
+      "severity": "MEDIUM",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "Network Review"
+      ],
+      "note": "Route table with no default 0.0.0.0/0 route while an Internet Gateway exists, reported by the route_table_no_default_route detector."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

@@ -29,6 +29,7 @@ What it does today:
 | Deterministic quality review | Template-structure analysis over condition logic, unused parameters and conditions, circular dependencies and mixed-type allowed values |
 | Agent semantic review | Two Skills (`cloudformation-review`, `iam-review` layer 2) reason over deterministically extracted facts and produce findings the pipeline validates and merges |
 | One normalized report | Every finding carries the same 13 fields, one of 11 categories, and the sources that detected it. Equivalent findings merge. IDs are assigned deterministically |
+| SARIF 2.1.0 output | `iac-review --format sarif` emits the report as SARIF for GitHub code scanning and CI result viewers; a deterministic transform that keeps Confidence, category, and the merged source list in each result's `properties` |
 | Reviewing synthesized CDK output | Templates under `cdk.out/` are reviewed as a separate group. `cdk synth` runs only behind an explicit flag |
 
 It is read-only. It calls no AWS API, deploys nothing, and applies no fix.
@@ -91,7 +92,7 @@ plugin.json          the Agent Plugins 1.0.0 manifest
 skills/              five Skills, each with SKILL.md and scripts/
 iacreview/           the shared deterministic library (imported, never installed)
 rules/               36 cfn-guard rules in 6 category directories
-benchmark/           12 measured cases, ground truth, and the harness
+benchmark/           15 measured cases, ground truth, and the harness
 examples/            small templates that are meant to pass review
 tests/               unit, integration, negative, regression and property tests
 docs/                architecture, security model, Finding schema, benchmark method, Kiro
@@ -245,9 +246,19 @@ python3 skills/iac-review/scripts/run_iac_review.py \
   --agent-findings agent-findings.json
 ```
 
+Emit SARIF 2.1.0 instead of the default JSON report, for GitHub code scanning or
+another CI result viewer:
+
+```sh
+python3 skills/iac-review/scripts/run_iac_review.py \
+  --target templates/app.yaml \
+  --format sarif > review.sarif
+```
+
 `iac-review` options: `--target` (required, repeatable), `--sources` to restrict
 which deterministic sources run, `--rules-dir` to add your own `.guard` rules on
-top of the bundled ones, `--agent-findings`, `--confirm-cdk-synth`, `--verbose`.
+top of the bundled ones, `--format {json,sarif}` (default `json`),
+`--agent-findings`, `--confirm-cdk-synth`, `--verbose`.
 Each `SKILL.md` documents its own options and output in full.
 
 ### Report envelope
@@ -404,8 +415,8 @@ defines what each number means and how far it generalizes.
 
 | What | How |
 | --- | --- |
-| Test suite | `python3 -m pytest`, over 3900 tests, zero failures |
-| Unit | 42 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis, secret detection, template quality |
+| Test suite | `python3 -m pytest`, over 4000 tests, zero failures |
+| Unit | 43 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis, secret detection, template quality |
 | Integration | 14 files running the seven entry points as real subprocesses over real templates, including 133 malformed-input cases |
 | Negative | Clean templates produce no false positive of the counted classes |
 | Regression | 8 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors |

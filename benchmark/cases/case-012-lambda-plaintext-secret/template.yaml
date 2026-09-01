@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A Lambda function whose environment variables hold a plaintext API key. The
+  value has the shape of a secret and is not a placeholder, so the Secret
+  Review Source reports it with the value redacted. The function is otherwise
+  complete -- a supported runtime, an explicit timeout, a dead-letter queue,
+  and tags -- so the case isolates the one secret finding.
+Resources:
+  ProcessorFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: processor
+      Runtime: python3.12
+      Handler: index.handler
+      Timeout: 30
+      Code:
+        ZipFile: |
+          def handler(event, context):
+            return {"statusCode": 200}
+      Role: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/processor"
+      DeadLetterConfig:
+        TargetArn: !Sub "arn:${AWS::Partition}:sqs:${AWS::Region}:${AWS::AccountId}:dlq"
+      Environment:
+        Variables:
+          LOG_LEVEL: info
+          API_KEY: sk-a7F9k2Qm8xLpZ3rT5vN1bW4c  # secret-scan:allow deliberate plaintext secret this case detects
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team

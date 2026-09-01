@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-012-lambda-plaintext-secret",
+  "template": "template.yaml",
+  "description": "ProcessorFunction declares an environment variable API_KEY holding a value with the shape of a provider token. It is not a placeholder, so the Secret Review Source (iacreview.secrets) reports it via lambda_env_plaintext_secret with the value redacted in the excerpt. cfn-lint W1011/W2501 warn about a parameter used as a secret, which this is not; the value is written down directly, which only the Secret Review Source finds. The function is otherwise complete: a supported runtime, an explicit timeout, a dead-letter queue, and Environment and Owner tags, so no other deterministic Source fires and the case isolates the one secret finding. The secret value is synthetic and carries no real credential.",
+  "authored_before_review": true,
+  "expected_finding_count": 1,
+  "expected_findings": [
+    {
+      "resource": "ProcessorFunction",
+      "normalized_category": "DataProtection",
+      "finding_type": "Security",
+      "severity": "HIGH",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "Secret Review"
+      ],
+      "note": "Plaintext secret in a Lambda environment variable, reported by the lambda_env_plaintext_secret detector. The excerpt is redacted so the value never reaches output."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}

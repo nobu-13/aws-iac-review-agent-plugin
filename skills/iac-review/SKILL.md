@@ -115,6 +115,7 @@ python3 skills/iac-review/scripts/run_iac_review.py --target templates/app.yaml
 | `--rules-dir PATH` | no | yes | Additional directory of `.guard` rules for the cfn-guard source. Additive: the bundled rules are always evaluated. Option order does not affect the output. |
 | `--agent-findings PATH` | no | no | JSON file of findings produced by agent reasoning, to merge into the report. |
 | `--confirm-cdk-synth` | no | no | Permit `cdk synth` for a CDK project target. See the warning above. |
+| `--format FORMAT` | no | no | Output format: `json` (default, the Review_Report envelope) or `sarif` (SARIF 2.1.0 for GitHub code scanning and other CI viewers). The exit code is unchanged. |
 | `--verbose` | no | no | Additional diagnostics on stderr. Never changes stdout. |
 
 Every path is resolved inside the workspace root, which is the current working

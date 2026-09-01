@@ -46,6 +46,37 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.7.0] - 2026-09-01
+
+### Added
+
+- **SARIF 2.1.0 output** (`iacreview/sarif.py`). A pure, deterministic transform
+  from a Review_Report to a SARIF document: same report in, same SARIF out, byte
+  for byte. It runs no review, reads no file, and makes no network call. This
+  lets a review run surface in GitHub's code-scanning tab and other CI result
+  viewers without a consumer learning the plugin's own Finding schema.
+- **`iac-review --format {json,sarif}`**. The default stays `json` (the
+  normalized report envelope on stdout); `sarif` emits the SARIF document
+  instead. No other output path changed.
+- **SARIF mapping that loses nothing.** Each distinct `Evidence[].RuleId`
+  (falling back to the Source name) becomes one `tool.driver.rules` entry;
+  Severity + FindingType map to a SARIF `level` (CRITICAL/HIGH -> `error`,
+  MEDIUM -> `warning`, LOW/INFO -> `note`) with a numeric `security-severity`;
+  and Confidence, Normalized_Category, and the full merged Source list, which
+  have no native SARIF field, travel in each result's `properties` bag.
+- **Three benchmark cases** bringing the total to 13 defect cases and 2 clean
+  cases: `case-011-unattached-gateway` (Network Review, an Internet Gateway with
+  no attachment), `case-012-lambda-plaintext-secret` (Secret Review, a plaintext
+  secret in a Lambda environment variable), and `case-013-condition-logic-mismatch`
+  (Quality Review, a condition whose logic contradicts its name). Each exercises
+  one of the deterministic Sources added in v0.4.0-v0.6.0 against authored
+  ground truth.
+
+### Changed
+
+- `benchmark/ground_truth.schema.json` `source` enum already carries every
+  deterministic Source; the three new cases author findings against it.
+
 ## [0.6.0] - 2026-09-01
 
 ### Added
@@ -256,7 +287,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.7.0
 [0.6.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.6.0
 [0.5.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.5.0
 [0.4.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.4.0

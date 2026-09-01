@@ -1019,3 +1019,60 @@ def test_a_target_name_with_a_shell_metacharacter_exits_two(
 
     assert completed.returncode == exitcodes.INVALID_ARGUMENTS
     assert completed.stdout == ""
+
+
+# ---------------------------------------------------------------------------
+# (g) SARIF output (v0.7.0)
+# ---------------------------------------------------------------------------
+
+
+def test_format_sarif_emits_a_sarif_document(tmp_path: Path, plugin_root: Path) -> None:
+    """--format sarif converts the report to SARIF 2.1.0.
+
+    Uses the IAM wildcard template so the run needs no external tool: the IAM
+    Review Source produces findings on its own, and those become SARIF results.
+    """
+    workspace = make_workspace(tmp_path, **{"template.yaml": MIXED_TEMPLATE})
+    completed = run_skill(
+        plugin_root,
+        ["--target", "template.yaml", "--sources", "IAM Review", "--format", "sarif"],
+        cwd=workspace,
+    )
+    assert completed.returncode == exitcodes.OK, completed.stderr
+    doc = json.loads(completed.stdout)
+    assert doc["version"] == "2.1.0"
+    assert doc["runs"][0]["tool"]["driver"]["name"] == "aws-iac-review-agent-plugin"
+    results = doc["runs"][0]["results"]
+    assert results, "the wildcard policy should produce at least one result"
+    # Every result carries a level and a rule id.
+    for result in results:
+        assert result["level"] in {"error", "warning", "note"}
+        assert result["ruleId"]
+
+
+def test_format_json_is_the_default(tmp_path: Path, plugin_root: Path) -> None:
+    """Without --format, stdout is the Review_Report envelope, not SARIF."""
+    workspace = make_workspace(tmp_path, **{"template.yaml": MIXED_TEMPLATE})
+    completed = run_skill(
+        plugin_root,
+        ["--target", "template.yaml", "--sources", "IAM Review"],
+        cwd=workspace,
+    )
+    assert completed.returncode == exitcodes.OK, completed.stderr
+    doc = json.loads(completed.stdout)
+    assert "version" not in doc  # not SARIF
+    assert set(doc) == set(REPORT_KEYS)
+
+
+def test_sarif_and_json_agree_on_exit_code(tmp_path: Path, plugin_root: Path) -> None:
+    """The output format never changes the exit code."""
+    workspace = make_workspace(tmp_path, **{"template.yaml": MIXED_TEMPLATE})
+    as_json = run_skill(
+        plugin_root, ["--target", "template.yaml", "--sources", "IAM Review"], cwd=workspace
+    )
+    as_sarif = run_skill(
+        plugin_root,
+        ["--target", "template.yaml", "--sources", "IAM Review", "--format", "sarif"],
+        cwd=workspace,
+    )
+    assert as_json.returncode == as_sarif.returncode

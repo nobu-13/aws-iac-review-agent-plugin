@@ -29,6 +29,7 @@ Finding を折り込み、1 つの JSON `Review_Report` を stdout へ書き出�
 | 決定論的な quality レビュー | condition 論理、未使用 parameter/condition、循環依存、型混在 AllowedValues をテンプレート構造解析で検査する |
 | Agent による意味的レビュー | 2 つの Skill (`cloudformation-review`、`iam-review` の layer 2) が決定論的に抽出された事実を推論の入力とし、pipeline が検証してから統合する Finding を生成する |
 | 正規化された 1 つのレポート | すべての Finding が同じ 13 フィールド、11 カテゴリのいずれか 1 つ、検出した source を持つ。等価な Finding は統合される。ID は決定論的に付与される |
+| SARIF 2.1.0 出力 | `iac-review --format sarif` はレポートを SARIF として出力し、GitHub code scanning や CI の結果ビューアで利用できる。Confidence、カテゴリ、統合された source リストを各 result の `properties` に保持する決定論的変換である |
 | synth 済み CDK 出力のレビュー | `cdk.out/` 配下のテンプレートは別グループとしてレビューされる。`cdk synth` は明示的な flag を付けたときだけ実行される |
 
 Read Only である。AWS API を呼ばず、何も deploy せず、修正を適用しない。
@@ -89,7 +90,7 @@ plugin.json          Agent Plugins 1.0.0 の manifest
 skills/              5 つの Skill。それぞれ SKILL.md と scripts/ を持つ
 iacreview/           共有される決定論的ライブラリ (import されるだけで install されない)
 rules/               6 つのカテゴリディレクトリに置かれた 36 個の cfn-guard rule
-benchmark/           測定対象の 12 case、ground truth、harness
+benchmark/           測定対象の 15 case、ground truth、harness
 examples/            レビューを通ることを意図した小さなテンプレート
 tests/               unit / integration / negative / regression / property test
 docs/                architecture、security model、Finding schema、benchmark 方法、Kiro
@@ -240,8 +241,18 @@ python3 skills/iac-review/scripts/run_iac_review.py \
   --agent-findings agent-findings.json
 ```
 
+既定の JSON レポートの代わりに SARIF 2.1.0 を出力する。GitHub code scanning や
+別の CI 結果ビューア向けである。
+
+```sh
+python3 skills/iac-review/scripts/run_iac_review.py \
+  --target templates/app.yaml \
+  --format sarif > review.sarif
+```
+
 `iac-review` の option は `--target` (必須、繰り返し可)、実行する決定論的 source を絞る
 `--sources`、同梱 rule に自分の `.guard` rule を追加する `--rules-dir`、
+出力形式を選ぶ `--format {json,sarif}` (既定は `json`)、
 `--agent-findings`、`--confirm-cdk-synth`、`--verbose` である。各 `SKILL.md` が自身の
 option と出力を網羅的に記述している。
 
@@ -354,7 +365,7 @@ Benchmark はレビュー品質を測る。テストスイートとは目的が�
 python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined
 ```
 
-この repository の 12 case について、Python 3.9.6、cfn-lint 1.46.0、cfn-guard 3.2.1 での
+この repository の 15 case について、Python 3.9.6、cfn-lint 1.46.0、cfn-guard 3.2.1 での
 現在の測定値。
 
 | 項目 | 値 |
@@ -384,8 +395,8 @@ harness は Agent を起動しないため、同じ case を 2 回実行する�
 
 | 対象 | 方法 |
 | --- | --- |
-| テストスイート | `python3 -m pytest`。3900 件超、失敗 0 |
-| Unit | 決定論的モジュールを対象とする 42 ファイル。解析、正規化、severity 変換、重複排除、path 検証、exit code、network graph 解析、secret 検出、template 品質 |
+| テストスイート | `python3 -m pytest`。4000 件超、失敗 0 |
+| Unit | 決定論的モジュールを対象とする 43 ファイル。解析、正規化、severity 変換、重複排除、path 検証、exit code、network graph 解析、secret 検出、template 品質 |
 | Integration | 7 つの entry point を実際の subprocess として実テンプレートに対して動かす 14 ファイル。不正入力 133 件を含む |
 | Negative | clean なテンプレートが、数え上げた種類の false positive を出さないこと |
 | Regression | security 上の振る舞いと過去に見つけた defect を固定する 8 ファイル。path traversal、不正な YAML と JSON、shell metacharacter を含むファイル名、外部ツール未導入、不正な引数、symlink の循環、error に host path が出ないこと |

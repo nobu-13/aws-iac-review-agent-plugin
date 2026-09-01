@@ -10,4 +10,4 @@ The package is not distributed on PyPI. The plugin ships as a directory.
 
 __all__ = ["__version__"]
 
-__version__ = "0.6.0"
+__version__ = "0.7.0"

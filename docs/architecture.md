@@ -43,7 +43,7 @@ flowchart TD
         B5c["quality: template structure and logic"]
         B6["normalization: categories + category_map.json"]
         B7["dedup: equivalence and merge"]
-        B8["report: sort, IDs, summary, JSON"]
+        B8["report: sort, IDs, summary, JSON or SARIF"]
     end
 
     subgraph AG["Agent reasoning layer: guided by SKILL.md"]
@@ -71,7 +71,7 @@ flowchart TD
     C1 -.->|"agent findings JSON, never Confirmed"| B6
     C2 -.->|"agent findings JSON, never Confirmed"| B6
     B6 --> B7 --> B8
-    B8 --> D["Review_Report on stdout"]
+    B8 --> D["Review_Report on stdout: JSON (default) or SARIF"]
 ```
 
 Solid edges are deterministic data flow; dotted edges pass through an agent. An
@@ -401,6 +401,17 @@ deterministic. What is guaranteed is that the pipeline is byte-identical for the
 same input excluding agent Findings, and byte-identical again for the same agent
 Findings JSON -- which is what makes a recorded agent output usable as a
 regression fixture.
+
+**SARIF is an alternative serialization, not a second report.** With
+`--format sarif` the same assembled Review_Report is passed through
+`iacreview.sarif.to_sarif`, a pure deterministic transform, and emitted as a
+SARIF 2.1.0 document instead of the JSON envelope. The report is built the same
+way either way -- same Sources, same dedup, same ordering, same IDs -- so the
+two outputs describe an identical set of findings. SARIF has no field for the
+plugin's Confidence or Normalized_Category and no notion of a finding merged
+from several Sources, so those travel in each result's `properties` bag and the
+full merged Source list is preserved there. The transform reads no file and
+makes no network call, so the same report yields the same SARIF byte for byte.
 
 ## cfn-lint
 

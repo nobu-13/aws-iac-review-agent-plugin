@@ -1,0 +1,63 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A VPC whose Internet Gateway is declared but never attached, and whose public
+  route table has no default route to it. Both defects are relationships
+  between resources that no single-resource rule can see; the Network Review
+  Source finds them from the reference graph. The template is otherwise
+  complete -- the route table is associated with a subnet, a flow log is
+  configured, and every resource is tagged -- so the case isolates the two
+  network-topology findings.
+Resources:
+  AppVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+  AppSubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AppVpc
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: !Select [0, !GetAZs ""]
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+  AppGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+  AppRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AppVpc
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team
+  AppRouteAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref AppRouteTable
+      SubnetId: !Ref AppSubnet
+  AppFlowLog:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceType: VPC
+      ResourceId: !Ref AppVpc
+      TrafficType: ALL
+      LogDestinationType: cloud-watch-logs
+      DeliverLogsPermissionArn: !Sub "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/flowlogs"
+      LogGroupName: /vpc/flowlogs

@@ -1,0 +1,44 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A template whose IsProduction condition tests for the literal "staging", so
+  its name and its logic disagree. The Quality Review Source reports the
+  mismatch. The condition is used by a resource so it is not also flagged as
+  unused, and every parameter is referenced, so the case isolates the one
+  logic finding.
+Parameters:
+  EnvironmentType:
+    Type: String
+    Default: production
+    AllowedValues:
+      - production
+      - staging
+      - development
+Conditions:
+  IsProduction:
+    !Equals [!Ref EnvironmentType, "staging"]
+Resources:
+  ConfigBucket:
+    Type: AWS::S3::Bucket
+    Condition: IsProduction
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LoggingConfiguration:
+        DestinationBucketName: log-bucket
+        LogFilePrefix: config/
+      Tags:
+        - Key: Environment
+          Value: !Ref EnvironmentType
+        - Key: Owner
+          Value: platform-team

@@ -145,6 +145,7 @@ from iacreview import (  # noqa: E402
     pathguard,
     quality,
     report,
+    sarif,
     secrets,
     template,
 )
@@ -391,7 +392,24 @@ def build_parser() -> bootstrap.EntryPointParser:
             "unsandboxed."
         ),
     )
+    parser.add_argument(
+        "--format",
+        choices=("json", "sarif"),
+        default="json",
+        help=(
+            "Output format. 'json' (default) is the Review_Report envelope. "
+            "'sarif' converts it to SARIF 2.1.0 for GitHub code scanning and "
+            "other CI result viewers. The exit code is unchanged."
+        ),
+    )
     return parser
+
+
+def _plugin_version() -> str:
+    """The plugin version, read from the package, for the SARIF tool record."""
+    import iacreview
+
+    return getattr(iacreview, "__version__", "")
 
 
 def workspace_root() -> Path:
@@ -1071,8 +1089,11 @@ class IacReview:
             ),
             verbose=verbose,
         )
+        report_doc = self._report()
+        if getattr(args, "format", "json") == "sarif":
+            report_doc = sarif.to_sarif(report_doc, tool_version=_plugin_version())
         return bootstrap.EntryPointOutcome(
-            report=self._report(), exit_code=self.exit_code()
+            report=report_doc, exit_code=self.exit_code()
         )
 
 

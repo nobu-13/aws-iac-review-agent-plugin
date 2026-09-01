@@ -673,6 +673,9 @@ EXPECTED_CASE_DIRECTORIES = [
     "case-008-unsafe-passrole",
     "case-009-public-database",
     "case-010-missing-deletion-protection",
+    "case-011-unattached-gateway",
+    "case-012-lambda-plaintext-secret",
+    "case-013-condition-logic-mismatch",
     # Clean cases, numbered from 101. They expect nothing, which the checks
     # below allow for; Task 24.4 asserts the property they exist for.
     "case-101-clean-web-tier",
@@ -924,6 +927,9 @@ DESIGN_DEFECT_CASE_CATEGORIES = {
     "case-008-unsafe-passrole": "IAM",
     "case-009-public-database": "PublicAccess",
     "case-010-missing-deletion-protection": "Availability",
+    "case-011-unattached-gateway": "NetworkSecurity",
+    "case-012-lambda-plaintext-secret": "DataProtection",  # secret-scan:allow
+    "case-013-condition-logic-mismatch": "TemplateQuality",
 }
 
 #: The case design.md attributes to the IAM detectors alone, because no bundled
@@ -934,7 +940,7 @@ IAM_ONLY_CASE = "case-008-unsafe-passrole"
 IAM_SOURCE = "IAM Review"
 
 
-def test_all_ten_design_defect_cases_exist() -> None:
+def test_all_design_defect_cases_exist() -> None:
     assert sorted(DESIGN_DEFECT_CASE_CATEGORIES) == [
         name for name in EXPECTED_CASE_DIRECTORIES if int(name.split("-")[1]) < 100
     ]

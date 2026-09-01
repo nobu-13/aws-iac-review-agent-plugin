@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-013-condition-logic-mismatch",
+  "template": "template.yaml",
+  "description": "The IsProduction condition is defined as Fn::Equals [EnvironmentType, \"staging\"], so its name asserts production while its logic tests for staging. The Quality Review Source (iacreview.quality) reports the contradiction via condition_name_logic_mismatch. The condition gates ConfigBucket, so it is not also flagged as unused, and EnvironmentType is referenced by both the condition and a tag, so it is not flagged as an unused parameter. The bucket is fully compliant -- encrypted, private, versioned, access-logged, retained, and tagged -- so no other deterministic Source fires and the case isolates the one condition-logic finding.",
+  "authored_before_review": true,
+  "expected_finding_count": 1,
+  "expected_findings": [
+    {
+      "resource": null,
+      "normalized_category": "TemplateQuality",
+      "finding_type": "BestPractice",
+      "severity": "MEDIUM",
+      "confidence": "Confirmed",
+      "detection_class": "deterministic",
+      "detected_by": [
+        "Quality Review"
+      ],
+      "note": "A condition named IsProduction that tests for the staging literal, reported by the condition_name_logic_mismatch detector."
+    }
+  ],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": []
+}
