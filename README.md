@@ -523,14 +523,14 @@ reason is in the document named beside it.
   user-supplied paths. The rejection is an explicit, named error. Values are
   rejected rather than sanitized, because stripping the character would silently
   redirect the read to a different file.
-- **`errors[].stderr_head` carries verbatim external tool output and is outside
-  the no-host-path guarantee.** Every message the plugin composes itself is
-  rendered workspace-relative, but `stderr_head` is up to five lines copied
-  unmodified from a crashing tool, and the tools are given absolute template
-  paths. Treat it as untrusted external text: it may contain a host path and
-  anything else the tool chose to print. The five-line cap bounds how much, not
-  what. Strip or review it before publishing a report more widely than the
-  machine that produced it (`docs/security-model.md`, R-4).
+- **`errors[].stderr_head` carries external tool output, with absolute host
+  paths redacted (v0.8.0).** It is up to five lines copied from a crashing tool,
+  and each line is scanned so an absolute host path is replaced with a fixed
+  `<path>` placeholder before it reaches the report, keeping the excerpt
+  byte-identical between runs. The redaction covers absolute POSIX paths only:
+  process identifiers, timestamps, and anything else a tool prints about the
+  input are still passed through, so treat the field as untrusted external text.
+  The five-line cap bounds how much, not what (`docs/security-model.md`, R-4).
 
 **Reproducibility**
 
@@ -664,8 +664,17 @@ dashes in the original are written as `--` here to keep this file ASCII.
 
 ## Roadmap
 
-Planned, not implemented, and not available in v0.1. Nothing in the sections
-above depends on any of it.
+Planned, not implemented, and not available today. Nothing in the sections above
+depends on any of it.
+
+**Delivered in v0.8.0.** The security-hardening and measurement items this
+section listed at v0.1 have since shipped: input size limits and a YAML
+alias-expansion budget (R-8), descriptor-based TOCTOU-safe reads (R-2),
+process-group termination on timeout (R-9), and `stderr_head` host-path
+redaction (R-4); and, for measurement, the cfn-lint contribution series, N-run
+agent variation (`--agent-runs`), the Remediation Accuracy and Human
+Intervention Count diagnostics, and the `agent-only` and `human-review` modes.
+See CHANGELOG.md and `docs/security-model.md`.
 
 **Additional IaC and analysis**
 
@@ -679,28 +688,29 @@ above depends on any of it.
 Automatic deployment and automatic remediation are permanent non-goals rather
 than roadmap items: this plugin reports, and does not act.
 
-**Security hardening**
+**Security hardening (remaining)**
 
-- An input size limit and a YAML alias-expansion budget, with a portable
-  resource-limit test technique to go with it (`docs/security-model.md`, R-8).
-- Descriptor-based file access to close the TOCTOU window between the containment
-  check and the read (R-2).
-- Process-group termination, so that a timeout reaps a tool's descendants (R-9).
-- Reconciling `stderr_head`, which needs two requirements resolved against each
-  other before an implementation can satisfy both (R-4).
+- Extending `stderr_head` redaction beyond absolute host paths to process
+  identifiers and timestamps a tool may print, which the plugin cannot yet
+  recognize reliably (`docs/security-model.md`, R-4).
+- The residual risks that remain by design rather than by omission: containment
+  is not a child-process sandbox (R-1), `cdk synth` runs unsandboxed (R-5),
+  `SIGKILL` can leave a temporary file for the OS sweeper (R-6), and redaction is
+  not secret detection (R-7).
 
-**Measurement**
+**Measurement (remaining)**
 
-- A way to measure cfn-lint's benchmark contribution without coupling a case to
-  the installed rule catalogue: a separate case series pinned to a stated
-  cfn-lint version, evaluated informationally rather than thresholded.
-- Running the agent over each case N times and reporting the variation rather
-  than a point estimate, so that agent stability is measured alongside accuracy.
-- The three deferred benchmark metrics -- Review Time, Remediation Accuracy,
-  Human Intervention Count -- are defined in `docs/benchmark-methodology.md` and
-  need no ground-truth format change to implement.
-- `agent-only` and `human-review` benchmark modes. The ground-truth format
-  already reserves the fields, always empty in v0.1.
+- Folding Review Time into a form the summary can carry, or a second output
+  stream for it. It is measured on stderr today because a wall-clock figure
+  cannot enter the byte-identical summary.
+- Populating the reserved `expected_findings_agent_only` and
+  `expected_findings_human_review` arrays. The `agent-only` and `human-review`
+  modes that read them shipped in v0.8.0, but every bundled case still leaves
+  both arrays empty, so the modes measure nothing until cases opt in.
+- Authoring cases that declare `expected_remediation` and
+  `expected_human_intervention_count`, so the Remediation Accuracy and Human
+  Intervention Count diagnostics report a value rather than `N/A`
+  (`docs/benchmark-methodology.md`).
 
 **Packaging and experience**
 

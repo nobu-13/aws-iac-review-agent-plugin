@@ -482,12 +482,12 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   ではレビューできない。`$` は利用者が与える path で拒否される 7 つの shell metacharacter
   の 1 つである。拒否は明示的で名前の付いたエラーになる。値を sanitize せず拒否するのは、
   その文字を除去すると読み込み先が黙って別のファイルへ変わってしまうからである。
-- **`errors[].stderr_head` は外部ツールの出力をそのまま持ち、host path を出さない保証の
-  外にある。** plugin 自身が組み立てるメッセージはすべて workspace 相対で描画されるが、
-  `stderr_head` は crash したツールから無改変でコピーした最大 5 行であり、ツールには
-  絶対 path のテンプレートが渡されている。untrusted な外部テキストとして扱うこと。host
-  path も、ツールが出力を選んだ何もかもが含まれうる。5 行の上限が縛るのは量であって内容
-  ではない。レポートを生成したマシンより広く公開する前に、除去するか確認すること
+- **`errors[].stderr_head` は外部ツールの出力を持つが、絶対 host path は伏せられる
+  (v0.8.0)。** crash したツールからコピーした最大 5 行であり、各行を走査して絶対 host path
+  を固定の `<path>` プレースホルダへ置換してから report へ渡すため、同一入力に対して抜粋は
+  byte-identical になる。redaction の対象は絶対 POSIX path のみで、process identifier や
+  timestamp、その他ツールが入力について出力した内容はそのまま通るため、untrusted な外部
+  テキストとして扱うこと。5 行の上限が縛るのは量であって内容ではない
   (`docs/security-model.md`、R-4)。
 
 **再現性**
@@ -619,28 +619,33 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 自動 deploy と自動 remediation は roadmap 項目ではなく恒久的な非目標である。この plugin は
 報告し、行動しない。
 
-**Security 強化**
+**v0.8.0 で提供済み。** 本節が v0.1 時点で挙げていた security 強化と測定の項目は既に出荷
+された。入力サイズ上限と YAML alias 展開の予算 (R-8)、descriptor ベースの TOCTOU 安全な
+読み込み (R-2)、timeout 時の process group 終了 (R-9)、`stderr_head` の host path redaction
+(R-4)。測定側では cfn-lint 貢献測定系列、Agent の N 回実行によるばらつき測定
+(`--agent-runs`)、Remediation Accuracy と Human Intervention Count の診断、`agent-only` と
+`human-review` モード。詳細は CHANGELOG.md と `docs/security-model.md` を参照。
 
-- 入力サイズ上限と YAML alias 展開の予算。あわせて可搬な resource limit のテスト手法
-  (`docs/security-model.md`、R-8)。
-- containment 検査と読み込みの間の TOCTOU window を閉じる、descriptor ベースのファイル
-  アクセス (R-2)。
-- timeout がツールの子孫プロセスも回収するための process group 終了 (R-9)。
-- `stderr_head` の整理。実装が両方を満たすには、2 つの requirement を互いに突き合わせて
-  解決する必要がある (R-4)。
+**Security 強化 (残り)**
 
-**測定**
+- `stderr_head` の redaction を絶対 host path 以外へ拡張すること。ツールが出力しうる
+  process identifier や timestamp は、plugin がまだ確実に認識できない
+  (`docs/security-model.md`、R-4)。
+- 設計上残る residual risk: containment は子プロセスの sandbox ではない (R-1)、`cdk synth`
+  は非 sandbox 実行 (R-5)、`SIGKILL` は一時ファイルを OS の sweeper に委ねる (R-6)、
+  redaction は secret 検出ではない (R-7)。
 
-- case を install された rule catalogue に結び付けずに cfn-lint の benchmark 貢献を測る方法。
-  宣言された cfn-lint バージョンに pin した別系列の case を、閾値ではなく参考値として評価
-  する。
-- 各 case について Agent を N 回動かし、点推定ではなくばらつきを報告することで、精度と
-  あわせて Agent の安定性も測る。
-- 先送りした 3 つの benchmark 指標 (Review Time、Remediation Accuracy、Human Intervention
-  Count)。`docs/benchmark-methodology.md` で定義済みで、実装に ground truth 形式の変更は
-  不要である。
-- benchmark の `agent-only` と `human-review` モード。ground truth 形式は既にフィールドを
-  予約しており、v0.1 では常に空である。
+**測定 (残り)**
+
+- Review Time を summary が持てる形にまとめるか、別の出力ストリームを用意すること。
+  wall-clock 値は byte-identical な summary に入れられないため、現在は stderr で報告して
+  いる。
+- 予約済みの `expected_findings_agent_only` / `expected_findings_human_review` 配列を埋める
+  こと。それらを読む `agent-only` / `human-review` モードは v0.8.0 で出荷したが、同梱 case
+  はいずれも両配列を空のままにしているため、case が opt-in するまでモードは何も測らない。
+- `expected_remediation` と `expected_human_intervention_count` を宣言する case を作り、
+  Remediation Accuracy と Human Intervention Count の診断が `N/A` ではなく値を報告するように
+  すること (`docs/benchmark-methodology.md`)。
 
 **パッケージングと体験**
 
