@@ -331,6 +331,7 @@ def test_deterministic_source_coverage_is_stated_per_source(
         "IAM Review",
         "Network Review",
         "Secret Review",
+        "Quality Review",
     ]
     for entry in coverage:
         assert sorted(entry) == SOURCE_COVERAGE_KEYS
@@ -344,6 +345,7 @@ def test_deterministic_source_coverage_is_stated_per_source(
         "IAM Review": True,
         "Network Review": True,
         "Secret Review": True,
+        "Quality Review": True,
     }
 
 
@@ -486,11 +488,14 @@ def test_summary_is_present_and_summarizes_the_in_process_iam_source(
     assert isinstance(summary, list)
     for entry in summary:
         assert sorted(entry) == SUMMARY_KEYS
-        assert entry["source"] == "IAM Review"
-    # The fixture header states the one deterministic IAM finding it produces.
-    assert [entry["rule"] for entry in summary] == ["unresolvable_value"]
-    assert summary[0]["resource"] == "AppExecutionRole"
-    assert summary[0]["severity"] == "INFO"
+        # In-process deterministic Sources only (IAM, Network, Secret, Quality).
+        assert entry["source"] in {"IAM Review", "Network Review", "Secret Review", "Quality Review"}
+    # The fixture header states the one deterministic IAM finding it produces;
+    # the Quality Source also flags the unreferenced DatabasePassword parameter.
+    iam_entries = [e for e in summary if e["source"] == "IAM Review"]
+    assert [entry["rule"] for entry in iam_entries] == ["unresolvable_value"]
+    assert iam_entries[0]["resource"] == "AppExecutionRole"
+    assert iam_entries[0]["severity"] == "INFO"
 
 
 def test_summary_reports_the_dangerous_iam_findings_of_a_security_fixture(
@@ -502,14 +507,14 @@ def test_summary_reports_the_dangerous_iam_findings_of_a_security_fixture(
     # Two of the rules that fixture's header documents. Their presence is what
     # tells the Agent these are taken (Requirement 2 AC14, AC15).
     assert {"star_action_star_resource", "principal_star"} <= rules
-    assert {entry["source"] for entry in summary} == {"IAM Review"}
-    assert {entry["category"] for entry in summary} == {"IAM"}
+    iam_entries = [e for e in summary if e["source"] == "IAM Review"]
+    assert {entry["category"] for entry in iam_entries} == {"IAM"}
 
     coverage = {
         entry["name"]: entry["findings_summarized"]
         for entry in facts["deterministic_sources"]
     }
-    assert coverage["IAM Review"] == len(summary)
+    assert coverage["IAM Review"] == len(iam_entries)
 
 
 def test_supplied_reports_extend_the_summary(
@@ -543,17 +548,17 @@ def test_supplied_reports_extend_the_summary(
 
     summary = facts["deterministic_findings_summary"]
     by_source = {entry["source"] for entry in summary}
-    assert by_source == {"cfn-lint", "cfn-guard", "IAM Review"}
-    assert {entry["rule"] for entry in summary} == {
-        "W3011",
-        "s3_logging",
-        "unresolvable_value",
+    # cfn-lint and cfn-guard come from the supplied report; IAM and Quality are
+    # computed in process (Quality flags the unreferenced DatabasePassword).
+    assert by_source == {"cfn-lint", "cfn-guard", "IAM Review", "Quality Review"}
+    assert {"W3011", "s3_logging", "unresolvable_value", "unused_parameter"} <= {
+        entry["rule"] for entry in summary
     }
     coverage = {
         entry["name"]: entry["findings_summarized"]
         for entry in facts["deterministic_sources"]
     }
-    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1, "Network Review": 0, "Secret Review": 0}
+    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1, "Network Review": 0, "Secret Review": 0, "Quality Review": 1}
     # Recorded as a workspace-relative path, never as an absolute host path
     # (Requirement 16 AC11).
     assert facts["deterministic_reports"] == [report]

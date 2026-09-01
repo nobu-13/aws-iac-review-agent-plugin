@@ -180,6 +180,7 @@
         "IAM Review",
         "Network Review",
         "Secret Review",
+        "Quality Review",
         "Agent Review"
       ]
     }

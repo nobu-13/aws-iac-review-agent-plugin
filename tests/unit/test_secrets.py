@@ -54,7 +54,7 @@ def test_recognizes_provider_token() -> None:
 
 
 def test_recognizes_private_key_header() -> None:
-    assert secrets.looks_like_secret("-----BEGIN RSA PRIVATE KEY-----") == "private_key_block"
+    assert secrets.looks_like_secret("-----BEGIN RSA PRIVATE KEY-----") == "private_key_block"  # secret-scan:allow
 
 
 def test_placeholder_is_never_a_secret() -> None:
@@ -76,7 +76,7 @@ def test_empty_or_non_string_is_not_a_secret() -> None:
 def test_lambda_env_high_entropy_secret_is_flagged() -> None:
     doc = _doc({
         "Fn": {"Type": "AWS::Lambda::Function", "Properties": {
-            "Environment": {"Variables": {"DB_PASSWORD": "A7f9K2mQ8xLpZ3"}}}},
+            "Environment": {"Variables": {"DB_PASSWORD": "A7f9K2mQ8xLpZ3"}}}},  # secret-scan:allow
     })
     findings = secrets.review(doc, template_file="t.yaml")
     assert "lambda_env_plaintext_secret" in _rules(findings)
@@ -127,7 +127,7 @@ def test_lambda_env_nonsecret_name_short_value_is_not_flagged() -> None:
 def test_userdata_plaintext_password_is_flagged() -> None:
     doc = _doc({
         "Ec2": {"Type": "AWS::EC2::Instance", "Properties": {
-            "UserData": {"Fn::Base64": {"Fn::Sub": "#!/bin/bash\necho \"DB_PASSWORD=hunter2secret\" > /etc/app.conf\n"}}}},
+            "UserData": {"Fn::Base64": {"Fn::Sub": "#!/bin/bash\necho \"DB_PASSWORD=hunter2secret\" > /etc/app.conf\n"}}}},  # secret-scan:allow
     })
     findings = secrets.review(doc, template_file="t.yaml")
     assert "userdata_plaintext_secret" in _rules(findings)
@@ -145,7 +145,7 @@ def test_userdata_placeholder_is_not_flagged() -> None:
 def test_userdata_plain_string_is_scanned() -> None:
     doc = _doc({
         "Ec2": {"Type": "AWS::EC2::Instance", "Properties": {
-            "UserData": "export API_KEY=abcd1234efgh5678"}},
+            "UserData": "export API_KEY=abcd1234efgh5678"}},  # secret-scan:allow
     })
     findings = secrets.review(doc, template_file="t.yaml")
     assert "userdata_plaintext_secret" in _rules(findings)
@@ -193,7 +193,7 @@ def test_findings_never_contain_the_secret_value() -> None:
     """The whole point: a secret finding must not echo the secret."""
     doc = _doc({
         "Fn": {"Type": "AWS::Lambda::Function", "Properties": {
-            "Environment": {"Variables": {"API_KEY": "sk-supersecret1234567890"}}}},
+            "Environment": {"Variables": {"API_KEY": "sk-supersecret1234567890"}}}},  # secret-scan:allow
     })
     findings = secrets.review(doc, template_file="t.yaml")
     assert findings
@@ -214,7 +214,7 @@ def test_empty_template_is_safe() -> None:
 def test_review_is_deterministic() -> None:
     doc = _doc({
         "Fn": {"Type": "AWS::Lambda::Function", "Properties": {
-            "Environment": {"Variables": {"TOKEN": "A7f9K2mQ8xLpZ3"}}}},
+            "Environment": {"Variables": {"TOKEN": "A7f9K2mQ8xLpZ3"}}}},  # secret-scan:allow
     })
     first = [f.Finding for f in secrets.review(doc, template_file="t.yaml")]
     second = [f.Finding for f in secrets.review(doc, template_file="t.yaml")]
@@ -235,7 +235,7 @@ def test_run_and_normalize_returns_a_secret_source_result(tmp_path) -> None:
         "    Properties:\n"
         "      Environment:\n"
         "        Variables:\n"
-        "          API_KEY: sk-supersecret1234567890\n",
+        "          API_KEY: sk-supersecret1234567890\n",  # secret-scan:allow
         encoding="utf-8",
     )
     result = secrets.run_and_normalize(str(template), workspace_root=tmp_path)

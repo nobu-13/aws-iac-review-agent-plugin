@@ -111,7 +111,7 @@ python3 skills/iac-review/scripts/run_iac_review.py --target templates/app.yaml
 | Option | Required | Repeatable | Meaning |
 | --- | --- | --- | --- |
 | `--target PATH` | yes | yes | A template file, or a directory to scan for template files. |
-| `--sources SOURCE` | no | yes | Restrict the review to a subset of the deterministic sources. Accepted values: `cfn-lint`, `cfn-guard`, `IAM Review`, and `iam-review` as a space-free spelling of the same source. Default: all three. |
+| `--sources SOURCE` | no | yes | Restrict the review to a subset of the deterministic sources. Accepted values: `cfn-lint`, `cfn-guard`, `IAM Review`, `Network Review`, `Secret Review`, `Quality Review`, and the space-free aliases `iam-review`, `network-review`, `secret-review`, `quality-review`. Default: all deterministic sources. |
 | `--rules-dir PATH` | no | yes | Additional directory of `.guard` rules for the cfn-guard source. Additive: the bundled rules are always evaluated. Option order does not affect the output. |
 | `--agent-findings PATH` | no | no | JSON file of findings produced by agent reasoning, to merge into the report. |
 | `--confirm-cdk-synth` | no | no | Permit `cdk synth` for a CDK project target. See the warning above. |

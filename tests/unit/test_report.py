@@ -377,6 +377,7 @@ def test_summary_counts_each_group_exactly() -> None:
         "IAM Review": 0,
         "Network Review": 0,
         "Secret Review": 0,
+        "Quality Review": 0,
         "Agent Review": 1,
     }
     assert summary["by_template_group"] == {STANDALONE_GROUP: 5, SYNTHESIZED_GROUP: 1}
@@ -437,6 +438,7 @@ def test_by_source_sums_above_total_for_a_merged_finding() -> None:
         "IAM Review": 0,
         "Network Review": 0,
         "Secret Review": 0,
+        "Quality Review": 0,
         "Agent Review": 1,
     }
     assert sum(summary["by_source"].values()) == 3

@@ -137,8 +137,8 @@ def looks_like_secret(value: str) -> Optional[str]:
 def _high_entropy(value: str) -> bool:
     """Whether a string is long and varied enough to be a real secret.
 
-    A crude gate that keeps a name/value pair like ``password: changeit`` (too
-    short) or ``password: description`` (a dictionary word) from being reported
+    A crude gate that keeps a short or dictionary-word value from being
+    reported as a secret while still catching a long, high-entropy string.
     while still catching ``password: A7f9K2mQ...``. At least 12 characters, and
     a mix of character classes.
     """

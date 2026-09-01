@@ -220,6 +220,7 @@ SOURCE_VALUES: Tuple[str, ...] = (
     "IAM Review",
     "Network Review",
     "Secret Review",
+    "Quality Review",
     "Agent Review",
 )
 

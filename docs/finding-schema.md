@@ -3,7 +3,7 @@
 This document is the reference for the normalized Finding produced by
 `aws-iac-review-agent-plugin`.
 
-Every review Source — cfn-lint, cfn-guard, IAM Review, Network Review, Secret Review, and Agent Review —
+Every review Source — cfn-lint, cfn-guard, IAM Review, Network Review, Secret Review, Quality Review, and Agent Review —
 produces its own shape of output and normalizes to the one shape described here.
 A consumer that reads this document can read the `findings` array of any Skill's
 stdout without knowing which Sources ran.
@@ -143,7 +143,8 @@ array, because a merged Finding names every Source that detected it.
 | `IAM Review` | 2 | The deterministic IAM pattern matching in `iacreview.iam`. | `Confirmed` |
 | `Network Review` | 3 | The deterministic network-relationship analysis in `iacreview.netgraph`. | `Confirmed` |
 | `Secret Review` | 4 | The deterministic plaintext-secret detection in `iacreview.secrets`. | `Confirmed` |
-| `Agent Review` | 5 | Findings an agent produced by semantic reasoning. | `Likely`, `Contextual` |
+| `Quality Review` | 5 | The deterministic template-quality and logic analysis in `iacreview.quality`. | `Confirmed` |
+| `Agent Review` | 6 | Findings an agent produced by semantic reasoning. | `Likely`, `Contextual` |
 
 The rank column is `finding.SOURCE_ORDER`, and it is the one order in which
 `Source` lists and `Evidence` lists appear. Deterministic Sources come before
@@ -256,7 +257,7 @@ carries every detecting Source's entries, concatenated in `SOURCE_ORDER`.
 
 | Key | JSON type | Nullable | Constraint |
 | --- | --- | --- | --- |
-| `Source` | string | no | One of the 4 Sources. Required. |
+| `Source` | string | no | One of the 7 Sources. Required. |
 | `Detail` | string | no | Non-empty. What this Source observed. Required. |
 | `RuleId` | string | yes | The rule that fired, for example `E3002` or a cfn-guard rule name. |
 | `Excerpt` | string | yes | Verbatim Template content that led to the conclusion. |
@@ -389,7 +390,7 @@ Findings differs from one with two only in the number.
 | `total` | Number of entries in `findings`. | — |
 | `by_finding_type` | Count per `FindingType`, 4 keys. | yes |
 | `by_severity` | Count per `Severity`, 5 keys. | yes |
-| `by_source` | Count per `Source`, 4 keys. | **no — may exceed it** |
+| `by_source` | Count per `Source`, 7 keys. | **no — may exceed it** |
 | `by_template_group` | Count per template group: `standalone`, `synthesized`. | yes |
 | `passed_all_checks` | `true` exactly when `findings` is empty. | — |
 

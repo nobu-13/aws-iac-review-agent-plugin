@@ -87,7 +87,7 @@ from typing import (  # noqa: E402
     Tuple,
 )
 
-from iacreview import bootstrap, iam, netgraph, pathguard, secrets  # noqa: E402
+from iacreview import bootstrap, iam, netgraph, pathguard, quality, secrets  # noqa: E402
 from iacreview.errors import InputNotFoundError, SchemaViolationError  # noqa: E402
 from iacreview.finding import (  # noqa: E402
     AGENT_SOURCE,
@@ -196,7 +196,7 @@ DETERMINISTIC_SOURCES: Tuple[str, ...] = tuple(
 #: The Sources this script computes itself; see the module docstring. Both read
 #: the parsed template directly (no external tool), so their zero counts mean
 #: "checked and clean" rather than "never ran".
-IN_PROCESS_SOURCES = frozenset({iam.SOURCE_NAME, netgraph.SOURCE_NAME, secrets.SOURCE_NAME})
+IN_PROCESS_SOURCES = frozenset({iam.SOURCE_NAME, netgraph.SOURCE_NAME, secrets.SOURCE_NAME, quality.SOURCE_NAME})
 
 
 # ---------------------------------------------------------------------------
@@ -1009,6 +1009,7 @@ def build_facts(
     iam_findings: Sequence[Finding] = (),
     network_findings: Sequence[Finding] = (),
     secret_findings: Sequence[Finding] = (),
+    quality_findings: Sequence[Finding] = (),
 ) -> Dict[str, Any]:
     """Build the facts JSON for one Template.
 
@@ -1041,6 +1042,7 @@ def build_facts(
     summary = list(_summary_from_findings(iam_findings))
     summary.extend(_summary_from_findings(network_findings))
     summary.extend(_summary_from_findings(secret_findings))
+    summary.extend(_summary_from_findings(quality_findings))
     for resolved, _ in reports:
         summary.extend(_summary_from_payload(_read_report(resolved), resolved))
     summary = _deduplicated_summary(summary)
@@ -1135,6 +1137,9 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     secret_result = secrets.run_and_normalize(
         template, workspace_root=root, loaded=loaded
     )
+    quality_result = quality.run_and_normalize(
+        template, workspace_root=root, loaded=loaded
+    )
     bootstrap.verbose_diagnostic(
         "in-process IAM Source produced {0} finding(s)".format(
             len(iam_result.findings)
@@ -1149,6 +1154,7 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
         iam_findings=iam_result.findings,
         network_findings=network_result.findings,
         secret_findings=secret_result.findings,
+        quality_findings=quality_result.findings,
     )
 
 

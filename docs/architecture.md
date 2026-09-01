@@ -18,7 +18,7 @@ validated rather than as a decision to be trusted.
 
 ```text
 IaC
- -> deterministic checks (cfn-lint, cfn-guard, IAM detectors, network graph analysis, secret detection)
+ -> deterministic checks (cfn-lint, cfn-guard, IAM detectors, network graph analysis, secret detection, template quality)
  -> agent semantic review (IAM context, security, architecture, best practices)
  -> Finding normalization
  -> deduplication and merge
@@ -38,6 +38,9 @@ flowchart TD
         B3["cfnlint: cfn-lint via argv"]
         B4["cfnguard: cfn-guard via argv"]
         B5["iam: 15 deterministic detectors"]
+        B5a["netgraph: network relationship analysis"]
+        B5b["secrets: plaintext-secret detection"]
+        B5c["quality: template structure and logic"]
         B6["normalization: categories + category_map.json"]
         B7["dedup: equivalence and merge"]
         B8["report: sort, IDs, summary, JSON"]
@@ -54,11 +57,17 @@ flowchart TD
     B2 --> B3
     B2 --> B4
     B2 --> B5
+    B2 --> B5a
+    B2 --> B5b
+    B2 --> B5c
     B2 -.->|"extracted template facts JSON"| C1
     B2 -.->|"extracted policy sites JSON"| C2
     B3 --> B6
     B4 --> B6
     B5 --> B6
+    B5a --> B6
+    B5b --> B6
+    B5c --> B6
     C1 -.->|"agent findings JSON, never Confirmed"| B6
     C2 -.->|"agent findings JSON, never Confirmed"| B6
     B6 --> B7 --> B8
@@ -76,7 +85,7 @@ AC11) out of reach of a model's variability.
 | Layer | Implementation | Guarantee |
 | --- | --- | --- |
 | Input validation | `iacreview.bootstrap`, `iacreview.pathguard` | Arguments validated before any work; every path resolves inside the workspace root (Requirement 9 AC4, AC5, Requirement 16 AC7) |
-| Deterministic detection | cfn-lint, cfn-guard, `iacreview.iam` | `Confidence: "Confirmed"` (Requirement 7 AC8, AC9) |
+| Deterministic detection | cfn-lint, cfn-guard, `iacreview.iam`, `iacreview.netgraph`, `iacreview.secrets`, `iacreview.quality` | `Confidence: "Confirmed"` (Requirement 7 AC8, AC9) |
 | Semantic reasoning | The host agent runtime interpreting a `SKILL.md` | `Confidence: "Likely"` or `"Contextual"` (Requirement 7 AC10) |
 | Normalization | `iacreview.categories` + `iacreview/category_map.json` | Every Finding carries one category from the closed set (Requirement 14 AC1) |
 | Aggregation | `iacreview.dedup`, `iacreview.report` | Deterministic merge, ordering and summary (Requirement 14, Requirement 7 AC15) |
@@ -104,8 +113,11 @@ re-run, and committed as a test fixture.
 3. `template.load_template`. A parse failure exits 4 with the error type, line
    and column; a document with no `Resources` mapping exits 8.
 4. Run the deterministic Sources in the fixed order `cfn-lint` -> `cfn-guard` ->
-   `IAM Review`. The order matches the Evidence concatenation order of
-   Requirement 14 AC11, so nothing downstream has to reorder to satisfy it.
+   `IAM Review` -> `Network Review` -> `Secret Review` -> `Quality Review`. The
+   order matches the Evidence concatenation order of Requirement 14 AC11, so
+   nothing downstream has to reorder to satisfy it. `Network Review`,
+   `Secret Review`, and `Quality Review` are computed in process from the parsed
+   template, so they add no external tool.
 5. Fold in agent Findings, when a file was supplied.
 6. `dedup.deduplicate`, then `report.sort_findings`, then `report.assign_ids`,
    then `report.build_report` and `report.dump`.

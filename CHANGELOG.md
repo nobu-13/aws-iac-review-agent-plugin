@@ -46,6 +46,34 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.6.0] - 2026-09-01
+
+### Added
+
+- **Quality Review, a sixth deterministic Source** (`iacreview/quality.py`). It
+  reasons about the structure of a template -- Conditions, Parameters, and the
+  dependency graph -- to find logic mistakes and dead configuration that no
+  single-resource rule and no cfn-lint check reliably reports.
+- **Five quality detectors**: `condition_name_logic_mismatch` (a condition
+  named for one environment that tests for another), `unused_parameter`,
+  `unused_condition`, `circular_dependency` (a cycle in the Ref / GetAtt /
+  DependsOn graph), and `allowed_values_mixed_types`.
+- Reuses the v0.4.0 resource-graph engine (`iacreview.netgraph`) for reference
+  resolution and cycle detection.
+- Quality Review is computed in process by `extract_facts.py`, so its findings
+  join `deterministic_findings_summary`.
+
+### Changed
+
+- `iacreview.finding.SOURCES` gains `"Quality Review"` (rank 5, before
+  `Agent Review`). The Source enum in `docs/finding-schema.md` and
+  `benchmark/ground_truth.schema.json` were updated together.
+- `iac-review --sources` accepts `Quality Review` and the alias
+  `quality-review`.
+- Condition logic contradictions and unused parameters/conditions, previously
+  reachable only through Agent reasoning (v0.3.0), are now detected
+  deterministically.
+
 ## [0.5.0] - 2026-09-01
 
 ### Added
@@ -228,7 +256,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.6.0
 [0.5.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.5.0
 [0.4.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.4.0
 [0.3.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.3.0
