@@ -37,8 +37,11 @@ __all__ = [
     "STRUCTURED_ERROR_KEYS",
     "STDERR_HEAD_MAX_LINES",
     "HOST_PATH_PLACEHOLDER",
+    "PID_PLACEHOLDER",
+    "TIMESTAMP_PLACEHOLDER",
     "os_error_detail",
     "redact_host_paths",
+    "redact_stderr_line",
     "IacReviewError",
     "InvalidArgumentsError",
     "InputNotFoundError",
@@ -124,6 +127,38 @@ HOST_PATH_PLACEHOLDER = "<path>"
 #: leaking a host path (steering/security.md, "判断が付かない場合は伏せる側に倒す").
 _HOST_PATH_TOKEN: Pattern[str] = re.compile(r"(?<![\w./-])/\S+")
 
+#: Fixed string a redacted process identifier collapses to (Requirement 20 AC1).
+#: A constant, like :data:`HOST_PATH_PLACEHOLDER`, so the excerpt is
+#: byte-identical across runs (Requirement 20 AC4).
+PID_PLACEHOLDER = "<pid>"
+
+#: Fixed string a redacted timestamp collapses to (Requirement 20 AC2).
+TIMESTAMP_PLACEHOLDER = "<timestamp>"
+
+#: Matches a process identifier written with an *explicit label*: the word
+#: ``pid`` (case-insensitively, on a word boundary) followed by one or more of
+#: space, ``:`` or ``=``, then the digits. Only the digit group is captured, so
+#: :func:`_redact_pids` keeps the label and replaces the value alone
+#: (``pid 1234`` -> ``pid <pid>``); the label is a useful diagnostic and is not
+#: environment-dependent.
+#:
+#: The explicit label is the whole point (Requirement 20 AC3): a bare integer is
+#: not touched, so a rule identifier, a line number, a byte count, or a version
+#: number a tool prints survives. Nothing here matches ``E3012`` (no ``pid``
+#: label) or ``42`` on its own.
+_PID_TOKEN: Pattern[str] = re.compile(r"(?i)(\bpid[\s:=]+)(\d+)")
+
+#: Matches an ISO-8601 / RFC-3339 date-time: ``YYYY-MM-DD`` then a ``T`` or a
+#: space, then ``HH:MM:SS``, with an optional fractional second and an optional
+#: timezone (``Z`` or ``+/-HH:MM``). The ``:`` in the time is what separates this
+#: from a version like ``1.46.0`` or a bare date fragment: only the compound
+#: date-*time* form is redacted (Requirement 20 AC2), so a date alone or a time
+#: alone -- either of which a number a tool prints might resemble -- is left
+#: intact to avoid the false positives Requirement 20 AC3 guards against.
+_TIMESTAMP_TOKEN: Pattern[str] = re.compile(
+    r"\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?"
+)
+
 
 def os_error_detail(exc: OSError) -> str:
     """Describe an :class:`OSError` without the filename it carries.
@@ -171,8 +206,10 @@ def redact_host_paths(line: str) -> str:
     the quotes or parens a tool emits (``open('/etc/passwd')``,
     ``File "/opt/x.py"``). When the token is ambiguous, redaction wins: leaking a
     host path is worse than collapsing a ``/foo/bar`` string that was never a
-    path (steering/security.md, "判断が付かない場合は伏せる側に倒す"). The scope is
-    absolute POSIX paths; PIDs and timestamps are out of scope for v0.8.0.
+    path (steering/security.md, "判断が付かない場合は伏せる側に倒す"). The scope of
+    *this* function is absolute POSIX paths only; process identifiers and
+    timestamps are redacted separately by :func:`redact_stderr_line`, which
+    composes this primitive with the PID and timestamp redactions (v0.9.0).
 
     Args:
         line: One line of captured tool stderr, already stripped of its ending.
@@ -186,6 +223,56 @@ def redact_host_paths(line: str) -> str:
     return _HOST_PATH_TOKEN.sub(HOST_PATH_PLACEHOLDER, line)
 
 
+def _redact_pids(line: str) -> str:
+    """Replace labeled process-identifier values in ``line`` with :data:`PID_PLACEHOLDER`.
+
+    Only a value introduced by an explicit ``pid`` label is redacted, and the
+    label is kept: ``pid 1234`` becomes ``pid <pid>``. A bare integer is never
+    touched (Requirement 20 AC3), so a rule identifier or a line number a tool
+    prints survives.
+    """
+    return _PID_TOKEN.sub(lambda match: match.group(1) + PID_PLACEHOLDER, line)
+
+
+def _redact_timestamps(line: str) -> str:
+    """Replace recognized date-times in ``line`` with :data:`TIMESTAMP_PLACEHOLDER`.
+
+    Only the compound ISO-8601 / RFC-3339 date-*time* form is matched, so a
+    version number or a bare date fragment is left intact (Requirement 20 AC3).
+    """
+    return _TIMESTAMP_TOKEN.sub(TIMESTAMP_PLACEHOLDER, line)
+
+
+def redact_stderr_line(line: str) -> str:
+    """Redact every environment-dependent value the plugin can recognize in ``line``.
+
+    Composes the three redactions applied to a retained ``stderr_head`` line, in
+    a fixed order: absolute host paths (:func:`redact_host_paths`, Requirement 18
+    AC2), then labeled process identifiers (Requirement 20 AC1), then recognized
+    timestamps (Requirement 20 AC2). Each replacement is a fixed placeholder, so
+    the result is byte-identical across runs of the same input (Requirement 18
+    AC3, Requirement 20 AC4).
+
+    The reach is deliberately narrow. Paths are matched by their leading ``/``,
+    process identifiers only when an explicit ``pid`` label introduces them, and
+    timestamps only in the compound date-time form. A bare integer, a rule
+    identifier, a line number, a byte count, and a version number are all left
+    intact (Requirement 20 AC3): over-redacting the diagnostic would defeat the
+    reason for capturing stderr at all. This is the single place the composition
+    lives; :func:`_head_lines` applies it per retained line, and
+    :func:`redact_host_paths` stays the host-path-only primitive it was so its
+    own callers and contract are unchanged.
+
+    Args:
+        line: One line of captured tool stderr, already stripped of its ending.
+
+    Returns:
+        The line with recognized host paths, labeled PIDs, and timestamps
+        replaced by their placeholders, and everything else preserved.
+    """
+    return _redact_timestamps(_redact_pids(redact_host_paths(line)))
+
+
 def _head_lines(stderr: Optional[str]) -> List[str]:
     """Return the first :data:`STDERR_HEAD_MAX_LINES` lines of ``stderr``, redacted.
 
@@ -195,15 +282,17 @@ def _head_lines(stderr: Optional[str]) -> List[str]:
     Windows.
 
     Redaction is applied *after* truncating to :data:`STDERR_HEAD_MAX_LINES`, to
-    each retained line, so that no absolute host path survives into the report.
-    This reconciles Requirement 15 AC7 (report the first 5 stderr lines) with
-    Requirement 16 AC11 / Requirement 18 AC2 (byte-identical output, no absolute
-    host path). Truncating first keeps the redaction cost bounded by the cap
-    rather than by the full stderr size.
+    each retained line, through :func:`redact_stderr_line`, so that no absolute
+    host path, no labeled process identifier, and no recognized timestamp
+    survives into the report. This reconciles Requirement 15 AC7 (report the
+    first 5 stderr lines) with Requirement 16 AC11 / Requirement 18 AC2 and
+    Requirement 20 (byte-identical output, no environment-dependent value the
+    plugin can recognize). Truncating first keeps the redaction cost bounded by
+    the cap rather than by the full stderr size.
     """
     if not stderr:
         return []
-    return [redact_host_paths(line) for line in stderr.splitlines()[:STDERR_HEAD_MAX_LINES]]
+    return [redact_stderr_line(line) for line in stderr.splitlines()[:STDERR_HEAD_MAX_LINES]]
 
 
 class IacReviewError(Exception):

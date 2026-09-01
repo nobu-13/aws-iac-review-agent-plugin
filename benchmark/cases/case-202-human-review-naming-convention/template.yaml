@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A measurement case for the human-review benchmark mode (Requirement 22 AC3).
+  The template is clean for every automated Source: an encrypted, tagged SNS
+  topic with no policy defect. The expectation under measurement is one no
+  automated Source is expected to reach -- whether the resource naming follows
+  the organization's internal convention -- a judgement left to a human
+  reviewer. The human-review mode records it informationally and never affects
+  PASS or FAIL.
+Resources:
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: notifications
+      KmsMasterKeyId: alias/aws/sns
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team

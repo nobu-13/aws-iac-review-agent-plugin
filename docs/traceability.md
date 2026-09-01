@@ -342,6 +342,38 @@ Per-criterion counts, which `tests/unit/test_traceability.py` enforces:
 | AC6 | A diagnostic that cannot be computed is recorded as an explicit "not applicable" rather than omitted or zero | `tests/unit/test_metrics.py`, `tests/integration/test_benchmark_harness.py` | The `NOT_APPLICABLE` marker, with the key always present |
 | AC7 | The new metrics and modes are documented, and the deterministic benchmark output stays reproducible | `tests/unit/test_docs.py`, `tests/integration/test_benchmark_harness.py` | `docs/benchmark-methodology.md`; byte-identity pinned |
 
+## Requirement 20: stderr redaction reach (v0.9.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | A labeled process identifier in stderr is redacted to a fixed placeholder | `tests/unit/test_errors.py`, `tests/regression/test_sec_no_host_path_in_errors.py` | `pid 1234` -> `pid <pid>`; label kept, value collapsed |
+| AC2 | A recognized ISO-8601 / RFC-3339 timestamp is redacted to a fixed placeholder | `tests/unit/test_errors.py`, `tests/regression/test_sec_no_host_path_in_errors.py` | compound date-time only |
+| AC3 | A bare number that is neither a labeled PID nor a recognized timestamp is preserved | `tests/unit/test_errors.py` | rule id, line number, byte count, version left intact |
+| AC4 | The reported `stderr_head` is byte-identical with no host path, labeled PID, or recognized timestamp | `tests/regression/test_sec_no_host_path_in_errors.py`, `tests/unit/test_errors.py` | fixed placeholders |
+| AC5 | The PID and timestamp redaction is documented with its scope and limits | `tests/unit/test_docs.py` | `docs/security-model.md` R-4 |
+| AC6 | A regression test pins that a labeled PID and a timestamp do not appear while a bare number is preserved | `tests/regression/test_sec_no_host_path_in_errors.py` | - |
+
+## Requirement 21: structured Review Time diagnostic (v0.9.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | Review Time is emitted as structured JSON on stderr, per case and in aggregate, separate from stdout | `tests/integration/test_benchmark_harness.py` | `--timing-report`; `TIMING_KEYS` |
+| AC2 | The structured diagnostic does not appear on stdout, and the summary stays byte-identical | `tests/integration/test_benchmark_harness.py` | byte-identity with/without the flag pinned |
+| AC3 | Review Time never affects the PASS or FAIL status | `tests/integration/test_benchmark_harness.py` | verdict unchanged by the flag |
+| AC4 | With repeated agent runs, the diagnostic carries per-run durations; deterministic Sources are evaluated once | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_run_benchmark.py` | `--agent-runs`; only `agent-only` repeats |
+| AC5 | The diagnostic and its channel are documented in the benchmark methodology | `tests/unit/test_docs.py` | `docs/benchmark-methodology.md` |
+
+## Requirement 22: settled positions and richer benchmark expectations (v0.9.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | Each unmitigated residual risk is stated as a deliberate position with its reason, not a roadmap item | `tests/unit/test_docs.py` | `docs/security-model.md` R-1/R-5/R-6/R-7 |
+| AC2 | A case with a non-empty `expected_findings_agent_only`, evaluated by `agent-only` against a fixed fixture | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_ground_truth.py` | `case-201-agent-only-oversized-policy` |
+| AC3 | A case with a non-empty `expected_findings_human_review`, informational and never affecting PASS/FAIL | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_ground_truth.py` | `case-202-human-review-naming-convention` |
+| AC4 | A case declaring `expected_remediation` and one declaring `expected_human_intervention_count`, so the diagnostics report a value | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_metrics.py` | `case-201`; diagnostics `100.0` / `1` |
+| AC5 | The schema permits the new fields, and the existing cases and their contract are unchanged | `tests/unit/test_ground_truth.py` | optional fields; `schema_version` unchanged |
+| AC6 | The `agent-only` findings are a fixed fixture rather than generated during the run | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_ground_truth.py` | `benchmark/agent-findings/` |
+
 ## The 31 correctness properties
 
 Every property in the design's "Correctness Properties" section is implemented

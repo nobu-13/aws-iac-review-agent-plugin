@@ -196,6 +196,9 @@ __all__ = [
     "CASE_NOT_EVALUATED",
     "HARNESS_EXIT_CODES",
     "SCHEMA_VERSION",
+    "TIMING_SCHEMA_VERSION",
+    "TIMING_KEYS",
+    "TIMING_CASE_KEYS",
     "GROUND_TRUTH_FILENAME",
     "ORCHESTRATOR",
     "REVIEW_TIMEOUT_S",
@@ -288,6 +291,24 @@ DESCRIPTION = (
 #: Review_Report's ``schema_version`` and of the Ground_Truth format's: this is
 #: the shape of *this* output, and it is the only version-like value in it.
 SCHEMA_VERSION = "1.0.0"
+
+#: Version of the structured Review Time diagnostic (Requirement 21). Separate
+#: from :data:`SCHEMA_VERSION` because it is a different document on a different
+#: channel (stderr, not stdout).
+TIMING_SCHEMA_VERSION = "1.0.0"
+
+#: Top-level keys of the structured Review Time diagnostic, in insertion order.
+#: The diagnostic is JSON on stderr, never on stdout, so it is free to carry the
+#: wall-clock values the summary must not (Requirement 21 AC1/AC2).
+TIMING_KEYS: Tuple[str, ...] = (
+    "schema_version",
+    "unit",
+    "cases",
+    "aggregate",
+)
+
+#: Keys of one per-case entry of the timing diagnostic's ``cases`` list.
+TIMING_CASE_KEYS: Tuple[str, ...] = ("case_id", "runs", "min", "max", "mean")
 
 #: The Ground_Truth file, in every case directory. A directory without one is not
 #: a case (see :func:`discover_cases`).
@@ -737,6 +758,17 @@ def build_parser() -> bootstrap.EntryPointParser:
             "from the first run. Default: 1."
         ),
     )
+    parser.add_argument(
+        "--timing-report",
+        action="store_true",
+        help=(
+            "Emit Review Time as a structured (JSON) diagnostic on stderr, per "
+            "case and in aggregate (Requirement 21). It never appears on stdout, "
+            "so the summary stays byte-identical between runs, and it never "
+            "affects PASS or FAIL. Without this flag, Review Time is only shown "
+            "as a human-readable line under --verbose."
+        ),
+    )
     return parser
 
 
@@ -1141,6 +1173,12 @@ class Benchmark:
         self.filter_only: bool = False
         self.agent_dir: Optional[Path] = None
         self.agent_runs: int = 1
+        self.timing_report: bool = False
+        # Per-case wall-clock durations, in discovery order. Kept off stdout: it
+        # is environment-dependent, and the summary must stay byte-identical
+        # (Requirement 16 AC11, Requirement 21 AC2). Emitted as a structured
+        # stderr diagnostic when --timing-report is set (Requirement 21 AC1).
+        self._timings: List[Dict[str, Any]] = []
         self.orchestrator: Optional[Path] = None
         self.entries: List[Dict[str, Any]] = []
         self.errors: List[Dict[str, str]] = []
@@ -1190,6 +1228,7 @@ class Benchmark:
                 remediation="Pass --agent-runs 1 or greater; the default is 1.",
             )
         self.agent_runs = int(args.agent_runs)
+        self.timing_report = bool(args.timing_report)
 
         if args.agent_findings:
             agent_dir = pathguard.resolve_within(args.agent_findings, self.root)
@@ -1507,24 +1546,43 @@ class Benchmark:
                         "{1}".format(case_id, exc)
                     )
 
-        self._report_timing(case_id, elapsed, verbose=verbose)
+        self._record_timing(case_id, elapsed, verbose=verbose)
         return first
 
-    @staticmethod
-    def _report_timing(
-        case_id: str, elapsed: Sequence[float], *, verbose: bool
+    def _record_timing(
+        self, case_id: str, elapsed: Sequence[float], *, verbose: bool
     ) -> None:
-        """Report Review Time on stderr, never on stdout (Requirement 19 AC2).
+        """Record one case's Review Time, for the structured stderr diagnostic.
+
+        Two outputs, both on stderr, neither on stdout (Requirement 21 AC2). The
+        structured entry is stored on :attr:`_timings` and emitted as one JSON
+        document at the end of the run when ``--timing-report`` is set
+        (Requirement 21 AC1); the human-readable line is kept for ``--verbose``,
+        unchanged from v0.8.0. Review Time never reaches the summary or the
+        pass/fail verdict (Requirement 21 AC3).
 
         Args:
             case_id: The case measured.
             elapsed: One wall-clock duration per completed review, in seconds.
-            verbose: Whether to emit the line; timing is a verbose-only
-                diagnostic, since a non-verbose run's stderr is reserved for
-                warnings.
+                Length is 1 unless ``--agent-runs`` repeated an agent-only case,
+                in which case each run's duration is carried so the variation is
+                reportable (Requirement 21 AC4).
+            verbose: Whether to also emit the human-readable line.
         """
         if not elapsed:
             return
+
+        runs = [round(value, 6) for value in elapsed]
+        self._timings.append(
+            {
+                "case_id": case_id,
+                "runs": runs,
+                "min": round(min(elapsed), 6),
+                "max": round(max(elapsed), 6),
+                "mean": round(sum(elapsed) / len(elapsed), 6),
+            }
+        )
+
         if len(elapsed) == 1:
             bootstrap.verbose_diagnostic(
                 "{0}: review time {1:.3f}s".format(case_id, elapsed[0]),
@@ -1542,6 +1600,42 @@ class Benchmark:
             ),
             verbose=verbose,
         )
+
+    def _emit_timing_report(self, *, stream: Optional[Any] = None) -> None:
+        """Write the structured Review Time diagnostic to stderr.
+
+        One JSON document with a fixed shape (:data:`TIMING_KEYS`): a
+        ``schema_version``, the ``unit``, the per-case entries, and an aggregate.
+        It goes to stderr, never stdout, so the byte-identical summary is
+        untouched (Requirement 21 AC1/AC2). Called only when ``--timing-report``
+        is set.
+
+        Timing values are wall-clock and therefore differ between runs; that is
+        the whole reason this is a separate stderr channel rather than a summary
+        field. The document is written with ``json.dump`` to stderr with a
+        trailing newline, so a consumer can parse the last line group as JSON.
+
+        Args:
+            stream: Destination, defaulting to :data:`sys.stderr`. Injectable for
+                tests.
+        """
+        durations = [entry["mean"] for entry in self._timings]
+        aggregate = {
+            "case_count": len(self._timings),
+            "total": round(sum(durations), 6),
+            "mean_per_case": round(sum(durations) / len(durations), 6)
+            if durations
+            else None,
+        }
+        report_doc = {
+            "schema_version": TIMING_SCHEMA_VERSION,
+            "unit": "seconds",
+            "cases": list(self._timings),
+            "aggregate": aggregate,
+        }
+        out = sys.stderr if stream is None else stream
+        json.dump(report_doc, out, ensure_ascii=False, sort_keys=True)
+        out.write("\n")
 
     # -- output -------------------------------------------------------------
 
@@ -1697,6 +1791,12 @@ class Benchmark:
 
         for case_id in case_ids:
             self.entries.append(self._evaluate(case_id, verbose=verbose))
+
+        # Structured Review Time on stderr, before the summary is serialized to
+        # stdout by the wrapper. Emitted only under --timing-report, and never to
+        # stdout, so the summary stays byte-identical (Requirement 21 AC1/AC2).
+        if self.timing_report:
+            self._emit_timing_report()
 
         self.completed = True
         return bootstrap.EntryPointOutcome(

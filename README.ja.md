@@ -409,6 +409,8 @@ harness は Agent を起動しないため、同じ case を 2 回実行する�
 
 v0.8.0 は悪意ある入力に対する堅牢化を行った。5 MiB を超える単一 Template、あるいは合計 50 MiB を超えるディレクトリは読み込まずに拒否する。YAML alias bomb は上限を設けて parse エラーとして失敗させる。Template は単一の file descriptor 経由で読み、containment 検査と読み込みの間に symlink が差し替えられないようにする。timeout したツールの子孫プロセスは回収する。ツール stderr 中の絶対 host path は report へ届く前に伏せる。Benchmark harness は Remediation Accuracy、Human Intervention Count、Review Time を pass/fail に影響しない診断として記録し、Source サブセットモードに加えて `agent-only` / `human-review` モードを提供する。詳細は `docs/security-model.md` (R-2, R-4, R-8, R-9) と `docs/benchmark-methodology.md` を参照。
 
+v0.9.0 は stderr redaction を host path に加えてラベル付き process identifier と認識可能な timestamp まで広げた (裸の rule id・行番号・version は保持する)。Review Time は `--timing-report` で構造化 JSON として stderr に出力する。residual risk R-1, R-5, R-6, R-7 を確定した方針として整理し、予約配列と診断期待フィールドを埋める benchmark 測定ケースを 2 件追加して、`agent-only` / `human-review` モードと 2 つの診断が宣言された期待値を測るようにした。
+
 ## Security 上の考慮事項
 
 この plugin は、信頼する理由の無い Infrastructure as Code を処理する。入力テンプレート、
@@ -615,28 +617,13 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 (`--agent-runs`)、Remediation Accuracy と Human Intervention Count の診断、`agent-only` と
 `human-review` モード。詳細は CHANGELOG.md と `docs/security-model.md` を参照。
 
-### v0.9.0 -- security 強化と測定 (残り)
-
-Security 強化:
-
-- `stderr_head` の redaction を絶対 host path 以外へ拡張すること。ツールが出力しうる
-  process identifier や timestamp は、plugin がまだ確実に認識できない
-  (`docs/security-model.md`、R-4)。
-- 設計上残る residual risk への対応、または最終的な方針の文書化: containment は子プロセスの
-  sandbox ではない (R-1)、`cdk synth` は非 sandbox 実行 (R-5)、`SIGKILL` は一時ファイルを
-  OS の sweeper に委ねる (R-6)、redaction は secret 検出ではない (R-7)。
-
-測定:
-
-- Review Time を summary が持てる形にまとめるか、別の出力ストリームを用意すること。
-  wall-clock 値は byte-identical な summary に入れられないため、現在は stderr で報告して
-  いる。
-- 予約済みの `expected_findings_agent_only` / `expected_findings_human_review` 配列を埋める
-  こと。それらを読む `agent-only` / `human-review` モードは v0.8.0 で出荷したが、同梱 case
-  はいずれも両配列を空のままにしているため、case が opt-in するまでモードは何も測らない。
-- `expected_remediation` と `expected_human_intervention_count` を宣言する case を作り、
-  Remediation Accuracy と Human Intervention Count の診断が `N/A` ではなく値を報告するように
-  すること (`docs/benchmark-methodology.md`)。
+**v0.9.0 で提供済み。** `stderr_head` の redaction を host path に加えてラベル付き process
+identifier と認識可能な timestamp まで広げた (裸の rule id・行番号・version は保持) (R-4)。
+Review Time は `--timing-report` で構造化 JSON として stderr に出力する。residual risk
+R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として整理した (未対応課題では
+ない)。予約配列と診断期待フィールドを埋める benchmark 測定ケースを 2 件追加し、`agent-only`
+/ `human-review` モードと 2 つの診断が宣言された期待値を測るようにした。詳細は CHANGELOG.md
+と `docs/benchmark-methodology.md` を参照。
 
 ### v0.10.0 -- IaC と分析の追加
 

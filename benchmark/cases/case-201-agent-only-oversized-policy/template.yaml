@@ -1,0 +1,31 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A measurement case for the agent-only benchmark mode (Requirement 22 AC2). The
+  template is clean for every deterministic Source: an encrypted DynamoDB table
+  with point-in-time recovery, tags, and a retain policy, and no IAM resource or
+  policy document, so no deterministic detector and no bundled Guard rule fires.
+  The finding under measurement is one only agent reasoning reaches -- that a
+  session table with no time-to-live will grow without bound -- supplied as a
+  fixed agent-finding fixture, never generated during the run.
+Resources:
+  SessionTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: SessionId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: SessionId
+          KeyType: HASH
+      SSESpecification:
+        SSEEnabled: true
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      Tags:
+        - Key: Environment
+          Value: production
+        - Key: Owner
+          Value: platform-team

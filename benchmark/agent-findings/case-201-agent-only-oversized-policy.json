@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "findings": [
+    {
+      "Normalized_Category": "Availability",
+      "FindingType": "BestPractice",
+      "Severity": "LOW",
+      "Confidence": "Likely",
+      "Source": ["Agent Review"],
+      "Resource": "SessionTable",
+      "Location": {
+        "File": "benchmark/cases/case-201-agent-only-oversized-policy/template.yaml",
+        "Line": null,
+        "Column": null,
+        "TemplatePath": ["Resources", "SessionTable"]
+      },
+      "Finding": "The session table declares no time-to-live, so it may grow without bound.",
+      "WhyItMatters": "Without a TimeToLiveSpecification, expired session items are never removed; the table grows indefinitely, raising cost and eventually operational risk.",
+      "Evidence": [
+        {
+          "Source": "Agent Review",
+          "Detail": "SessionTable has no TimeToLiveSpecification, and a session store is a table whose items are expected to expire.",
+          "RuleId": null,
+          "Excerpt": "Type: AWS::DynamoDB::Table"
+        }
+      ],
+      "Recommendation": "Declare a TimeToLiveSpecification on an expiry attribute so expired sessions are removed automatically.",
+      "SuggestedRemediation": "Enable a time-to-live attribute on the table (TimeToLiveSpecification with an ExpiresAt attribute) so expired sessions are purged."
+    }
+  ]
+}

@@ -46,6 +46,48 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.9.0] - 2026-09-01
+
+Closes the residual edges of v0.8.0: a wider deterministic `stderr_head`, Review
+Time as structured data, the residual security risks settled as positions, and
+benchmark cases that exercise the modes and diagnostics that shipped empty. The
+byte-identical stdout contract and read-only default are unchanged, and no
+Finding-schema or Ground_Truth-schema version is bumped for a breaking reason.
+
+### Added
+
+- **`run_benchmark.py --timing-report`.** Emits Review Time as a structured
+  (JSON) diagnostic on stderr, per case and in aggregate, on a channel separate
+  from the summary. It never appears on stdout, so the summary stays
+  byte-identical, and it never affects PASS or FAIL (Requirement 21).
+- **Ground_Truth `expected_remediation` and `expected_human_intervention_count`.**
+  Two optional fields (a per-finding string and a top-level integer) that make
+  the Remediation Accuracy and Human Intervention Count diagnostics report a
+  value instead of "not applicable". Both are optional, so the Ground_Truth
+  `schema_version` is unchanged, and every v0.1-v0.8 case is unaffected
+  (Requirement 22 AC4, AC5).
+- **Two benchmark measurement cases** (`case-201-agent-only-oversized-policy`,
+  `case-202-human-review-naming-convention`) and an agent-finding fixture under
+  `benchmark/agent-findings/`. They populate the reserved
+  `expected_findings_agent_only` and `expected_findings_human_review` arrays so
+  the `agent-only` and `human-review` modes measure a declared expectation
+  rather than nothing; both carry empty `expected_findings`, so the deterministic
+  pass/fail contract is unchanged (Requirement 22 AC2, AC3, AC6).
+
+### Changed
+
+- **`stderr_head` redaction widened** to labeled process identifiers
+  (`pid 1234` -> `pid <pid>`) and recognized ISO-8601 / RFC-3339 timestamps
+  (-> `<timestamp>`), in addition to absolute host paths. The reach is
+  deliberately narrow: a bare integer, a rule id, a line number, a byte count,
+  and a version number are preserved, so the diagnostic value survives
+  (Requirement 20). The host-path redaction primitive is unchanged; the new
+  composition lives in `iacreview.errors.redact_stderr_line`.
+- **Residual risks R-1, R-5, R-6, R-7 are now stated as deliberate positions**
+  in `docs/security-model.md` -- boundaries the plugin does not cross, each with
+  its reason -- rather than roadmap candidates awaiting a fix (Requirement 22
+  AC1).
+
 ## [0.8.0] - 2026-09-01
 
 Robustness against untrusted input, a deterministic stderr excerpt, and an
@@ -354,7 +396,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.9.0
 [0.8.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.8.0
 [0.7.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.7.0
 [0.6.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.6.0

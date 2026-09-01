@@ -370,3 +370,98 @@ def test_redacted_stderr_head_is_byte_identical_across_two_runs(
 
     assert first["stderr_head"] == second["stderr_head"]
     assert json.dumps(first["stderr_head"]) == json.dumps(second["stderr_head"])
+
+
+# ---------------------------------------------------------------------------
+# Requirement 20 (v0.9.0): a labeled PID and a recognized timestamp in tool
+# stderr must not reach the report, while a bare number a tool prints (a rule
+# id, a line number) is preserved. The redaction lives in one place,
+# iacreview.errors.redact_stderr_line, applied per retained line in _head_lines.
+# ---------------------------------------------------------------------------
+
+
+def _reproduce_cfnlint_failure_with_pid_and_timestamp_in_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+    fakebin_dir: Path,
+    tmp_path: Path,
+) -> dict:
+    """Drive cfn-lint into a crash whose stderr carries a labeled PID, a
+    timestamp, and a bare rule id / line number that must survive.
+
+    Same fake mechanism as the host-path reproduction: ``PATH`` resolves
+    cfn-lint only to the fake, and ``TMPDIR`` is the fake's configuration
+    channel.
+    """
+    from iacreview import cfnlint
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True)
+    (workspace / "template.yaml").write_text(TEMPLATE_TEXT, encoding="utf-8")
+
+    config = {
+        "results_text": "",
+        "exit_code": 1,
+        "stderr": (
+            "cfn-lint worker pid 4242 crashed\n"
+            "at 2026-09-01T21:25:14Z during rule E3012 on line 9\n"
+            "RuntimeError: fake cfn-lint always crashes\n"
+        ),
+    }
+    config_dir = tmp_path / "cfg"
+    config_dir.mkdir()
+    (config_dir / "fake-cfn-lint.json").write_text(json.dumps(config), encoding="utf-8")
+
+    monkeypatch.setenv(
+        "PATH", os.pathsep.join([str(fakebin_dir), str(Path(sys.executable).parent)])
+    )
+    monkeypatch.setenv("TMPDIR", str(config_dir))
+
+    result = cfnlint.run_and_normalize(
+        workspace / "template.yaml", workspace_root=workspace
+    )
+    assert result.findings == []
+    assert len(result.errors) == 1, result.errors
+    return result.errors[0]
+
+
+def test_tool_stderr_pid_and_timestamp_do_not_reach_stderr_head(
+    monkeypatch: pytest.MonkeyPatch, fakebin_dir: Path, tmp_path: Path
+) -> None:
+    """Requirement 20 AC1/AC2/AC4: the labeled PID and the ISO-8601 timestamp
+    cfn-lint wrote to stderr are redacted; the bare rule id and line number are
+    preserved (AC3)."""
+    error = _reproduce_cfnlint_failure_with_pid_and_timestamp_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path
+    )
+
+    assert error["error_class"] == "tool_execution"
+    joined = "\n".join(error["stderr_head"])
+
+    # The environment-dependent values are gone.
+    assert "4242" not in joined, joined
+    assert "2026-09-01T21:25:14Z" not in joined, joined
+    assert "<pid>" in joined
+    assert "<timestamp>" in joined
+    # The whole rendered StructuredError, which is what reaches stdout.
+    assert "4242" not in json.dumps(error), error
+    assert "2026-09-01T21:25:14Z" not in json.dumps(error), error
+    # The diagnostic value survives: rule id, line number, tool name, and fault.
+    assert "E3012" in joined
+    assert "line 9" in joined
+    assert "cfn-lint" in joined
+    assert "RuntimeError" in joined
+
+
+def test_redacted_pid_and_timestamp_are_byte_identical_across_two_runs(
+    monkeypatch: pytest.MonkeyPatch, fakebin_dir: Path, tmp_path: Path
+) -> None:
+    """Requirement 20 AC4: the same failure yields a byte-identical
+    ``stderr_head`` on a second run, carrying no PID and no timestamp."""
+    first = _reproduce_cfnlint_failure_with_pid_and_timestamp_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path / "run1"
+    )
+    second = _reproduce_cfnlint_failure_with_pid_and_timestamp_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path / "run2"
+    )
+
+    assert first["stderr_head"] == second["stderr_head"]

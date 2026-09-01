@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-201-agent-only-oversized-policy",
+  "template": "template.yaml",
+  "description": "A measurement case for the agent-only benchmark mode (Requirement 22 AC2). SessionTable is clean for every deterministic Source: it is encrypted, has point-in-time recovery, carries the required tags and a retain policy, and the template declares no IAM resource or policy document, so no deterministic detector and no bundled Guard rule fires. The expectation under measurement lives in expected_findings_agent_only: a BestPractice observation that only agent reasoning reaches -- that a session table with no TimeToLiveSpecification grows without bound, an Availability concern no single-resource rule expresses. It is supplied by a fixed agent-finding fixture (benchmark/agent-findings/case-201-agent-only-oversized-policy.json), never generated during the run, so the benchmark stays deterministic. This entry declares an expected_remediation so the Remediation Accuracy diagnostic reports a value, and the case declares an expected_human_intervention_count so the Human Intervention Count diagnostic reports a value.",
+  "authored_before_review": true,
+  "expected_finding_count": 0,
+  "expected_findings": [],
+  "expected_findings_agent_only": [
+    {
+      "resource": "SessionTable",
+      "normalized_category": "Availability",
+      "finding_type": "BestPractice",
+      "severity": "LOW",
+      "confidence": "Likely",
+      "detection_class": "agent-dependent",
+      "detected_by": ["Agent Review"],
+      "note": "The session table declares no TimeToLiveSpecification, so expired sessions are never removed and the table grows without bound. Reachable only by agent reasoning, not by any deterministic rule.",
+      "expected_remediation": "enable a time-to-live attribute"
+    }
+  ],
+  "expected_findings_human_review": [],
+  "expected_human_intervention_count": 1
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "case_id": "case-202-human-review-naming-convention",
+  "template": "template.yaml",
+  "description": "A measurement case for the human-review benchmark mode (Requirement 22 AC3). NotificationTopic is clean for every automated Source: it is encrypted with the AWS managed SNS key and carries the required tags, so no deterministic detector, no Guard rule, and no agent finding is expected. The expectation under measurement lives in expected_findings_human_review: whether the topic name follows the organization's internal naming convention, a judgement no automated Source can make and that a human reviewer is expected to reach. The human-review mode is informational and never affects PASS or FAIL, so this case reports INFO and does not change the run's verdict.",
+  "authored_before_review": true,
+  "expected_finding_count": 0,
+  "expected_findings": [],
+  "expected_findings_agent_only": [],
+  "expected_findings_human_review": [
+    {
+      "resource": "NotificationTopic",
+      "normalized_category": "Other",
+      "finding_type": "BestPractice",
+      "severity": "INFO",
+      "confidence": "Contextual",
+      "detection_class": "agent-dependent",
+      "detected_by": ["Agent Review"],
+      "note": "Whether TopicName follows the organization's naming convention is a human judgement; no automated Source is expected to reach it, which is why it is recorded under human-review rather than expected_findings."
+    }
+  ]
+}

@@ -1438,3 +1438,200 @@ def test_the_new_modes_are_byte_identical_between_runs(workspace: Path) -> None:
         first = run_harness(["--cases", "cases", "--mode", mode], workspace)
         second = run_harness(["--cases", "cases", "--mode", mode], workspace)
         assert first.stdout == second.stdout, mode
+
+
+# ---------------------------------------------------------------------------
+# v0.9.0: structured Review Time on stderr (Requirement 21)
+# ---------------------------------------------------------------------------
+
+
+def test_timing_report_emits_structured_json_on_stderr(workspace: Path) -> None:
+    """Requirement 21 AC1: --timing-report writes a per-case + aggregate JSON
+    document to stderr."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "iam-only", "--timing-report"], workspace
+    )
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+    # The last JSON object on stderr is the timing report.
+    document = json.loads(completed.stderr.strip().splitlines()[-1])
+    assert sorted(document) == sorted(run_benchmark.TIMING_KEYS)
+    assert document["unit"] == "seconds"
+    assert document["aggregate"]["case_count"] == len(document["cases"])
+    for entry in document["cases"]:
+        assert sorted(entry) == sorted(run_benchmark.TIMING_CASE_KEYS)
+
+
+def test_timing_report_never_appears_on_stdout(workspace: Path) -> None:
+    """Requirement 21 AC2: no timing value reaches the byte-identical summary."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "iam-only", "--timing-report"], workspace
+    )
+    summary = summary_of(completed)
+
+    assert "timing" not in summary
+    assert "unit" not in summary
+    assert "seconds" not in completed.stdout
+
+
+def test_timing_report_does_not_change_stdout(workspace: Path) -> None:
+    """Requirement 21 AC2: the summary is byte-identical with and without the flag."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    without = run_harness(["--cases", "cases", "--mode", "iam-only"], workspace)
+    with_flag = run_harness(
+        ["--cases", "cases", "--mode", "iam-only", "--timing-report"], workspace
+    )
+
+    assert without.stdout == with_flag.stdout
+    assert without.returncode == with_flag.returncode == exitcodes.OK
+
+
+def test_timing_report_does_not_affect_the_verdict(workspace: Path) -> None:
+    """Requirement 21 AC3: Review Time never changes PASS/FAIL."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    without = summary_of(run_harness(["--cases", "cases", "--mode", "iam-only"], workspace))
+    with_flag = summary_of(
+        run_harness(
+            ["--cases", "cases", "--mode", "iam-only", "--timing-report"], workspace
+        )
+    )
+
+    assert without["status"] == with_flag["status"]
+
+
+# ---------------------------------------------------------------------------
+# v0.9.0: the measurement cases exercise the reserved modes and diagnostics
+# (Requirement 22 AC2-AC6). Scoped to case-201 / case-202 in a tmp cases dir so
+# the tests need no external tool: both templates are DynamoDB / SNS only, which
+# the deterministic Sources handle in pure Python.
+# ---------------------------------------------------------------------------
+
+AGENT_ONLY_CASE = "case-201-agent-only-oversized-policy"
+HUMAN_REVIEW_CASE = "case-202-human-review-naming-convention"
+
+
+def _measurement_workspace(tmp_path: Path) -> Path:
+    """A cases dir holding copies of the two v0.9.0 measurement cases.
+
+    Copied rather than pointed at ``benchmark/cases`` so the run covers only
+    these two -- the defect cases would need cfn-lint and cfn-guard, and these do
+    not -- and so the harness contains every path inside ``tmp_path``.
+    """
+    source = PLUGIN_ROOT / "benchmark" / "cases"
+    cases = tmp_path / "cases"
+    cases.mkdir()
+    for name in (AGENT_ONLY_CASE, HUMAN_REVIEW_CASE):
+        shutil.copytree(source / name, cases / name)
+    findings = tmp_path / "agent-findings"
+    findings.mkdir()
+    shutil.copy(
+        PLUGIN_ROOT / "benchmark" / "agent-findings" / "{0}.json".format(AGENT_ONLY_CASE),
+        findings / "{0}.json".format(AGENT_ONLY_CASE),
+    )
+    return tmp_path
+
+
+def test_agent_only_case_measures_the_reserved_array_against_the_fixture(
+    tmp_path: Path,
+) -> None:
+    """Requirement 22 AC2/AC6: the agent-only mode evaluates
+    expected_findings_agent_only against a fixed fixture, matching the declared
+    expectation."""
+    workspace = _measurement_workspace(tmp_path)
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "agent-only", "--agent-findings", "agent-findings"],
+        workspace,
+    )
+    summary = summary_of(completed)
+    entry = case_entry(summary, AGENT_ONLY_CASE)
+
+    assert entry["evaluated"] is True
+    assert entry["metrics"]["expected_count"] == 1
+    assert entry["metrics"]["matched_count"] == 1
+    assert entry["metrics"]["detection_rate"] == "100.0"
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+
+def test_agent_only_case_reports_the_remediation_and_intervention_diagnostics(
+    tmp_path: Path,
+) -> None:
+    """Requirement 22 AC4: the declared diagnostics report a value, not N/A."""
+    workspace = _measurement_workspace(tmp_path)
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "agent-only", "--agent-findings", "agent-findings"],
+        workspace,
+    )
+    diagnostics = case_entry(summary_of(completed), AGENT_ONLY_CASE)["diagnostics"]
+
+    assert diagnostics["remediation_accuracy"] == "100.0"
+    assert diagnostics["human_intervention_count"] == 1
+
+
+def test_human_review_case_is_informational_and_never_fails(tmp_path: Path) -> None:
+    """Requirement 22 AC3: a non-empty human-review array is measured but never
+    thresholded."""
+    workspace = _measurement_workspace(tmp_path)
+
+    completed = run_harness(["--cases", "cases", "--mode", "human-review"], workspace)
+    summary = summary_of(completed)
+    entry = case_entry(summary, HUMAN_REVIEW_CASE)
+
+    assert entry["metrics"]["expected_count"] == 1
+    assert entry["status"] == metrics.STATUS_INFO
+    assert summary["status"] == metrics.STATUS_INFO
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+
+def test_agent_runs_records_one_duration_per_run_for_the_agent_case(
+    tmp_path: Path,
+) -> None:
+    """Requirement 21 AC4: --agent-runs N carries N per-run durations for the
+    agent-only case, and the summary is unaffected."""
+    workspace = _measurement_workspace(tmp_path)
+
+    completed = run_harness(
+        [
+            "--cases",
+            "cases",
+            "--mode",
+            "agent-only",
+            "--agent-findings",
+            "agent-findings",
+            "--agent-runs",
+            "2",
+            "--timing-report",
+        ],
+        workspace,
+    )
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+    timing = json.loads(completed.stderr.strip().splitlines()[-1])
+    agent_entry = next(
+        entry for entry in timing["cases"] if entry["case_id"] == AGENT_ONLY_CASE
+    )
+    assert len(agent_entry["runs"]) == 2
+
+
+def test_the_bundled_measurement_cases_do_not_change_the_combined_verdict(
+    tmp_path: Path,
+) -> None:
+    """Requirement 22 AC5: the measurement cases carry empty expected_findings,
+    so combined mode reports them clean and the verdict stays PASS/INFO."""
+    workspace = _measurement_workspace(tmp_path)
+
+    completed = run_harness(["--cases", "cases", "--mode", "combined"], workspace)
+    summary = summary_of(completed)
+
+    for name in (AGENT_ONLY_CASE, HUMAN_REVIEW_CASE):
+        entry = case_entry(summary, name)
+        assert entry["metrics"]["false_positive_count"] == 0, name
+    assert summary["status"] in (metrics.STATUS_PASS, metrics.STATUS_INFO)
+    assert completed.returncode == exitcodes.OK, completed.stderr

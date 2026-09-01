@@ -75,6 +75,12 @@ EXPECTED_CASE_FIELDS = [
     "expected_findings_human_review",
 ]
 
+#: Optional top-level fields (added v0.9.0). Not in ``required``: a case declares
+#: them only to make a diagnostic report a value instead of "not applicable", and
+#: neither affects PASS or FAIL. Present in the schema's ``properties`` but not in
+#: every case.
+OPTIONAL_CASE_FIELDS = ["expected_human_intervention_count"]
+
 RESERVED_CASE_FIELDS = [
     "expected_findings_agent_only",
     "expected_findings_human_review",
@@ -94,7 +100,10 @@ EXPECTED_FINDING_REQUIRED_FIELDS = [
 #: The one optional entry field. ``confidence`` follows from ``detection_class``
 #: unless a case pins it, so requiring it would force every case to restate a
 #: derivable value.
-OPTIONAL_FINDING_FIELDS = ["confidence"]
+#: Optional per-finding fields: ``confidence`` (derivable from detection_class)
+#: and, from v0.9.0, ``expected_remediation`` (drives the Remediation Accuracy
+#: diagnostic). Present in ``properties`` but never in ``required``.
+OPTIONAL_FINDING_FIELDS = ["confidence", "expected_remediation"]
 
 DETECTION_CLASSES = ["deterministic", "agent-dependent"]
 
@@ -343,9 +352,10 @@ def test_schema_requires_every_case_field(schema: Dict[str, Any]) -> None:
 
 
 def test_schema_declares_exactly_the_required_case_fields(schema: Dict[str, Any]) -> None:
-    # No optional top-level field exists: every case states all nine, so two
-    # cases are always comparable.
-    assert list(schema["properties"]) == EXPECTED_CASE_FIELDS
+    # The nine required fields plus any optional top-level field (v0.9.0's
+    # expected_human_intervention_count). The required nine are compared
+    # separately by test_schema_requires_every_case_field.
+    assert list(schema["properties"]) == EXPECTED_CASE_FIELDS + OPTIONAL_CASE_FIELDS
 
 
 def test_reserved_fields_are_required(schema: Dict[str, Any]) -> None:
@@ -680,6 +690,14 @@ EXPECTED_CASE_DIRECTORIES = [
     # below allow for; Task 24.4 asserts the property they exist for.
     "case-101-clean-web-tier",
     "case-102-clean-data-tier",
+    # Measurement cases, numbered from 201 (v0.9.0, Requirement 22). They exercise
+    # the reserved arrays and the diagnostic expectation fields rather than the
+    # deterministic pipeline: 201 populates expected_findings_agent_only and
+    # declares the two diagnostic fields, 202 populates
+    # expected_findings_human_review. Their expected_findings are empty, so they
+    # do not change the deterministic pass/fail contract.
+    "case-201-agent-only-oversized-policy",
+    "case-202-human-review-naming-convention",
 ]
 
 #: The one account ID benchmark templates may contain, fixed by
@@ -770,12 +788,25 @@ def test_case_declares_that_it_was_authored_before_review(name: str) -> None:
 
 
 @pytest.mark.parametrize("name", case_ids())
-def test_case_reserved_arrays_are_present_and_empty(name: str) -> None:
-    # Requirement 11 AC12: present so a future mode needs no format change, and
-    # empty in v0.1 because no mode populates them yet.
+def test_case_reserved_arrays_are_present(name: str) -> None:
+    # Requirement 11 AC12 / 22 AC5: present in every case so a mode needs no
+    # format change. The ground-truth cases (001-199) leave them empty; the
+    # v0.9.0 measurement cases (201+) populate one of them, which is checked
+    # separately. Here we only assert presence and the array type.
     case = load_case(name)
     for field in RESERVED_CASE_FIELDS:
-        assert case[field] == [], field
+        assert field in case, field
+        assert isinstance(case[field], list), field
+
+
+@pytest.mark.parametrize("name", case_ids())
+def test_ground_truth_cases_leave_the_reserved_arrays_empty(name: str) -> None:
+    # The defect and clean cases (001-199) measure the deterministic pipeline;
+    # only the dedicated measurement cases (201+) populate a reserved array.
+    if not name.startswith("case-2"):
+        case = load_case(name)
+        for field in RESERVED_CASE_FIELDS:
+            assert case[field] == [], field
 
 
 @pytest.mark.parametrize("name", case_ids())
