@@ -41,10 +41,17 @@ Nothing in the Template is evaluated
     from ``SafeLoader``. Intrinsic functions are kept as data (``{"Ref": ...}``)
     and never resolved (design.md, Security Design / Template 内容を評価しない).
 
-Path validation is *not* done here. A caller passes a path that
-:func:`iacreview.pathguard.resolve_within` already resolved and contained; this
-module only reads it, and reports an unreadable file as
-:class:`~iacreview.errors.InputNotFoundError` to match the exit code the failure
+The read is time-of-check to time-of-use safe. A caller passes a path that
+:func:`iacreview.pathguard.resolve_within` already resolved and contained, but
+that check and the read used to be separate operations, leaving a window in
+which a symlink or the path itself could be swapped between them
+(Requirement 17 AC5). :func:`_read_bytes_toctou_safe` closes the window: it opens
+the path once with ``O_NOFOLLOW``, then proves via :func:`os.fstat` on that one
+descriptor that the file it holds is a *regular* file (Requirement 17 AC6) whose
+``(st_dev, st_ino)`` still match the resolved path -- and does the size check on
+the same descriptor's ``st_size``. A mismatch or a non-regular file is a
+``path_violation``; an unreadable file is still an
+:class:`~iacreview.errors.InputNotFoundError`, matching the exit code the failure
 mode matrix assigns to that case.
 
 No message built here names an absolute path
@@ -71,13 +78,17 @@ No message built here names an absolute path
 from __future__ import annotations
 
 import json
+import os
+import stat
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from iacreview.errors import (
     InputNotFoundError,
+    InputTooLargeError,
     NotReviewableError,
+    PathContainmentError,
     TemplateParseError,
     os_error_detail,
 )
@@ -85,6 +96,7 @@ from iacreview.source import display_path
 from iacreview.yamlcfn import import_yaml, load_yaml
 
 __all__ = [
+    "MAX_TEMPLATE_BYTES",
     "TEMPLATE_FORMATS",
     "RESOURCES_KEY",
     "JSON_START_CHARACTERS",
@@ -99,6 +111,15 @@ __all__ = [
     "is_reviewable",
     "load_template",
 ]
+
+#: Maximum size, in bytes, of a single Template file the plugin will read
+#: (Requirement 17 AC1). 5 MiB: comfortably above CloudFormation's 1 MiB
+#: template-body limit, so a legitimate ``cdk synth`` output still loads, while
+#: a hostile multi-gigabyte file is refused before a byte is read. This is the
+#: single definition of the single-file limit (Requirement 17 AC8); the
+#: aggregate limit for a directory target lives in the orchestration layer as
+#: ``MAX_AGGREGATE_BYTES``. Documented in ``docs/security-model.md`` (R-8).
+MAX_TEMPLATE_BYTES = 5 * 1024 * 1024
 
 #: The two formats Requirement 3 AC4 requires, in a fixed order.
 TEMPLATE_FORMATS: Tuple[str, str] = ("yaml", "json")
@@ -172,26 +193,172 @@ class LoadedTemplate:
 # ---------------------------------------------------------------------------
 
 
-def _read_text(path: Path) -> str:
-    """Read ``path`` as UTF-8 text.
+def _read_bytes_toctou_safe(path: Path) -> bytes:
+    """Open, verify, and read ``path`` through a single file descriptor.
+
+    Requirement 17 AC5 asks that the containment check and the read happen
+    against the *same* file object, so that a symlink or path swapped between
+    :func:`iacreview.pathguard.resolve_within` returning and the read starting
+    cannot redirect the read to a file outside the workspace. ``resolve_within``
+    ran on ``path`` earlier and confirmed it resolves inside the root; this
+    function opens that same path and then proves the descriptor it holds refers
+    to the very file that was contained, closing the check/read gap for identity,
+    size, and file type at once.
+
+    The sequence, on the one file descriptor:
+
+    1. ``os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)`` --
+       ``O_NOFOLLOW`` refuses to open the *final* component if it is a symlink,
+       defeating the swap where the resolved regular file is replaced by a link
+       to a target outside the root. It behaves identically on macOS and Linux.
+       It only guards the last component, so the identity re-check below is the
+       primary control and ``O_NOFOLLOW`` is defense-in-depth (design.md, R-2).
+       ``O_NONBLOCK`` keeps the open from blocking when the path is a FIFO with
+       no writer (a hostile input could hang the review otherwise); it has no
+       effect on reading a regular file, which is the only file type that gets
+       past the ``S_ISREG`` check below.
+    2. ``os.fstat(fd)`` -- read ``st_dev``/``st_ino``, ``st_size``, and
+       ``st_mode`` from the *opened* file, not from a second path lookup.
+    3. ``stat.S_ISREG(st_mode)`` -- confirm a regular file; a FIFO, device, or
+       directory is refused (Requirement 17 AC6).
+    4. ``os.stat(path)`` on the already-resolved path and require
+       ``(st_dev, st_ino)`` to match the fstat. A mismatch means the name now
+       points at a different file than the descriptor holds -- the check/read
+       swap -- so the read is refused.
+    5. size check against :data:`MAX_TEMPLATE_BYTES` on the fstat ``st_size``,
+       before any byte is read, preserving the Requirement 17 AC1 behaviour and
+       moving it onto the same descriptor.
+    6. read the bytes from the descriptor and close it in ``finally``.
+
+    Non-regular files and identity mismatches are both reported as
+    ``path_violation`` (:class:`~iacreview.errors.PathContainmentError`). The
+    class already means "the path does not safely refer to a contained regular
+    file", which is exactly what a FIFO passed as a template, or a name swapped
+    after the containment check, both are; a dedicated ``not_regular_file`` class
+    would split one "this path is not a safe input file" outcome across two codes
+    without a consumer needing to tell them apart.
 
     Raises:
-        InputNotFoundError: The file is missing, is a directory, or cannot be
-            read. This mirrors the exit code the failure mode matrix assigns to
-            an unreadable input (3), rather than reporting it as a parse
-            failure.
-        TemplateParseError: The bytes are not valid UTF-8, which is what binary
-            input looks like at this point. The position is computed from the
-            offending byte offset so the report can still point at a location.
+        InputNotFoundError: The file is missing or cannot be opened/read.
+        InputTooLargeError: The opened file is larger than
+            :data:`MAX_TEMPLATE_BYTES` (Requirement 17 AC1); refused before its
+            bytes are read.
+        PathContainmentError: The opened file is not a regular file
+            (Requirement 17 AC6), or its identity does not match the resolved
+            path (Requirement 17 AC5). Neither message names an absolute host
+            path (Requirement 16 AC11).
     """
     try:
-        data = path.read_bytes()
+        fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
     except OSError as exc:
         raise InputNotFoundError(
             "cannot read input file: {0} ({1})".format(
                 display_path(path), os_error_detail(exc)
             )
         ) from exc
+
+    try:
+        info = os.fstat(fd)
+
+        if not stat.S_ISREG(info.st_mode):
+            raise PathContainmentError(
+                "input path is not a regular file and was not read: {0}".format(
+                    display_path(path)
+                ),
+                remediation=(
+                    "Provide a regular YAML or JSON Template file. FIFOs, "
+                    "devices, and directories are not Templates."
+                ),
+            )
+
+        try:
+            resolved_info = os.stat(path)
+        except OSError as exc:
+            raise InputNotFoundError(
+                "cannot read input file: {0} ({1})".format(
+                    display_path(path), os_error_detail(exc)
+                )
+            ) from exc
+
+        if (info.st_dev, info.st_ino) != (
+            resolved_info.st_dev,
+            resolved_info.st_ino,
+        ):
+            raise PathContainmentError(
+                "input path changed between the containment check and the "
+                "read and was not read: {0}".format(display_path(path)),
+                remediation=(
+                    "Do not modify or replace the input path while a review "
+                    "is running."
+                ),
+            )
+
+        if info.st_size > MAX_TEMPLATE_BYTES:
+            raise InputTooLargeError(
+                "input file exceeds the maximum size of {0} bytes and was not "
+                "read: {1} ({2} bytes)".format(
+                    MAX_TEMPLATE_BYTES, display_path(path), info.st_size
+                ),
+                remediation=(
+                    "Review a CloudFormation Template no larger than {0} "
+                    "bytes. A file this large is not a normal Template.".format(
+                        MAX_TEMPLATE_BYTES
+                    )
+                ),
+            )
+
+        try:
+            return _read_all(fd)
+        except OSError as exc:
+            raise InputNotFoundError(
+                "cannot read input file: {0} ({1})".format(
+                    display_path(path), os_error_detail(exc)
+                )
+            ) from exc
+    finally:
+        os.close(fd)
+
+
+def _read_all(fd: int) -> bytes:
+    """Read a file descriptor to EOF, returning the bytes read.
+
+    ``os.read`` may return a short read, so it is called in a loop until it
+    returns an empty ``bytes`` (EOF). The descriptor is positioned at the start
+    because :func:`_read_bytes_toctou_safe` performs no seek after opening.
+    """
+    chunks = []
+    while True:
+        chunk = os.read(fd, 65536)
+        if not chunk:
+            break
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+def _read_text(path: Path) -> str:
+    """Read ``path`` as UTF-8 text through a TOCTOU-safe descriptor.
+
+    The open/verify/read is delegated to :func:`_read_bytes_toctou_safe`; this
+    function only handles the UTF-8 decode, so that the descriptor lifetime and
+    the identity checks stay in one place.
+
+    Raises:
+        InputNotFoundError: The file is missing, or cannot be opened or read.
+            This mirrors the exit code the failure mode matrix assigns to an
+            unreadable input (3), rather than reporting it as a parse failure.
+        InputTooLargeError: The file is larger than :data:`MAX_TEMPLATE_BYTES`.
+            The size is taken from ``os.fstat`` on the opened descriptor and
+            checked *before* any byte is read, so an oversized file never enters
+            memory (Requirement 17 AC1). The message names the file the way the
+            report does, never as an absolute host path (Requirement 16 AC11).
+        PathContainmentError: The opened file is not a regular file
+            (Requirement 17 AC6), or was swapped after the containment check
+            (Requirement 17 AC5).
+        TemplateParseError: The bytes are not valid UTF-8, which is what binary
+            input looks like at this point. The position is computed from the
+            offending byte offset so the report can still point at a location.
+    """
+    data = _read_bytes_toctou_safe(path)
 
     try:
         return data.decode("utf-8")
@@ -487,6 +654,8 @@ def load_template(path: Path) -> LoadedTemplate:
 
     Raises:
         InputNotFoundError: ``path`` cannot be read.
+        InputTooLargeError: ``path`` is larger than :data:`MAX_TEMPLATE_BYTES`;
+            the file is refused before its bytes are read (Requirement 17 AC1).
         TemplateParseError: The content is not valid UTF-8, is empty, or fails
             to parse as YAML or JSON. Carries ``error_type``, ``line``, and
             ``column`` (Requirement 3 AC6).

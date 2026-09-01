@@ -810,3 +810,78 @@ def test_deferred_metrics_are_named_in_the_benchmark_readme() -> None:
     readme = README_PATH.read_text(encoding="utf-8")
     for name in metrics.DEFERRED_METRICS:
         assert name in readme, name
+
+
+# ---------------------------------------------------------------------------
+# compute_diagnostics (Requirement 19 AC3, AC6)
+# ---------------------------------------------------------------------------
+#
+# Diagnostics are deterministic functions of ground truth that never bear on
+# PASS or FAIL. A case declaring no expectation for a diagnostic records N/A
+# rather than 0 or an absent key, so the block is the same shape whatever the
+# case declared.
+
+
+def test_diagnostics_return_exactly_the_declared_keys_in_order() -> None:
+    result = metrics.compute_diagnostics([expectation()], [finding()], {})
+    assert list(result) == list(metrics.DIAGNOSTIC_KEYS)
+
+
+def test_a_case_declaring_no_expectation_records_not_applicable() -> None:
+    # Requirement 19 AC6: not "0", which would say "measured, found nothing".
+    result = metrics.compute_diagnostics([expectation()], [finding()], {})
+    assert result["remediation_accuracy"] == metrics.NOT_APPLICABLE
+    assert result["human_intervention_count"] == metrics.NOT_APPLICABLE
+
+
+def test_human_intervention_count_is_echoed_when_declared() -> None:
+    case = {metrics.HUMAN_INTERVENTION_EXPECTATION_FIELD: 3}
+    result = metrics.compute_diagnostics([], [], case)
+    assert result["human_intervention_count"] == 3
+
+
+def test_a_boolean_human_intervention_declaration_is_not_a_count() -> None:
+    # bool is an int in Python; a True must not read as 1.
+    case = {metrics.HUMAN_INTERVENTION_EXPECTATION_FIELD: True}
+    result = metrics.compute_diagnostics([], [], case)
+    assert result["human_intervention_count"] == metrics.NOT_APPLICABLE
+
+
+def test_remediation_accuracy_is_the_share_of_declared_remediations_cleared() -> None:
+    first = expectation(resource="A")
+    first[metrics.REMEDIATION_EXPECTATION_FIELD] = "enable encryption"
+    second = expectation(resource="B")
+    second[metrics.REMEDIATION_EXPECTATION_FIELD] = "add a bucket policy"
+    expected = [first, second]
+    actual = [
+        finding(resource="A", text="A"),
+        finding(resource="B", text="B"),
+    ]
+    # Only A's matched finding suggests the expected remediation.
+    actual[0]["SuggestedRemediation"] = "Please enable encryption on the bucket."
+    actual[1]["SuggestedRemediation"] = "Restrict public access."
+    result = metrics.compute_diagnostics(expected, actual, {})
+    assert result["remediation_accuracy"] == "50.0"
+
+
+def test_remediation_accuracy_is_not_applicable_without_a_declaration() -> None:
+    # No expectation declares a remediation, so there is nothing to measure.
+    result = metrics.compute_diagnostics([expectation()], [finding()], {})
+    assert result["remediation_accuracy"] == metrics.NOT_APPLICABLE
+
+
+def test_review_time_remains_the_only_deferred_metric() -> None:
+    # v0.8.0 implemented the other two; Review Time stays deferred because it is
+    # environment-dependent and cannot enter a byte-identical document.
+    assert metrics.DEFERRED_METRICS == ("Review Time",)
+    computed = set(metrics.METRIC_KEYS) | set(metrics.CATEGORY_KEYS) | set(
+        metrics.DIAGNOSTIC_KEYS
+    )
+    for name in metrics.DEFERRED_METRICS:
+        assert name.lower().replace(" ", "_") not in computed, name
+
+
+def test_the_implemented_diagnostics_are_no_longer_deferred() -> None:
+    for key in metrics.DIAGNOSTIC_KEYS:
+        readable = key.replace("_", " ").title()
+        assert readable not in metrics.DEFERRED_METRICS, key

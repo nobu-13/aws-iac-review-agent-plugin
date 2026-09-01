@@ -23,6 +23,7 @@ EXPECTED: Tuple[Tuple[Type[errors.IacReviewError], str, int], ...] = (
     (errors.IacReviewError, "unexpected", 1),
     (errors.InvalidArgumentsError, "invalid_arguments", 2),
     (errors.InputNotFoundError, "input_not_found", 3),
+    (errors.InputTooLargeError, "input_too_large", 3),
     (errors.TemplateParseError, "parse_failure", 4),
     (errors.ToolUnavailableError, "tool_unavailable", 5),
     (errors.ToolVersionError, "tool_version", 5),
@@ -91,13 +92,24 @@ def test_structured_error_key_set_is_identical_for_every_class(
     assert minimal["error_class"] in errors.ERROR_CLASSES
 
 
-def test_permitted_error_class_set_has_eleven_values() -> None:
-    assert len(errors.ERROR_CLASSES) == 11
+def test_permitted_error_class_set_has_twelve_values() -> None:
+    assert len(errors.ERROR_CLASSES) == 12
 
 
 def test_every_permitted_error_class_is_used_by_some_class() -> None:
     used = {cls.error_class for cls, _, _ in EXPECTED}
     assert used == set(errors.ERROR_CLASSES)
+
+
+def test_input_too_large_is_a_permitted_error_class_with_a_mapping() -> None:
+    """v0.8.0 (Requirement 17 AC1/AC2/AC9): ``input_too_large`` is in the closed
+    set and its exception maps to a documented exit code."""
+    assert "input_too_large" in errors.ERROR_CLASSES
+    assert errors.InputTooLargeError.error_class == "input_too_large"
+    assert errors.InputTooLargeError.exit_code in set(exitcodes.EXIT_CODES.values())
+    structured = errors.InputTooLargeError("too big").to_structured_error()
+    assert structured["error_class"] == "input_too_large"
+    assert set(structured) == set(errors.STRUCTURED_ERROR_KEYS)
 
 
 def test_unset_optional_fields_are_none_not_missing() -> None:
@@ -178,6 +190,86 @@ def test_stderr_head_list_is_not_shared_with_the_exception() -> None:
     structured["stderr_head"].append("injected")  # type: ignore[union-attr]
 
     assert error.stderr_head == ["line1", "line2"]
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        (
+            "open('/Users/alice/workspace/tpl.yaml') failed",
+            "open('<path> failed",
+        ),
+        (
+            'File "/opt/tool/cfnlint/runner.py", line 42',
+            'File "<path> line 42',
+        ),
+        (
+            "cfn-lint: could not read /etc/passwd",
+            "cfn-lint: could not read <path>",
+        ),
+        ("RuntimeError: fake cfn-lint always crashes", "RuntimeError: fake cfn-lint always crashes"),
+        (
+            "copied /var/tmp/a to /var/tmp/b",
+            "copied <path> to <path>",
+        ),
+        ("prefer read/write access and/or none", "prefer read/write access and/or none"),
+        ("computed a / b as a ratio", "computed a / b as a ratio"),
+        ("/absolute/leading/path only", "<path> only"),
+    ],
+    ids=[
+        "absolute-path-redacted",
+        "quoted-path-redacted",
+        "trailing-path-redacted",
+        "no-path-unchanged",
+        "multiple-paths-all-redacted",
+        "relative-fragments-unchanged",
+        "bare-slash-unchanged",
+        "leading-path-redacted",
+    ],
+)
+def test_redact_host_paths_replaces_only_absolute_path_tokens(line: str, expected: str) -> None:
+    """Requirement 18 AC2: absolute host paths collapse to a fixed placeholder;
+    normal words and relative fragments are left intact."""
+    assert errors.redact_host_paths(line) == expected
+
+
+def test_redact_host_paths_leaves_the_bare_word_unmangled() -> None:
+    """A word that merely contains ``or`` next to a slash is not a path."""
+    assert errors.redact_host_paths("read and/or write") == "read and/or write"
+
+
+def test_redact_host_paths_is_deterministic_and_idempotent() -> None:
+    """Requirement 18 AC3: the placeholder is fixed, so redaction is stable and
+    reapplying it changes nothing."""
+    once = errors.redact_host_paths("failed on /home/ci/build/tpl.json now")
+    assert once == "failed on <path> now"
+    assert errors.redact_host_paths(once) == once
+
+
+def test_stderr_head_redacts_absolute_paths_after_the_five_line_cap() -> None:
+    """Redaction runs on the retained lines, satisfying both the 5-line cap
+    (Requirement 15 AC7) and the no-host-path rule (Requirement 18 AC2)."""
+    stderr = "\n".join(
+        [
+            "cfn-lint failed while reading /Users/ci/repo/tpl.yaml",
+            "Traceback (most recent call last):",
+            "  File \"/opt/tool/cfnlint/runner.py\", line 42",
+            "RuntimeError: boom",
+            "context: /var/log/tool.log",
+            "/should/not/appear/line6",
+        ]
+    )
+
+    structured = errors.ToolExecutionError("cfn-lint crashed", stderr=stderr).to_structured_error()
+    head = structured["stderr_head"]
+
+    assert len(head) == errors.STDERR_HEAD_MAX_LINES  # type: ignore[arg-type]
+    joined = "\n".join(head)  # type: ignore[arg-type]
+    assert "/Users/ci/repo/tpl.yaml" not in joined
+    assert "/opt/tool/cfnlint/runner.py" not in joined
+    assert "/var/log/tool.log" not in joined
+    assert "/should/not/appear/line6" not in joined  # dropped by the cap
+    assert errors.HOST_PATH_PLACEHOLDER in joined
 
 
 def test_message_is_also_the_exception_str() -> None:

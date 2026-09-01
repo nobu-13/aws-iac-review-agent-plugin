@@ -103,6 +103,9 @@ __all__ = [
     "METRIC_KEYS",
     "CATEGORY_KEYS",
     "DEFERRED_METRICS",
+    "REMEDIATION_EXPECTATION_FIELD",
+    "HUMAN_INTERVENTION_EXPECTATION_FIELD",
+    "DIAGNOSTIC_KEYS",
     "match_key",
     "severity_of",
     "category_of",
@@ -114,6 +117,7 @@ __all__ = [
     "percentage",
     "format_percentage",
     "compute",
+    "compute_diagnostics",
     "category_status",
     "compute_by_category",
     "has_failure",
@@ -221,32 +225,56 @@ CATEGORY_KEYS: Tuple[str, ...] = METRIC_KEYS + (
     "status",
 )
 
-#: Metrics that are defined but not computed in v0.1 (Requirement 11 AC13).
-#: None of them needs a ground-truth field, which is why deferring them costs no
-#: format change:
+#: Metrics still defined but not computed, after v0.8.0 implemented the other
+#: two (Requirement 19). One remains, because it is the one that cannot enter a
+#: byte-identical document:
 #:
 #: ``Review Time``
 #:     Wall-clock time to review one template, deterministic and agent phases
 #:     separated. Measured at run time and environment-dependent, so it cannot
 #:     enter output that has to stay byte-identical between runs
-#:     (Requirement 16 AC11); implementing it means a second, separate output.
+#:     (Requirement 16 AC11, Requirement 19 AC2). ``run_benchmark.py`` measures
+#:     it and reports it on stderr, the second channel design.md's Determinism
+#:     Design reserves for non-deterministic metadata; it never reaches the
+#:     summary. This is "recorded as a diagnostic that does not affect PASS or
+#:     FAIL", not "not measured at all" -- the metric is computed, just kept out
+#:     of stdout.
 #:
-#: ``Remediation Accuracy``
-#:     Share of ``SuggestedRemediation`` values that, applied, clear their
-#:     Finding without introducing a new one. Computable from the expectations
-#:     that already exist, by patching the template and reviewing it again --
-#:     that is, it needs a second review pass rather than new ground truth.
+#: ``Remediation Accuracy`` and ``Human Intervention Count`` were here in v0.1
+#: and are now computed by :func:`compute_diagnostics` (Requirement 19 AC3):
+#: both are deterministic functions of ground truth, so they belong in the
+#: byte-identical summary rather than on the deferred list. A case that declares
+#: neither expectation records them as :data:`NOT_APPLICABLE` (AC6) rather than
+#: omitting the key.
 #:
-#: ``Human Intervention Count``
-#:     Number of human decisions needed to complete a review. A property of a
-#:     review session, not of a case, so no case file can carry it.
-#:
-#: ``benchmark/README.md`` states the same three reasons; a test asserts the
-#: names appear in both places.
-DEFERRED_METRICS: Tuple[str, ...] = (
-    "Review Time",
-    "Remediation Accuracy",
-    "Human Intervention Count",
+#: ``benchmark/README.md`` states the same reason for the one that remains; a
+#: test asserts the name appears in both places.
+DEFERRED_METRICS: Tuple[str, ...] = ("Review Time",)
+
+#: Ground-truth field naming, per expected finding, the remediation the review
+#: is expected to suggest for that finding. Its presence is what
+#: :func:`compute_diagnostics` reads as "this case declares a remediation
+#: expectation" (Requirement 19 AC3). Absent from every v0.1 case, so
+#: Remediation Accuracy is :data:`NOT_APPLICABLE` there; reserved so a case can
+#: declare it without a schema-version bump (the field is optional).
+REMEDIATION_EXPECTATION_FIELD = "expected_remediation"
+
+#: Ground-truth field, at the top level of a case, declaring how many human
+#: decisions the case is expected to need. Its presence is what
+#: :func:`compute_diagnostics` reads as "this case declares a human-intervention
+#: expectation" (Requirement 19 AC3). Absent from every v0.1 case, so Human
+#: Intervention Count is :data:`NOT_APPLICABLE` there.
+HUMAN_INTERVENTION_EXPECTATION_FIELD = "expected_human_intervention_count"
+
+#: Keys of :func:`compute_diagnostics`'s result, in insertion order. Every one is
+#: present in every run, carrying :data:`NOT_APPLICABLE` when the case declares no
+#: expectation for it (Requirement 19 AC6), so the diagnostic block's shape does
+#: not depend on which cases were measured. Kept apart from :data:`METRIC_KEYS`
+#: because these are diagnostics that never bear on PASS or FAIL, and mixing them
+#: into the metrics block would invite reading them as if they did.
+DIAGNOSTIC_KEYS: Tuple[str, ...] = (
+    "remediation_accuracy",
+    "human_intervention_count",
 )
 
 #: Marker for "no default", so that ``None`` stays usable as a real default.
@@ -615,6 +643,109 @@ def compute(expected: Sequence[Item], actual: Sequence[Item]) -> Dict[str, Any]:
         "precision": format_percentage(percentage(matched, matched + false_positives)),
         "severity_accuracy": format_percentage(percentage(severity_matches, matched)),
     }
+
+
+def compute_diagnostics(
+    expected: Sequence[Item], actual: Sequence[Item], case: Mapping[str, Any]
+) -> Dict[str, Any]:
+    """Compute the diagnostics that never bear on PASS or FAIL (Requirement 19 AC3).
+
+    Diagnostics are reported so a contributor can characterise a case over time,
+    and they are deliberately kept out of :func:`compute`: a diagnostic that
+    slid into the metrics block could be mistaken for one the pass/fail rule
+    reads, and none of these do. Both are deterministic functions of ground
+    truth, so unlike Review Time they belong in the byte-identical summary.
+
+    A case that declares no expectation for a diagnostic records it as
+    :data:`NOT_APPLICABLE` rather than ``0`` or an absent key (Requirement 19
+    AC6): "not measured" and "measured, found nothing" are different facts, and a
+    fixed key set keeps the diagnostic block the same shape whatever the case
+    declared.
+
+    Args:
+        expected: The case's expectations, in ground truth order, already
+            narrowed by ``--mode`` the way :func:`compute` receives them.
+        actual: The report's Findings, narrowed the same way.
+        case: The whole parsed ``ground_truth.json``. Read for the top-level
+            :data:`HUMAN_INTERVENTION_EXPECTATION_FIELD`; the per-finding
+            :data:`REMEDIATION_EXPECTATION_FIELD` is read off the expectations.
+
+    Returns:
+        A new dict with exactly the keys of :data:`DIAGNOSTIC_KEYS`.
+        ``remediation_accuracy`` is a percentage string or :data:`NOT_APPLICABLE`;
+        ``human_intervention_count`` is an ``int`` or :data:`NOT_APPLICABLE`.
+    """
+    expected_list = list(expected)
+    actual_list = list(actual)
+
+    # Remediation Accuracy: of the expectations that declare a remediation and
+    # were detected, the share whose matched Finding suggested that remediation.
+    # A case declaring no remediation expectation records N/A rather than 0.
+    declaring = [
+        item for item in expected_list if REMEDIATION_EXPECTATION_FIELD in item
+    ]
+    if not declaring:
+        remediation_accuracy: Any = NOT_APPLICABLE
+    else:
+        result = match(expected_list, actual_list)
+        matched_by_expected = {
+            expected_index: actual_index for expected_index, actual_index in result.pairs
+        }
+        cleared = 0
+        for expected_index, item in enumerate(expected_list):
+            if REMEDIATION_EXPECTATION_FIELD not in item:
+                continue
+            actual_index = matched_by_expected.get(expected_index)
+            if actual_index is None:
+                continue
+            suggested = actual_list[actual_index].get("SuggestedRemediation")
+            if suggested is not None and _remediation_matches(
+                item[REMEDIATION_EXPECTATION_FIELD], suggested
+            ):
+                cleared += 1
+        remediation_accuracy = format_percentage(percentage(cleared, len(declaring)))
+
+    # Human Intervention Count: a property of a review session, so it is a
+    # per-case declaration rather than something read off the findings. Echoed
+    # back as a diagnostic when the case declares it, N/A otherwise.
+    declared_intervention = case.get(HUMAN_INTERVENTION_EXPECTATION_FIELD)
+    if isinstance(declared_intervention, bool) or not isinstance(
+        declared_intervention, int
+    ):
+        # A bool is an int in Python; reject it and any non-integer so a
+        # malformed declaration reads as "not declared" rather than as 0 or 1.
+        human_intervention_count: Any = NOT_APPLICABLE
+    else:
+        human_intervention_count = declared_intervention
+
+    return {
+        "remediation_accuracy": remediation_accuracy,
+        "human_intervention_count": human_intervention_count,
+    }
+
+
+def _remediation_matches(expected_text: Any, suggested: Any) -> bool:
+    """Whether a report's ``SuggestedRemediation`` satisfies the expectation.
+
+    A conservative substring test rather than string equality: the expectation
+    states the remediation's substance and the report may phrase it more fully,
+    so requiring an exact match would make every rewording look like a
+    regression -- the same reason Finding text is never compared as a string.
+    Both sides are lowered and stripped so that spacing and case do not decide a
+    diagnostic.
+
+    Args:
+        expected_text: The expectation's declared remediation.
+        suggested: The matched Finding's ``SuggestedRemediation``.
+
+    Returns:
+        ``True`` when both are strings and the expected text appears in the
+        suggested one; ``False`` otherwise, including when either is not a
+        string.
+    """
+    if not isinstance(expected_text, str) or not isinstance(suggested, str):
+        return False
+    return expected_text.strip().lower() in suggested.strip().lower()
 
 
 def category_status(

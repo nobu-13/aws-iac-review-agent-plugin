@@ -87,8 +87,8 @@ machine. Interception plus snapshot is weaker in principle and checkable
 everywhere, and the probe is what keeps "weaker" from becoming "silent".
 
 No external tool is needed anywhere in this file. cfn-lint, cfn-guard and the CDK
-CLI may all be absent: ``subprocess.run`` is replaced before any invocation could
-reach it, and the two places an invocation is arranged at all -- the observer's own
+CLI may all be absent: the process starters are replaced before any invocation
+could reach them, and the two places an invocation is arranged at all -- the observer's own
 probe and Property 23's timeout branch -- use :data:`sys.executable` as ``argv[0]``
 so that the ``PATH`` lookup succeeds without installing anything.
 
@@ -152,6 +152,7 @@ from iacreview.errors import (
     STDERR_HEAD_MAX_LINES,
     STRUCTURED_ERROR_KEYS,
     ToolTimeoutError,
+    redact_host_paths,
 )
 from iacreview.finding import (
     AGENT_SOURCE,
@@ -306,6 +307,26 @@ class _Recorder:
         self.stderr: str = ""
 
 
+class _BenignPopenHandle:
+    """The minimal :class:`subprocess.Popen` surface :func:`iacreview.proc.run`
+    touches on its success path.
+
+    Task 33 made ``proc.run`` start the child with ``subprocess.Popen`` and then
+    read ``.communicate(timeout=...)`` and ``.returncode``. The recorder in
+    :func:`_observed` records the launch and returns this handle so ``proc.run``
+    continues on its normal path -- letting a *later* file write be observed too
+    rather than being masked by an exception. ``.pid`` is present because the
+    module reads it on the timeout path, which this benign handle never triggers.
+    """
+
+    def __init__(self) -> None:
+        self.returncode: int = 0
+        self.pid: int = -1
+
+    def communicate(self, timeout: Optional[float] = None) -> Tuple[str, str]:
+        return ("", "")
+
+
 def _snapshot(root: Path) -> Dict[str, _Stat]:
     """Describe every entry under ``root`` well enough to notice a change.
 
@@ -350,12 +371,13 @@ def _observed(workspace: Path) -> Iterator[_Recorder]:
     the reason ``tests/property/test_prop_pathguard.py`` records: a function-scoped
     fixture is set up once per test, and this has to happen once per example.
 
-    ``subprocess.run`` records and returns a benign
-    :class:`subprocess.CompletedProcess` -- letting the caller continue, so that a
-    *later* file write is observed too rather than being masked by an exception.
-    Every other process starter records and then raises: those are reachable only
-    by bypassing :mod:`iacreview.proc`, and continuing from one would mean
-    continuing from a violation.
+    ``subprocess.Popen`` -- the spawn point :func:`iacreview.proc.run` uses since
+    Task 33 -- records and returns a benign fake handle, letting the caller
+    continue, so that a *later* file write is observed too rather than being
+    masked by an exception. Every other process starter, ``subprocess.run``
+    included, records and then raises: those are reachable only by bypassing
+    :mod:`iacreview.proc`, and continuing from one would mean continuing from a
+    violation.
 
     Yields:
         The recorder. Its lists are complete only after the block exits, since
@@ -398,12 +420,10 @@ def _observed(workspace: Path) -> Iterator[_Recorder]:
 
         return mutator
 
-    def subprocess_run(*args: Any, **kwargs: Any) -> Any:
+    def subprocess_popen(*args: Any, **kwargs: Any) -> Any:
         argv: Any = args[0] if args else kwargs.get("args")
-        recorder.launches.append("subprocess.run({0!r})".format(argv))
-        return subprocess.CompletedProcess(
-            args=argv, returncode=0, stdout="", stderr=""
-        )
+        recorder.launches.append("subprocess.Popen({0!r})".format(argv))
+        return _BenignPopenHandle()
 
     def make_blocker(label: str) -> Any:
         def blocker(*args: Any, **kwargs: Any) -> Any:
@@ -424,8 +444,8 @@ def _observed(workspace: Path) -> Iterator[_Recorder]:
     for name in _MUTATING_OS_FUNCTIONS:
         if hasattr(os, name):
             replace(os, name, make_mutator(getattr(os, name), "os." + name))
-    replace(subprocess, "run", subprocess_run)
-    replace(subprocess, "Popen", make_blocker("subprocess.Popen"))
+    replace(subprocess, "Popen", subprocess_popen)
+    replace(subprocess, "run", make_blocker("subprocess.run"))
     for name in _PROCESS_STARTING_OS_FUNCTIONS:
         if hasattr(os, name):
             replace(os, name, make_blocker("os." + name))
@@ -491,9 +511,9 @@ def _probe_the_observer(workspace: Path) -> None:
     must fire; if any of them stops firing, "nothing was observed" stops meaning
     "nothing happened".
 
-    No child process is started: ``subprocess.run`` is already replaced inside the
-    window, so ``argv[0]`` only has to resolve, and :data:`sys.executable` does
-    that without ``PATH`` and without any external tool.
+    No child process is started: ``subprocess.Popen`` is already replaced inside
+    the window, so ``argv[0]`` only has to resolve, and :data:`sys.executable`
+    does that without ``PATH`` and without any external tool.
 
     Raises:
         AssertionError: One of the three mechanisms observed nothing.
@@ -724,31 +744,78 @@ def _lines_of(text: str) -> List[str]:
     return parts
 
 
+class _TimingOutPopenHandle:
+    """A :class:`subprocess.Popen` stand-in whose first ``communicate`` times out.
+
+    Task 33 moved the timeout to ``proc_handle.communicate(timeout=...)``: the
+    first call raises :class:`subprocess.TimeoutExpired` carrying the partial
+    stderr, and :func:`iacreview.proc.run` then terminates the process group and
+    calls ``communicate`` a second time to reap the child. This handle answers
+    that whole path -- the termination reads ``.pid`` and may call ``.wait`` and
+    ``.kill`` -- so the transcription is exercised through the same call chain a
+    real cfn-lint timeout takes, with no external tool installed and no wait for a
+    real timeout.
+    """
+
+    def __init__(self, argv: Any, stderr_text: str) -> None:
+        self._argv = argv
+        self._stderr_text = stderr_text
+        self._timed_out = False
+        self.pid: int = -1
+        self.returncode: Optional[int] = None
+
+    def communicate(self, timeout: Optional[float] = None) -> Tuple[str, str]:
+        if not self._timed_out:
+            self._timed_out = True
+            raise subprocess.TimeoutExpired(
+                cmd=self._argv, timeout=timeout or 1, output="", stderr=self._stderr_text
+            )
+        # The reaping call in proc.run's termination path.
+        return ("", "")
+
+    def wait(self, timeout: Optional[float] = None) -> int:
+        self.returncode = -15
+        return self.returncode
+
+    def kill(self) -> None:
+        self.returncode = -9
+
+
 @contextmanager
 def _timing_out_subprocess(stderr_text: str) -> Iterator[None]:
-    """Make the next ``subprocess.run`` behave as a tool that timed out.
+    """Make the next ``subprocess.Popen`` behave as a tool that timed out.
 
     The realistic way stderr reaches a StructuredError: :func:`iacreview.proc.run`
-    catches :class:`subprocess.TimeoutExpired`, reads its partial ``stderr``, and
-    raises :class:`~iacreview.errors.ToolTimeoutError` carrying it. Simulated at
-    the ``subprocess`` boundary rather than by constructing the exception
-    ourselves, so that the transcription is exercised through the same call chain
-    a real cfn-lint timeout takes -- and with no external tool installed and no
-    test that has to wait for a real timeout.
+    starts the child with ``subprocess.Popen`` and reads
+    ``proc_handle.communicate(timeout=...)``, catches
+    :class:`subprocess.TimeoutExpired`, reads its partial ``stderr``, and raises
+    :class:`~iacreview.errors.ToolTimeoutError` carrying it. Simulated at the
+    ``subprocess`` boundary rather than by constructing the exception ourselves,
+    so that the transcription is exercised through the same call chain a real
+    cfn-lint timeout takes.
+
+    ``os.getpgid`` is replaced to raise :class:`ProcessLookupError` so that the
+    ``killpg`` branch of ``proc.run``'s termination is skipped cleanly: the fake
+    handle has no real process group, and the module treats an already-gone group
+    as "nothing left to kill".
     """
-    original = subprocess.run
+    original_popen = subprocess.Popen
+    original_getpgid = os.getpgid
 
     def timing_out(*args: Any, **kwargs: Any) -> Any:
         argv: Any = args[0] if args else kwargs.get("args")
-        raise subprocess.TimeoutExpired(
-            cmd=argv, timeout=kwargs.get("timeout", 1), stderr=stderr_text
-        )
+        return _TimingOutPopenHandle(argv, stderr_text)
 
-    subprocess.run = timing_out  # type: ignore[assignment]
+    def no_group(_pid: int) -> int:
+        raise ProcessLookupError
+
+    subprocess.Popen = timing_out  # type: ignore[assignment]
+    os.getpgid = no_group  # type: ignore[assignment]
     try:
         yield
     finally:
-        subprocess.run = original  # type: ignore[assignment]
+        subprocess.Popen = original_popen  # type: ignore[assignment]
+        os.getpgid = original_getpgid  # type: ignore[assignment]
 
 
 # Feature: aws-iac-review-agent-plugin, Property 23: *For any* stderr text produced by an external tool, the `stderr_head` field of the resulting structured error contains at most 5 elements, and element `i` equals line `i` of the input text.
@@ -770,11 +837,11 @@ def test_stderr_transcription_is_capped_and_copies_the_leading_lines(
     fields.
 
     The *funnel* path runs :func:`iacreview.proc.run` against a
-    ``subprocess.run`` that raises :class:`subprocess.TimeoutExpired` carrying the
-    same text, which is how a real tool's stderr arrives. Its ``stderr_head`` must
-    equal the direct path's: a wrapper that re-wrapped, joined or re-split the
-    output on its way through would differ here while the direct path stayed
-    correct.
+    ``subprocess.Popen`` whose ``communicate`` raises
+    :class:`subprocess.TimeoutExpired` carrying the same text, which is how a real
+    tool's stderr arrives since Task 33. Its ``stderr_head`` must equal the direct
+    path's: a wrapper that re-wrapped, joined or re-split the output on its way
+    through would differ here while the direct path stayed correct.
 
     The bound is asserted twice over, once as a length and once as an equality
     against the independently computed prefix, and the final assertion requires
@@ -782,10 +849,20 @@ def test_stderr_transcription_is_capped_and_copies_the_leading_lines(
     bound. That last one is what keeps the property from being satisfied by a
     field that is always empty.
 
+    Task 34 made :func:`iacreview.errors._head_lines` redact absolute host paths
+    from each retained line, which is a separate property (Requirement 18 AC2/AC3)
+    with its own tests. To keep *this* property -- the 5-line cap and the line
+    correspondence -- independent of that redaction, the example is restricted to
+    stderr text no line of which holds a ``/``-leading absolute-path token, so
+    redaction is a no-op and ``stderr_head`` equals the raw leading lines.
+
     ``deadline=None``: the funnel path resolves ``argv[0]`` on ``PATH``, which is
     a filesystem operation whose timing says nothing about this code.
     """
     expected = _lines_of(text)
+    # Independence from Task 34 redaction: only text whose lines redact to
+    # themselves reaches the cap assertions below.
+    assume(all(redact_host_paths(line) == line for line in expected))
 
     direct = error_class("a tool failed", stderr=text).to_structured_error()
     assert set(direct) == set(STRUCTURED_ERROR_KEYS), error_class.__name__

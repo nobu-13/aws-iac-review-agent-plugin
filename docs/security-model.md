@@ -511,14 +511,21 @@ invoking user can, regardless of where the workspace root is. Agent Plugins
 1.0.0 says the same about its own containment model. Treat containment as a
 guarantee about this plugin's file access, not about the review as a whole.
 
-**R-2: A TOCTOU window remains between the containment check and the read.**
-`resolve_within` resolves and validates a path, and the file could be replaced
-between that moment and the moment it is opened. The impact is bounded by the
-plugin being read-only: the worst outcome is reading a different file than the
-one that was checked, and reporting Findings about it. There is no write to
-misdirect and no privilege to escalate. Closing the window properly needs
-descriptor-based access (`O_NOFOLLOW`, `openat`) whose portability across the
-supported platforms is not established for v0.1.
+**R-2 (resolved in v0.8.0): the TOCTOU window between the containment check and
+the read is closed.** `resolve_within` still resolves and validates a path, but
+the read no longer trusts that a second lookup of the same path names the same
+file. `iacreview.template._read_bytes_toctou_safe` opens the path once with
+`os.open(..., O_RDONLY | O_NOFOLLOW | O_NONBLOCK)`, then works from that one
+descriptor: `os.fstat` confirms the opened file is a regular file
+(`stat.S_ISREG`, so a FIFO, device, or directory is refused, Requirement 17 AC6)
+and that its `(st_dev, st_ino)` still match the resolved path. A symlink or a
+name substituted between the check and the read points the descriptor at a
+different inode, the identity re-check fails, and the read is refused as
+`path_violation` (Requirement 17 AC5). `O_NOFOLLOW` refuses to open a symlink as
+the final component and is defense-in-depth behind the identity check;
+`O_NONBLOCK` keeps a hostile FIFO from blocking the open. Both flags behave
+identically on macOS and Linux. The size check (R-8) is done on the same
+descriptor's `st_size` before any byte is read.
 
 **R-3: A symlink cycle in the workspace makes that path unreviewable.** A cycle
 cannot be normalized, so `resolve_within` refuses it as `invalid_arguments`, and
@@ -535,34 +542,38 @@ resolution sites now catch it, and
 produces a cycle as readily as a repository authored to produce one, so this is
 ordinary untrusted content rather than an exotic case.
 
-**R-4: `errors[].stderr_head` carries verbatim external tool output, and is
-therefore not covered by the no-host-path guarantee.** Everything the plugin
-itself writes into a message is rendered through `iacreview.source.display_path`
-or `iacreview.errors.os_error_detail`, so no message the plugin composes contains
-an absolute host path (Requirement 16 AC11, pinned by
-`tests/regression/test_sec_no_host_path_in_errors.py`). `stderr_head` is
-different: it is up to five lines copied unmodified from a crashing tool.
-`cfnlint.build_argv` and `cfnguard.build_argv` pass the resolved *absolute*
-Template path to the tool, so a tool that echoes its input path in a crash
-message puts that absolute path into the report.
-
-This is a genuine conflict between two requirements rather than an oversight.
+**R-4 (resolved in v0.8.0): `errors[].stderr_head` no longer leaks an absolute
+host path, and is byte-identical between runs.** The tension was real:
 Requirement 15 AC7 wants the first five stderr lines *because they are the
-diagnostic* for a tool failure the plugin cannot interpret. Requirement 16 AC11
-forbids an absolute host path on stdout. Verbatim third-party output cannot
-satisfy both, and the alternatives were worse: rewriting a tool's stderr would
-destroy the diagnostic value that is the whole reason for capturing it, and
-dropping the field would leave a tool crash with no explanation at all. The
-decision for v0.1 is to keep the field verbatim and to scope the guarantee
-accordingly.
+diagnostic* for a tool failure the plugin cannot interpret, while Requirement 16
+AC11 forbids an absolute host path on stdout and Requirement 18 AC3 wants the
+excerpt byte-identical between runs. `cfnlint.build_argv` and
+`cfnguard.build_argv` pass the resolved *absolute* Template path to the tool, so
+a tool that echoes its input path in a crash message would otherwise put that
+path into the report.
 
-**So: treat `stderr_head` as untrusted external text, outside the byte-identical
-and no-host-path guarantees that apply to the rest of stdout.** It may contain a
-host path, and, for the same reason, anything else the tool chose to print about
-the input it was given. The five-line cap bounds how much (Requirement 15 AC7,
-Property 23 in `tests/property/test_prop_security.py`); it does not filter what.
-Consumers that publish reports to a wider audience than the machine that produced
-them should either strip `stderr_head` or review it before publication.
+The resolution (Requirement 18) is redaction rather than dropping the field or
+rewriting it wholesale. `iacreview.errors._head_lines` truncates to five lines
+and then applies `iacreview.errors.redact_host_paths` to each retained line,
+replacing every absolute-path-like token (a `/` that begins a path, followed by
+non-space) with the fixed placeholder `<path>` (`HOST_PATH_PLACEHOLDER`). A
+fixed placeholder, not a per-path derivation, is what makes the redacted excerpt
+byte-identical across runs. The diagnostic value survives -- the tool's message,
+minus the environment-specific paths, is still there -- and the five-line cap
+still bounds how much untrusted output reaches the report (Property 23 in
+`tests/property/test_prop_security.py`).
+
+**Limits of the redaction.** The scope is absolute POSIX paths, the one
+environment-dependent value the plugin can recognize in third-party output.
+Process identifiers and timestamps a tool might print are out of scope for
+v0.8.0: the plugin cannot reliably tell a PID or a timestamp from an ordinary
+number a tool emits, and guessing would corrupt the diagnostic. When a token is
+ambiguous, redaction wins -- collapsing a `/foo/bar` string that was never a path
+is preferred over leaking a host path, following the security guideline that an
+undecidable case is resolved on the side of concealment.
+`tests/regression/test_sec_no_host_path_in_errors.py` reproduces a tool that
+writes an absolute path to stderr and pins that the path does not appear in the
+report (Requirement 18 AC4).
 
 **R-5: `cdk synth` runs unsandboxed.** Stated in full above and quoted from
 `SYNTH_WARNING`. Reviewing untrusted CDK source starting from source code is an
@@ -584,35 +595,64 @@ location. The mitigation is upstream: do not put plaintext secrets in Templates,
 and use `NoEcho` for Parameters that carry them. See the rejected key-name
 pattern approach above for why the obvious extension is not an improvement.
 
-**R-8: There is no input size or alias-expansion budget.** A YAML alias bomb
-(`billion laughs`) is an availability attack: PyYAML expands aliases eagerly, so
-a small file can exhaust memory. v0.1 sets no budget to enforce, and
-`tests/integration/test_malformed_input.py` records this as deliberately out of
-scope rather than as an untested assumption -- a test that merely hoped the
-process died quickly would need memory and CPU limits that are not portable
-across the supported platforms, and would be worse than no test. This is a
-missing requirement rather than a defended position, so it is listed as a
-Roadmap candidate below. Bounded resource exhaustion *is* covered: a
-2000-level-deep document is one of the fourteen inputs in that matrix, because
-its outcome is deterministic.
+**R-8 (resolved in v0.8.0): input size and YAML alias expansion are bounded.** A
+YAML alias bomb (`billion laughs`) is an availability attack: PyYAML expands
+aliases eagerly, so a small file can otherwise exhaust memory. Three named
+constants close this, each defined in one place (Requirement 17 AC8):
 
-**R-9: A grandchild of a timed-out tool may survive.** `subprocess.run` kills and
-reaps the direct child before the timeout is reported, so no orphaned child
-remains. Processes that child spawned are not tracked by CPython and may outlive
-it. Fixing this needs process groups, whose semantics differ across the supported
-platforms; it is recorded rather than papered over.
+- `iacreview.template.MAX_TEMPLATE_BYTES` (5 MiB) caps a single Template. The
+  size is read from `os.fstat` on the opened descriptor and checked *before* any
+  byte is read, so an oversized file is refused without being loaded
+  (Requirement 17 AC1). CloudFormation's own template-body limit is 1 MiB, so
+  5 MiB admits a large synth output while refusing a hostile multi-gigabyte file.
+- `MAX_AGGREGATE_BYTES` (50 MiB, in the `iac-review` orchestrator) caps the
+  combined size of the Templates read from a directory target. Each file's size
+  is charged before it is opened, so the walk stops at the file that would exceed
+  the limit rather than after reading it (Requirement 17 AC2).
+- `iacreview.yamlcfn.MAX_ALIAS_EXPANSIONS` (10000) bounds alias expansion. The
+  `CfnSafeLoader` counts alias references as they are composed and raises once
+  the count is exceeded, node by node before the document is built, so the fan-out
+  is never materialized. The failure joins the normal parse-failure path as a
+  positioned `TemplateParseError` (Requirement 17 AC3).
+
+All three fail through the structured-error mechanism and name no absolute host
+path (Requirement 17 AC9). A single-file or aggregate overrun reports the new
+`input_too_large` error class; an alias overrun reports `parse_failure`. The
+size limit and the alias bound are verified by monkeypatching the constant to a
+small value and feeding an input just over it, and by a `billion laughs`
+fixture -- a portable technique that needs no platform-specific resource-limit
+facility (Requirement 17 AC4), pinned in `tests/regression/`.
+
+**R-9 (resolved in v0.8.0): a timed-out tool's descendants are reaped.**
+`iacreview.proc.run` starts the child with `subprocess.Popen(...,
+start_new_session=True)`, making it the leader of a new session and process
+group, so a grandchild it forks stays in that group. On timeout the whole group
+is signalled with `os.killpg(os.getpgid(pid), SIGTERM)` and, after a grace
+period, `SIGKILL`, so no descendant of the timed-out tool survives the review
+(Requirement 17 AC7). `start_new_session` and `os.killpg` are POSIX and behave
+identically on macOS and Linux; Windows is out of scope (O-6). The change does
+not touch stdout, and the timeout still reports the `tool_timeout` error class.
+A regression test spawns a grandchild and confirms with `os.kill(pid, 0)` that it
+does not outlive the timeout.
 
 ## Roadmap Candidates
 
-Not implemented in v0.1, and not claimed to be:
+R-2, R-4, R-8 and R-9 were residual risks in v0.1 and are **resolved in
+v0.8.0**; see their entries above. The residual risks that remain unmitigated,
+and are not claimed to be otherwise:
 
-- An input size limit and a YAML alias-expansion budget, with the accompanying
-  portable resource-limit test technique (R-8).
-- Descriptor-based file access to close the TOCTOU window (R-2).
-- Process-group termination so that a timeout reaps a tool's descendants (R-9).
-- A revisit of `stderr_head`, which needs Requirement 15 AC7 and Requirement 16
-  AC11 to be reconciled at the requirements level before an implementation can
-  satisfy both (R-4).
+- **R-1**: containment is not a sandbox for the child processes the review
+  starts.
+- **R-5**: `cdk synth` runs unsandboxed; mitigated only by an explicit
+  confirmation flag, withheld credentials, and a timeout.
+- **R-6**: `SIGKILL`, a hard crash, or a power loss can leave a mode-`0600`
+  temporary file for the operating system's sweeper to remove.
+- **R-7**: redaction is not secret detection; a plaintext secret under an
+  unrecognized key name can still be quoted in an Excerpt.
+
+Further out, `stderr_head` redaction covers absolute host paths but not process
+identifiers or timestamps a tool might print (R-4); recognizing those reliably is
+a candidate for a later release.
 
 ## Where These Claims Are Tested
 

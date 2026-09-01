@@ -883,9 +883,14 @@ def test_a_crashing_synthesis_reports_its_stderr_and_keeps_the_stale_assembly_ou
     entry = error_of_class(run.report, "tool_execution")
     assert entry["tool"] == CDK
     assert entry["exit_code"] == 1
-    # The fake's own two lines, reported verbatim and in order.
+    # The fake's own two lines, reported in order. The first names an absolute
+    # path (``/nonexistent``), which Task 34 redaction collapses to
+    # ``<path>`` before it reaches the report (Requirement 16 AC11,
+    # Requirement 18 AC2): the crash stderr is still reported, but the host
+    # path in it is withheld. The non-path text of both lines survives verbatim,
+    # which is what carries the intent that a crash's stderr is transcribed.
     assert entry["stderr_head"] == [
-        "Error: Cannot find asset at /nonexistent",
+        "Error: Cannot find asset at <path>",
         "    at Object.synth (fake cdk)",
     ]
     assert entry["remediation"] == cdk.NO_FALLBACK_REMEDIATION

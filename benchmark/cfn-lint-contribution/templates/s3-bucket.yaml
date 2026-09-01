@@ -1,0 +1,10 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A minimal S3 bucket, syntactically valid, used to measure what cfn-lint's rule
+  catalogue reports about a plain bucket. Not a ground-truth case: no expected
+  finding is declared, and the count this produces is informational.
+Resources:
+  ContributionBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: contribution-series-bucket

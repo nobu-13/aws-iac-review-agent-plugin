@@ -247,3 +247,109 @@ def test_unparseable_pyyaml_version_does_not_block_parsing(monkeypatch) -> None:
     monkeypatch.setattr(yaml, "__version__", "unknown")
 
     assert yamlcfn.load_yaml("Value: !Ref X\n") == {"Value": {"Ref": "X"}}
+
+
+# --- (5) alias-expansion budget ---------------------------------------------
+
+
+def _nested_alias_document(levels: int, fan_out: int) -> str:
+    """Build a billion-laughs style document without materializing it.
+
+    Each level is a sequence of ``fan_out`` references to the level below, so
+    the number of *alias references* the composer must resolve grows quickly
+    while the source text stays a few dozen lines. The document is never
+    expanded here -- it is only text -- so this consumes no memory itself; the
+    point is that the loader refuses it before *it* would.
+    """
+    lines = ['l0: &l0 ["x", "x"]']
+    for level in range(1, levels + 1):
+        refs = ", ".join(["*l{0}".format(level - 1)] * fan_out)
+        lines.append("l{0}: &l{0} [{1}]".format(level, refs))
+    return "\n".join(lines) + "\n"
+
+
+def test_a_nested_alias_document_trips_a_small_budget(monkeypatch) -> None:
+    """With a small budget, a fan-out document fails as a YAML error.
+
+    The budget is monkeypatched low so the failure is reached in the first few
+    levels, without a real billion-laughs payload. The raised error is a
+    ``yaml.YAMLError`` (so :mod:`iacreview.template` turns it into a positioned
+    ``TemplateParseError``) and carries a ``problem_mark`` for that position.
+    """
+    monkeypatch.setattr(yamlcfn, "MAX_ALIAS_EXPANSIONS", 5)
+    monkeypatch.setattr(yamlcfn, "_LOADER", None)
+
+    document = _nested_alias_document(levels=5, fan_out=4)
+
+    with pytest.raises(yaml.constructor.ConstructorError) as exc_info:
+        yamlcfn.load_yaml(document)
+
+    error = exc_info.value
+    assert isinstance(error, yaml.YAMLError)
+    assert getattr(error, "problem_mark", None) is not None
+    assert str(yamlcfn.MAX_ALIAS_EXPANSIONS) in str(error)
+
+
+def test_the_budget_is_not_charged_until_it_is_exceeded(monkeypatch) -> None:
+    """A document with exactly the budgeted number of aliases still parses.
+
+    The check is ``> MAX_ALIAS_EXPANSIONS``, so the boundary value is allowed;
+    this pins that anchors and aliases are legal YAML and are not banned outright
+    (the budget only refuses documents that go *past* it).
+    """
+    monkeypatch.setattr(yamlcfn, "MAX_ALIAS_EXPANSIONS", 3)
+    monkeypatch.setattr(yamlcfn, "_LOADER", None)
+
+    document = "base: &b value\n" "uses: [*b, *b, *b]\n"  # exactly 3 aliases
+
+    assert yamlcfn.load_yaml(document) == {"base": "value", "uses": ["value"] * 3}
+
+
+def test_a_normal_template_reusing_aliases_is_unaffected() -> None:
+    """A realistic reuse of anchors stays far below the default budget.
+
+    Anchors and aliases are ordinary YAML; a template that factors a common
+    block out and references it a handful of times must parse normally with the
+    shipped :data:`MAX_ALIAS_EXPANSIONS`.
+    """
+    template = (
+        "Mappings:\n"
+        "  Common: &tags\n"
+        "    Team: platform\n"
+        "    Env: prod\n"
+        "Resources:\n"
+        "  A:\n"
+        "    Properties:\n"
+        "      Tags: *tags\n"
+        "  B:\n"
+        "    Properties:\n"
+        "      Tags: *tags\n"
+    )
+
+    doc = yamlcfn.load_yaml(template)
+
+    assert doc["Resources"]["A"]["Properties"]["Tags"] == {
+        "Team": "platform",
+        "Env": "prod",
+    }
+    assert doc["Resources"]["B"]["Properties"]["Tags"] == {
+        "Team": "platform",
+        "Env": "prod",
+    }
+
+
+def test_the_alias_counter_is_per_document(monkeypatch) -> None:
+    """Each parse starts from zero; one document's aliases do not carry over.
+
+    The counter lives on the loader instance, and a new instance is created per
+    parse. Two sequential parses that each stay under the budget must both
+    succeed even though their combined alias count exceeds it.
+    """
+    monkeypatch.setattr(yamlcfn, "MAX_ALIAS_EXPANSIONS", 3)
+    monkeypatch.setattr(yamlcfn, "_LOADER", None)
+
+    document = "base: &b value\nuses: [*b, *b]\n"  # 2 aliases, under budget
+
+    assert yamlcfn.load_yaml(document)["uses"] == ["value", "value"]
+    # A second parse would exceed the budget only if the counter were shared.
+    assert yamlcfn.load_yaml(document)["uses"] == ["value", "value"]

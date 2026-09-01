@@ -1,0 +1,16 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: >-
+  A syntactically valid template that trips cfn-lint's non-error rules, so the
+  series measures a non-zero cfn-lint contribution. Informational only: no
+  expected finding is declared, and the exact rule set that fires depends on the
+  installed cfn-lint version, which is why this is a measurement series rather
+  than a ground-truth case.
+Parameters:
+  UnusedParameter:
+    Type: String
+    Default: never-referenced
+Resources:
+  ProbeBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: cfn-lint-contribution-probe

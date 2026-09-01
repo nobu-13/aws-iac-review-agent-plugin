@@ -1,0 +1,58 @@
+#!/bin/sh
+# A cfn-lint that spawns a long-lived grandchild, then hangs itself.
+#
+# Exists for the R-9 (Requirement 17 AC7) process-group regression: proc.run
+# must kill not only this tool on timeout but every descendant it started. This
+# script backgrounds a `sleep` -- the grandchild, from proc.run's point of view
+# -- writes that sleep's PID where the test can read it, then blocks on a sleep
+# of its own so the invocation exceeds a tiny timeout.
+#
+# The grandchild is started with `&`, so it stays in this shell's process group
+# rather than getting one of its own; that group is the new session proc.run
+# created with start_new_session=True, so os.killpg reaps the grandchild along
+# with this tool. If proc.run killed only the direct child, the grandchild
+# would outlive the timeout and the test would catch it still alive.
+#
+# The grandchild PID is written to the path given as `--grandchild-pidfile PATH`
+# so the test can poll os.kill(pid, 0) for its disappearance. It arrives through
+# argv, not the environment, because proc._minimal_env strips every variable
+# outside its allowlist -- an env-carried path would never reach this script.
+# Writing the PID before the blocking sleep guarantees the file exists by the
+# time the timeout fires.
+#
+# --version is answered at once for the same reason cfn-lint-timeout does it:
+# the version gate uses a fixed 10s timeout a caller cannot shrink, so hanging
+# the banner would add 10s of real waiting before the case under test is even
+# reached.
+#
+# POSIX sh, absolute interpreter path, arguments compared and never evaluated,
+# following the other fakes in this directory. PATH is set before the exec of
+# the standard tools this script needs (sleep) because a caller may point PATH
+# at this directory alone.
+pidfile=
+prev=
+for arg in "$@"; do
+    if [ "$arg" = "--version" ]; then
+        echo "cfn-lint 1.22.0"
+        exit 0
+    fi
+    if [ "$prev" = "--grandchild-pidfile" ]; then
+        pidfile=$arg
+    fi
+    prev=$arg
+done
+
+PATH=/usr/bin:/bin
+export PATH
+
+# The grandchild: a sleep long enough to outlast any test timeout if it is not
+# reaped. Backgrounded so it shares this process group.
+sleep 999 &
+grandchild_pid=$!
+
+if [ -n "$pidfile" ]; then
+    printf '%s\n' "$grandchild_pid" > "$pidfile"
+fi
+
+# Hang the tool itself so proc.run's timeout fires.
+sleep 999

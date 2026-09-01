@@ -55,6 +55,7 @@ from iacreview.cfnguard import load_rule_metadata
 from iacreview.errors import (
     InputNotFoundError,
     NotReviewableError,
+    PathContainmentError,
     TemplateParseError,
 )
 
@@ -139,21 +140,46 @@ def test_a_not_reviewable_message_carries_no_absolute_path(
 def test_an_unreadable_input_leaks_neither_the_path_nor_the_oserror_filename(
     tmp_path: Path,
 ) -> None:
-    """A directory reaches ``errors[]`` through ``iac-review``'s candidate loop.
+    """An ``OSError`` from the open reaches ``errors[]`` without leaking the path.
 
     Two leaks in one message before the fix: the path this module was given, and
     the filename CPython appends to ``str(OSError)``. The errno and its text are
     kept, because they are the whole diagnostic value.
+
+    A missing file is used, so ``os.open`` fails with ``ENOENT``: this is the
+    ``input_not_found`` branch of the fd-based reader, the one that still carries
+    an ``OSError`` filename to strip. (A directory now takes a different branch --
+    it opens, and is refused as a non-regular file; that message is pinned
+    below.)
+    """
+    missing = tmp_path / "templates" / "app.yaml"
+
+    with pytest.raises(InputNotFoundError) as caught:
+        template.load_template(missing)
+
+    message = caught.value.message
+    assert str(missing) not in message, message
+    assert "errno" in message, message
+
+
+def test_a_non_regular_file_refusal_names_no_absolute_path(
+    tmp_path: Path,
+) -> None:
+    """A directory now opens and is refused as a non-regular file (AC6).
+
+    The refusal is a ``path_violation`` rather than an ``input_not_found``, and
+    its message names no absolute host path (Requirement 16 AC11, Requirement 17
+    AC9).
     """
     directory = tmp_path / "templates"
     directory.mkdir()
 
-    with pytest.raises(InputNotFoundError) as caught:
+    with pytest.raises(PathContainmentError) as caught:
         template.load_template(directory)
 
     message = caught.value.message
+    assert caught.value.error_class == "path_violation"
     assert str(directory) not in message, message
-    assert "errno" in message, message
 
 
 def test_an_unreadable_agent_findings_file_carries_no_absolute_path(
@@ -233,3 +259,114 @@ def test_a_standalone_skill_prints_no_absolute_path_for_a_parse_failure(
     assert "malformed_syntax.yaml" in str(report["errors"][0]["message"])
     for absolute in (str(workspace), str(tmp_path), sys.executable):
         assert absolute not in completed.stdout
+
+
+# ---------------------------------------------------------------------------
+# Requirement 18 (v0.8.0): a host path in *tool stderr* must not reach the
+# report's stderr_head either.
+#
+# The fixes above render the *plugin's own* messages without an absolute path.
+# stderr_head is different: it carries untrusted text the external tool wrote,
+# and a tool routinely names the file it was handed -- an absolute path in this
+# plugin, because that is what a tool has to be given. Requirement 18 AC2 asks
+# that such a path be redacted before it reaches the report, and AC3 that the
+# result be byte-identical across runs. The redaction lives in one place,
+# iacreview.errors.redact_host_paths, applied per retained line in _head_lines.
+# ---------------------------------------------------------------------------
+
+TEMPLATE_TEXT = """\
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DataBucket:
+    Type: AWS::S3::Bucket
+"""
+
+
+def _reproduce_cfnlint_failure_with_host_path_in_stderr(
+    monkeypatch: pytest.MonkeyPatch,
+    fakebin_dir: Path,
+    tmp_path: Path,
+) -> Tuple[dict, Path]:
+    """Drive cfn-lint into a crash whose stderr names an absolute host path.
+
+    The configurable fake writes a crash traceback that embeds the workspace's
+    absolute path -- exactly the shape a real analyzer emits when it reports the
+    file it failed on. ``PATH`` resolves cfn-lint only to the fake, so no
+    installed tool is consulted; ``TMPDIR`` is the fake's configuration channel
+    (:mod:`iacreview.proc` drops invented variables).
+
+    Returns the single StructuredError produced and the workspace path whose
+    absence from ``stderr_head`` is under test.
+    """
+    from iacreview import cfnlint
+
+    workspace = tmp_path / "workspace"
+    workspace.mkdir(parents=True)
+    (workspace / "template.yaml").write_text(TEMPLATE_TEXT, encoding="utf-8")
+
+    host_path = str(workspace / "template.yaml")
+    config = {
+        "results_text": "",
+        "exit_code": 1,
+        "stderr": (
+            "cfn-lint: internal error while processing {0}\n"
+            "Traceback (most recent call last):\n"
+            "  File \"{0}\", line 1\n"
+            "RuntimeError: fake cfn-lint always crashes\n".format(host_path)
+        ),
+    }
+    config_dir = tmp_path / "cfg"
+    config_dir.mkdir()
+    (config_dir / "fake-cfn-lint.json").write_text(json.dumps(config), encoding="utf-8")
+
+    monkeypatch.setenv(
+        "PATH", os.pathsep.join([str(fakebin_dir), str(Path(sys.executable).parent)])
+    )
+    monkeypatch.setenv("TMPDIR", str(config_dir))
+
+    result = cfnlint.run_and_normalize(
+        workspace / "template.yaml", workspace_root=workspace
+    )
+    assert result.findings == []
+    assert len(result.errors) == 1, result.errors
+    return result.errors[0], workspace
+
+
+def test_tool_stderr_host_path_does_not_reach_stderr_head(
+    monkeypatch: pytest.MonkeyPatch, fakebin_dir: Path, tmp_path: Path
+) -> None:
+    """Requirement 18 AC2/AC4: the absolute path cfn-lint wrote to stderr is
+    redacted before it lands in the report's ``stderr_head``."""
+    error, workspace = _reproduce_cfnlint_failure_with_host_path_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path
+    )
+
+    assert error["error_class"] == "tool_execution"
+    stderr_head = error["stderr_head"]
+    assert 0 < len(stderr_head) <= 5
+
+    joined = "\n".join(stderr_head)
+    assert str(workspace) not in joined, joined
+    assert str(workspace / "template.yaml") not in joined, joined
+    # ``error`` is the rendered StructuredError dict -- what actually reaches
+    # stdout -- so the assertion is repeated against its full serialization.
+    assert str(workspace) not in json.dumps(error), error
+    # The diagnostic value survives: the line still names the tool and the fault.
+    assert "cfn-lint" in joined
+    assert "RuntimeError" in joined
+
+
+def test_redacted_stderr_head_is_byte_identical_across_two_runs(
+    monkeypatch: pytest.MonkeyPatch, fakebin_dir: Path, tmp_path: Path
+) -> None:
+    """Requirement 18 AC3: the same tool failure yields a byte-identical
+    ``stderr_head`` on a second run, carrying no environment-dependent path."""
+    first, _ = _reproduce_cfnlint_failure_with_host_path_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path / "run1"
+    )
+    second, _ = _reproduce_cfnlint_failure_with_host_path_in_stderr(
+        monkeypatch, fakebin_dir, tmp_path / "run2"
+    )
+
+    assert first["stderr_head"] == second["stderr_head"]
+    assert json.dumps(first["stderr_head"]) == json.dumps(second["stderr_head"])

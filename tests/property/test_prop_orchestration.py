@@ -129,7 +129,7 @@ layout rather than for the sampled ones -- which is the only way to cover a
 "for any input directory layout" quantifier. The orchestrator holds no second
 copy of the decision: it passes ``confirmed`` straight through.
 
-*Dynamically*, :func:`subprocess.run` is replaced by a recorder for the duration
+*Dynamically*, :func:`subprocess.Popen` is replaced by a recorder for the duration
 of each ``main()`` call and every ``argv`` it receives is captured. Recording
 under :mod:`subprocess` rather than under :func:`iacreview.proc.run` is one layer
 lower than the integration test's assertion, so a call that bypassed the wrapper
@@ -144,7 +144,7 @@ since a synth's observable effect is a written ``cdk.out``.
 is called with ``confirmed=True`` on the same directory, and the recorder must
 hold exactly one invocation of ``cdk synth``. Without this the empty-list
 assertion above would also pass against a recorder wired to nothing. No child
-process is started on that path either -- ``subprocess.run`` is still the
+process is started on that path either -- ``subprocess.Popen`` is still the
 recorder -- so the project's ``app.py`` never executes.
 
 Settings
@@ -769,29 +769,51 @@ def _unconfirmed_gate_violations() -> List[str]:
 _GATE_VIOLATIONS: List[str] = _unconfirmed_gate_violations()
 
 
+class _BenignPopenHandle:
+    """The minimal :class:`subprocess.Popen` surface :func:`iacreview.proc.run`
+    touches on its success path.
+
+    Task 33 made ``proc.run`` start the child with ``subprocess.Popen`` and read
+    ``.communicate(timeout=...)`` and ``.returncode``. Returning this from the
+    recorder lets the code under test continue on its normal path instead of
+    failing on a raise -- and is why ``cdk.json``'s ``app`` command never runs.
+    ``.pid`` is present because the module reads it on the timeout path, which a
+    benign handle never triggers.
+    """
+
+    def __init__(self) -> None:
+        self.returncode: int = 0
+        self.pid: int = -1
+
+    def communicate(self, timeout: Optional[float] = None) -> Tuple[str, str]:
+        return ("", "")
+
+
 @contextmanager
 def _recorded_process_starts() -> Iterator[List[List[str]]]:
-    """Replace :func:`subprocess.run` with a recorder and yield what it saw.
+    """Replace :func:`subprocess.Popen` with a recorder and yield what it saw.
 
-    One layer below :func:`iacreview.proc.run`, so an invocation that bypassed
-    the wrapper is recorded too. Nothing is executed: the recorder returns a
-    successful :class:`subprocess.CompletedProcess` with empty streams, which
-    lets the code under test continue on its normal path instead of failing on a
-    raise -- and which is why ``cdk.json``'s ``app`` command never runs.
+    ``subprocess.Popen`` is the real spawn point since Task 33, and it is one
+    layer below :func:`iacreview.proc.run`, so an invocation that bypassed the
+    wrapper is recorded too. Nothing is executed: the recorder returns a benign
+    fake handle whose ``communicate`` yields empty streams and whose
+    ``returncode`` is 0, which lets the code under test continue on its normal
+    path instead of failing on a raise -- and which is why ``cdk.json``'s ``app``
+    command never runs.
     """
     calls: List[List[str]] = []
-    original = subprocess.run
+    original = subprocess.Popen
 
     def recorder(*args: Any, **kwargs: Any) -> Any:
         argv = args[0] if args else kwargs.get("args")
         calls.append([str(token) for token in argv])
-        return subprocess.CompletedProcess(args=argv, returncode=0, stdout="", stderr="")
+        return _BenignPopenHandle()
 
-    subprocess.run = recorder  # type: ignore[assignment]
+    subprocess.Popen = recorder  # type: ignore[assignment]
     try:
         yield calls
     finally:
-        subprocess.run = original  # type: ignore[assignment]
+        subprocess.Popen = original  # type: ignore[assignment]
 
 
 def _cdk_invocations(calls: Sequence[Sequence[str]]) -> List[Sequence[str]]:
@@ -823,7 +845,7 @@ def _fake_cdk_binary(base: Path) -> Path:
     shape the property is stated about.
 
     Created outside the reviewed workspace, so it does not disturb the
-    before/after comparison, and never executed: ``subprocess.run`` is the
+    before/after comparison, and never executed: ``subprocess.Popen`` is the
     recorder for the whole control block, so the file's contents do not matter.
     The execute bit does -- :func:`iacreview.proc.run` resolves ``argv[0]`` with
     :func:`shutil.which` before it calls out, and an absolute path that is not
@@ -974,8 +996,8 @@ def test_cdk_synth_is_never_invoked_without_confirmation(
         # The control: the same recorder, shown to record a synth. Without it the
         # empty-list assertion above would also hold for a recorder wired to
         # nothing. The tool lookup is replaced because the CDK CLI need not be
-        # installed for the channel to be verifiable, and subprocess.run is still
-        # the recorder, so no project code runs here either.
+        # installed for the channel to be verifiable, and subprocess.Popen is
+        # still the recorder, so no project code runs here either.
         tool = ToolInfo(
             name=cdk.CDK, path=str(_fake_cdk_binary(workspace.parent)), version=_STUB_VERSION
         )
