@@ -23,6 +23,7 @@ instead of being relabelled a parse failure.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Optional, Tuple, Type
@@ -33,6 +34,7 @@ from iacreview import template
 from iacreview.errors import (
     IacReviewError,
     InputNotFoundError,
+    InputTooLargeError,
     NotReviewableError,
     TemplateParseError,
     ToolUnavailableError,
@@ -381,9 +383,199 @@ def test_missing_file_is_reported_as_input_not_found(tmp_path: Path) -> None:
         template.load_template(tmp_path / "does_not_exist.yaml")
 
 
-def test_directory_input_is_reported_as_input_not_found(tmp_path: Path) -> None:
-    with pytest.raises(InputNotFoundError):
+def test_directory_input_is_reported_as_a_non_regular_file(tmp_path: Path) -> None:
+    """A directory opens but is not a regular file, so it is a path violation.
+
+    Requirement 17 AC6 asks for a directory (like a FIFO or a device) to be
+    refused because it is not a regular file. The fd-based read confirms
+    ``stat.S_ISREG`` on the opened descriptor and reports the refusal as
+    ``path_violation`` rather than ``input_not_found``: the path exists and can
+    be opened, it simply does not name a Template file.
+    """
+    from iacreview.errors import PathContainmentError
+
+    with pytest.raises(PathContainmentError) as exc_info:
         template.load_template(tmp_path)
+
+    assert exc_info.value.error_class == "path_violation"
+    assert str(tmp_path) not in exc_info.value.message
+
+
+# ---------------------------------------------------------------------------
+# Single-file size limit (Requirement 17 AC1). The limit is a named constant
+# and is monkeypatched to a small value rather than writing a multi-megabyte
+# file, so the test is portable and does not depend on a platform resource
+# limit facility (Requirement 17 AC4).
+# ---------------------------------------------------------------------------
+
+
+def _write_template(path: Path, padding: int = 0) -> Path:
+    """Write a minimal reviewable Template, optionally padded with a comment."""
+    body = "Resources:\n  Bucket:\n    Type: AWS::S3::Bucket\n"
+    if padding:
+        body += "# " + "x" * padding + "\n"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_file_over_the_limit_is_refused_as_input_too_large(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = _write_template(tmp_path / "template.yaml", padding=200)
+    size = path.stat().st_size
+    monkeypatch.setattr(template, "MAX_TEMPLATE_BYTES", size - 1)
+
+    with pytest.raises(InputTooLargeError):
+        template.load_template(path)
+
+
+def test_over_the_limit_file_is_not_read_into_memory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC1: an oversized file must be refused *without* loading it. Any call to
+    ``read_bytes`` here would fail the test."""
+    path = _write_template(tmp_path / "template.yaml", padding=200)
+    size = path.stat().st_size
+    monkeypatch.setattr(template, "MAX_TEMPLATE_BYTES", size - 1)
+
+    def _forbidden_read(self: Path) -> bytes:  # pragma: no cover - must not run
+        raise AssertionError("read_bytes was called for an oversized file")
+
+    monkeypatch.setattr(Path, "read_bytes", _forbidden_read)
+
+    with pytest.raises(InputTooLargeError):
+        template.load_template(path)
+
+
+def test_file_at_the_limit_is_still_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The comparison is strict ``>``; a file exactly at the limit loads."""
+    path = _write_template(tmp_path / "template.yaml")
+    size = path.stat().st_size
+    monkeypatch.setattr(template, "MAX_TEMPLATE_BYTES", size)
+
+    assert template.load_template(path).fmt == "yaml"
+
+
+def test_input_too_large_message_carries_no_absolute_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Requirement 16 AC11: the reported message names no absolute host path."""
+    path = _write_template(tmp_path / "template.yaml", padding=200)
+    monkeypatch.setattr(template, "MAX_TEMPLATE_BYTES", 1)
+
+    with pytest.raises(InputTooLargeError) as exc_info:
+        template.load_template(path)
+
+    assert str(tmp_path) not in exc_info.value.message
+    assert exc_info.value.message.count("/") == 0 or display_path(path) in exc_info.value.message
+
+
+def test_max_template_bytes_is_exported() -> None:
+    assert "MAX_TEMPLATE_BYTES" in template.__all__
+    assert template.MAX_TEMPLATE_BYTES == 5 * 1024 * 1024
+
+
+# ---------------------------------------------------------------------------
+# TOCTOU-safe, fd-based reading (Requirement 17 AC5, AC6).
+#
+# The read now opens the path once with ``O_NOFOLLOW`` and verifies, on that one
+# descriptor, that the file is regular and that its inode still matches the
+# resolved path. The regression suite pins the security-relevant refusals; the
+# tests here confirm the ordinary path still works and that the fd-based size
+# check preserves the Task 30 behaviour.
+# ---------------------------------------------------------------------------
+
+
+def test_normal_regular_file_still_loads_through_the_fd_path(tmp_path: Path) -> None:
+    """The common case is unchanged: a regular file reads and parses as before."""
+    path = _write_template(tmp_path / "template.yaml")
+
+    loaded = template.load_template(path)
+
+    assert loaded.fmt == "yaml"
+    assert "Bucket" in loaded.doc["Resources"]
+
+
+def test_size_check_uses_the_fstat_of_the_opened_descriptor(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC1 preserved on the fd path: the limit is checked against fstat st_size.
+
+    ``os.read`` is forbidden here to prove the refusal happens before any byte is
+    read, mirroring the Task 30 guarantee now that the read goes through a
+    descriptor instead of ``Path.read_bytes``.
+    """
+    path = _write_template(tmp_path / "template.yaml", padding=200)
+    size = path.stat().st_size
+    monkeypatch.setattr(template, "MAX_TEMPLATE_BYTES", size - 1)
+
+    real_read = template.os.read
+
+    def _forbidden_read(fd: int, n: int) -> bytes:  # pragma: no cover - must not run
+        raise AssertionError("os.read was called for an oversized file")
+
+    monkeypatch.setattr(template.os, "read", _forbidden_read)
+    try:
+        with pytest.raises(InputTooLargeError):
+            template.load_template(path)
+    finally:
+        monkeypatch.setattr(template.os, "read", real_read)
+
+
+def test_a_fifo_passed_as_the_template_is_refused(tmp_path: Path) -> None:
+    """AC6: a FIFO is not a regular file and must be refused as path_violation."""
+    from iacreview.errors import PathContainmentError
+
+    fifo = tmp_path / "pipe.yaml"
+    if not hasattr(os, "mkfifo"):
+        pytest.skip("os.mkfifo is not available on this platform")
+    os.mkfifo(fifo)
+
+    with pytest.raises(PathContainmentError) as exc_info:
+        template.load_template(fifo)
+
+    assert exc_info.value.error_class == "path_violation"
+    assert str(tmp_path) not in exc_info.value.message
+
+
+def test_inode_mismatch_between_check_and_read_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC5: if the resolved-path stat differs from the fstat, the read is refused.
+
+    A fully deterministic swap between check and read is hard to force in a test,
+    so the identity comparison is exercised directly: ``os.stat`` (the
+    resolved-path lookup) is patched to report a different inode than the
+    ``os.fstat`` of the opened descriptor. This proves the comparison rejects a
+    mismatch, which is the check that closes the TOCTOU window.
+    """
+    from iacreview.errors import PathContainmentError
+
+    path = _write_template(tmp_path / "template.yaml")
+    real_stat = os.stat
+
+    class _Fake:
+        def __init__(self, base: os.stat_result) -> None:
+            self.st_dev = base.st_dev
+            self.st_ino = base.st_ino + 1
+            self.st_size = base.st_size
+            self.st_mode = base.st_mode
+
+    def _fake_stat(target: object, *args: object, **kwargs: object) -> object:
+        result = real_stat(target, *args, **kwargs)
+        if os.fspath(target) == str(path):
+            return _Fake(result)
+        return result
+
+    monkeypatch.setattr(template.os, "stat", _fake_stat)
+
+    with pytest.raises(PathContainmentError) as exc_info:
+        template.load_template(path)
+
+    assert exc_info.value.error_class == "path_violation"
+    assert "changed between" in exc_info.value.message
 
 
 def test_missing_pyyaml_stays_a_tool_unavailable_error(

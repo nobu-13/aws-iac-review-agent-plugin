@@ -89,10 +89,15 @@ EXPECTED_CRITERION_COUNTS: Dict[int, int] = {
     14: 13,
     15: 7,
     16: 11,
+    # v0.8.0 (Robustness, Determinism, Measurement).
+    17: 9,
+    18: 4,
+    19: 7,
 }
 
-#: The total the completion condition of Task 29.1 names.
-EXPECTED_TOTAL_CRITERIA = 182
+#: The total the completion condition of Task 29.1 named for v0.1 (182), plus the
+#: 20 criteria the three v0.8.0 requirements add.
+EXPECTED_TOTAL_CRITERIA = 202
 
 #: A level-2 heading of ``docs/traceability.md`` that opens a requirement's table.
 REQUIREMENT_HEADING_PATTERN = re.compile(r"^##\s+Requirement\s+(\d+):")

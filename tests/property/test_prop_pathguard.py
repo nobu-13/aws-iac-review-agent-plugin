@@ -83,7 +83,7 @@ quantifier:
 *dynamically*, the three real argv builders (:func:`iacreview.cfnlint.build_argv`,
     :func:`iacreview.cfnguard.build_argv`, :func:`iacreview.cdk.build_synth_argv`)
     are fed a path that came out of :func:`iacreview.pathguard.resolve_within`,
-    handed to :func:`iacreview.proc.run`, and what :func:`subprocess.run`
+    handed to :func:`iacreview.proc.run`, and what :func:`subprocess.Popen`
     actually received is captured and compared token by token.
 
 Asserting the clause by searching the source *text* for ``shell=True`` was the
@@ -95,7 +95,7 @@ three, and the capture half observes the real call. Neither half alone is enough
 the capture sees one call site, and the AST cannot see what a list contains at run
 time.
 
-No child process is started. ``subprocess.run`` is replaced for the duration of
+No child process is started. ``subprocess.Popen`` is replaced for the duration of
 the capture, so ``argv[0]`` only has to *resolve*; :data:`sys.executable` is used
 for that, which needs no ``PATH`` lookup and no external tool to be installed.
 The replacement is done with a context manager rather than the ``monkeypatch``
@@ -116,7 +116,7 @@ import subprocess
 import sys
 from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
-from typing import Any, Dict, FrozenSet, Iterator, List, Tuple
+from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Tuple
 
 import pytest
 from hypothesis import given, settings
@@ -533,11 +533,14 @@ def _shipped_shell_scripts() -> List[str]:
 
 
 def _funnel_passes_shell_false() -> bool:
-    """Whether :data:`_PROCESS_FUNNEL` still calls ``subprocess.run(shell=False)``.
+    """Whether :data:`_PROCESS_FUNNEL` still calls ``subprocess.Popen(shell=False)``.
 
     :func:`_process_spawning_violations` returning nothing is only meaningful
     while the funnel exists: a refactor that deleted the single
-    ``subprocess.run`` call would satisfy the violation check vacuously.
+    ``subprocess.Popen`` call would satisfy the violation check vacuously. Task 33
+    replaced ``subprocess.run`` with ``subprocess.Popen`` so the child can be
+    signalled by process group on timeout; ``shell=False`` is still stated
+    explicitly on it, which is what this asserts.
     """
     for relative, tree in _shipped_sources():
         if relative != _PROCESS_FUNNEL:
@@ -550,7 +553,7 @@ def _funnel_passes_shell_false() -> bool:
                 isinstance(function, ast.Attribute)
                 and isinstance(function.value, ast.Name)
                 and function.value.id == "subprocess"
-                and function.attr == "run"
+                and function.attr == "Popen"
             ):
                 continue
             for keyword in node.keywords:
@@ -571,36 +574,52 @@ _FUNNEL_IS_INTACT: bool = _funnel_passes_shell_false()
 _SHELL_SCRIPTS: List[str] = _shipped_shell_scripts()
 
 
+class _FakePopenHandle:
+    """The minimal :class:`subprocess.Popen` surface :func:`iacreview.proc.run`
+    touches on its success path.
+
+    ``proc.run`` reads ``.communicate(timeout=...)`` for the captured streams and
+    ``.returncode`` for the exit code, and nothing else when the child does not
+    time out. ``.pid`` is present because the module reads it on the timeout path;
+    it is never reached here but is given a value so the surface is honest.
+    """
+
+    def __init__(self) -> None:
+        self.returncode: int = 0
+        self.pid: int = -1
+
+    def communicate(self, timeout: Optional[float] = None) -> Tuple[str, str]:
+        return ("", "")
+
+
 @contextmanager
 def _captured_subprocess_run() -> Iterator[List[Tuple[Tuple[Any, ...], Dict[str, Any]]]]:
-    """Replace :func:`subprocess.run` with a recorder for the duration.
+    """Replace :func:`subprocess.Popen` with a recorder for the duration.
 
-    :mod:`iacreview.proc` does ``import subprocess`` and calls
-    ``subprocess.run``, so replacing the attribute on the module object is what
-    that call resolves to. No child is started, which is the point: the property
-    is about what the wrapper *passes*, and an external tool does not have to be
-    installed for that to be observable.
+    :mod:`iacreview.proc` does ``import subprocess`` and now starts the child with
+    ``subprocess.Popen`` (Task 33), so replacing the attribute on the module
+    object is what that call resolves to. No child is started, which is the point:
+    the property is about what the wrapper *passes*, and an external tool does not
+    have to be installed for that to be observable. The recorder captures the argv
+    the wrapper hands the child -- the first positional argument, or ``args`` as a
+    keyword -- and returns a benign fake handle so ``proc.run`` completes its
+    success path.
 
     Yields:
         The list of ``(args, kwargs)`` the recorder was called with.
     """
     calls: List[Tuple[Tuple[Any, ...], Dict[str, Any]]] = []
-    original = subprocess.run
+    original = subprocess.Popen
 
     def recorder(*args: Any, **kwargs: Any) -> Any:
         calls.append((args, kwargs))
-        return subprocess.CompletedProcess(
-            args=args[0] if args else kwargs.get("args"),
-            returncode=0,
-            stdout="",
-            stderr="",
-        )
+        return _FakePopenHandle()
 
-    subprocess.run = recorder  # type: ignore[assignment]
+    subprocess.Popen = recorder  # type: ignore[assignment]
     try:
         yield calls
     finally:
-        subprocess.run = original  # type: ignore[assignment]
+        subprocess.Popen = original  # type: ignore[assignment]
 
 
 def _plugin_argvs(
@@ -654,7 +673,7 @@ def test_shell_metacharacters_are_rejected_and_argv_reaches_the_child_as_a_list(
     The remaining assertions follow one user-supplied path through the whole
     chain the plugin actually uses: ``resolve_within`` on a relative candidate,
     then each real argv builder, then :func:`iacreview.proc.run`, then the
-    ``subprocess.run`` call itself. What is checked there is that the token the
+    ``subprocess.Popen`` call itself. What is checked there is that the token the
     user supplied arrives as *one whole element* of a list. That is the precise
     negation of "concatenated from user input": if any builder joined the path to
     a neighbouring flag, or interpolated it into a command string, the captured

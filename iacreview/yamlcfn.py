@@ -35,6 +35,23 @@ long-form conversion
     template. Conversion is a rewrite of representation only: no value is
     resolved, evaluated, or executed.
 
+alias-expansion budget
+    A "billion laughs" YAML nests anchors (``&a``) and aliases (``*a``) so that
+    each level multiplies the one below it. PyYAML memoizes constructed nodes,
+    so this particular graph does not blow memory the way an XML entity-expansion
+    attack would, but the input is untrusted and the bound must be explicit
+    rather than incidental (Requirement 17 AC3). The loader counts *alias
+    references* as they are composed and raises once the count exceeds
+    :data:`MAX_ALIAS_EXPANSIONS`. Composition happens node by node before the
+    document is fully constructed, so the count is checked and the parse
+    abandoned *before* any fan-out is materialized -- the bound is on the work,
+    not on the result. The raise is a ``yaml.constructor.ConstructorError`` (a
+    ``yaml.YAMLError`` subclass) carrying the alias node's mark, so it reaches
+    the same positioned :class:`~iacreview.errors.TemplateParseError` every
+    other YAML failure does, with no separate handling in
+    :mod:`iacreview.template`. Anchors and aliases are legal YAML; a normal
+    template that reuses a handful of them stays far below the budget.
+
 PyYAML is imported inside the functions, not at module scope. Requirement 16
 AC3 permits exactly one YAML dependency and the plugin is distributed as a
 directory rather than an installed package, so PyYAML may legitimately be
@@ -53,6 +70,7 @@ from iacreview.errors import ToolUnavailableError, ToolVersionError
 __all__ = [
     "PYYAML_MIN_VERSION",
     "PYYAML_INSTALL_COMMAND",
+    "MAX_ALIAS_EXPANSIONS",
     "SHORT_TAGS",
     "BARE_TAGS",
     "long_form_key",
@@ -66,6 +84,19 @@ PYYAML_MIN_VERSION = "6.0"
 
 #: Install command quoted in every PyYAML-related error message.
 PYYAML_INSTALL_COMMAND = "pip install 'PyYAML>=6.0'"
+
+#: Maximum number of YAML alias references (``*anchor``) resolved while parsing
+#: one document (Requirement 17 AC3, AC8).
+#:
+#: This bounds the work a "billion laughs" style document can force, by capping
+#: how many aliases the composer will resolve before the parse is abandoned. The
+#: value is high enough that no real CloudFormation Template reaches it -- a
+#: hand-authored template that reuses a common block a few dozen times is three
+#: orders of magnitude below it -- and low enough that a fan-out payload trips it
+#: within the first, cheap levels of composition, long before any exponential
+#: expansion could be materialized. This is the single definition of the bound
+#: (Requirement 17 AC8); it is documented in ``docs/security-model.md`` (R-8).
+MAX_ALIAS_EXPANSIONS = 10000
 
 #: CloudFormation shorthand tag names, without the leading ``!``.
 #:
@@ -283,7 +314,43 @@ def _build_loader(yaml: ModuleType) -> Type[Any]:
         Only the tags in :data:`SHORT_TAGS` are registered. Every other tag,
         including ``!!python/object/apply:os.system`` and any unknown local tag
         such as ``!Bogus``, raises ``yaml.constructor.ConstructorError``.
+
+        The loader also bounds alias expansion (:data:`MAX_ALIAS_EXPANSIONS`).
+        The counter lives on the instance, so each parse starts from zero and one
+        document's aliases never leak into the next.
         """
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            #: Alias references resolved so far in this document. Compared
+            #: against :data:`MAX_ALIAS_EXPANSIONS` on every alias node.
+            self._alias_expansions = 0
+
+        def compose_node(self, parent: Any, index: Any) -> Any:
+            """Count each alias reference before it is resolved.
+
+            An alias (``*anchor``) surfaces as an ``AliasEvent`` at this point,
+            *before* ``super().compose_node`` looks the anchor up and returns the
+            shared node. Counting here, and raising before delegating, means the
+            budget is enforced during composition -- ahead of the deep
+            construction where a fan-out would otherwise expand. The raised
+            ``ConstructorError`` carries the alias event's mark so the failure is
+            positioned, and being a ``yaml.YAMLError`` it flows through the
+            existing parse-failure path unchanged.
+            """
+            if self.check_event(yaml.events.AliasEvent):
+                self._alias_expansions += 1
+                if self._alias_expansions > MAX_ALIAS_EXPANSIONS:
+                    event = self.peek_event()
+                    raise yaml.constructor.ConstructorError(
+                        None,
+                        None,
+                        "aborting parse after {0} YAML alias expansions; a "
+                        "document this alias-heavy is refused to bound "
+                        "expansion work".format(MAX_ALIAS_EXPANSIONS),
+                        event.start_mark,
+                    )
+            return super().compose_node(parent, index)
 
     for tag_name in SHORT_TAGS:
         CfnSafeLoader.add_constructor(

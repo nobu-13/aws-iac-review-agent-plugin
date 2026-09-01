@@ -490,57 +490,108 @@ tools are known to be present.
 
 ## Deferred metrics
 
-Three metrics the steering rule lists are defined here and **not implemented in
-v0.1** (Requirement 11 AC13). Each definition is stated so that a later
-implementation does not have to reinvent it, and so that nobody reads their
-absence as an oversight. None of them needs a new ground-truth field, which is
-why deferring them costs no format change. `metrics.DEFERRED_METRICS` names all
-three in code, and a test asserts the names appear both there and in
-`benchmark/README.md`.
+Three metrics the steering rule lists were defined here and not implemented in
+v0.1. **v0.8.0 implemented two of them as diagnostics** (Requirement 19 AC3);
+one remains deferred from the summary because it cannot enter a byte-identical
+document. `metrics.DEFERRED_METRICS` names the one that remains, and a test
+asserts its name appears both there and in `benchmark/README.md`.
+
+All three are **diagnostics**: they are reported and never turned into a PASS or
+FAIL, so they leave the pass/fail contract and the deterministic Sources'
+reproducibility untouched (Requirement 19 AC7). The two implemented ones appear
+in the summary under `diagnostics`, per case and in aggregate; a case that
+declares no expectation for one records it as `N/A` rather than `0` or an absent
+key (Requirement 19 AC6), so the block is the same shape whatever the cases
+declared.
 
 ### Review Time
 
-**Intended definition.** Wall-clock time to review one template, with the
-deterministic phase and the agent phase measured separately, since only one of
-them is under the plugin's control.
+Still deferred from the summary.
 
-**Why deferred.** It is the one metric that cannot enter the harness's stdout at
-all. Review Time is environment-dependent by construction -- it varies with the
-machine, the Python version, the external tool versions, and the load on the box
--- and both the Review_Report and the benchmark summary must stay byte-identical
-between runs over the same input (Requirement 16 AC11). A timing figure in either
-document would break that on the first run, and byte-identical output is what the
-determinism property test and the whole regression story rest on. Implementing
-Review Time therefore means a **second, separate output stream** rather than a
-new field, and that is a design decision rather than an addition. Deferring it is
-cheap: it needs no ground-truth field and no case change, so nothing about the
-current cases has to be revisited when it arrives.
+**Definition.** Wall-clock time to review one template, with the deterministic
+phase and the agent phase measured separately, since only one of them is under
+the plugin's control.
+
+**Why it stays out of the summary.** It is the one metric that cannot enter the
+harness's stdout at all. Review Time is environment-dependent by construction --
+it varies with the machine, the Python version, the external tool versions, and
+the load on the box -- and both the Review_Report and the benchmark summary must
+stay byte-identical between runs over the same input (Requirement 16 AC11). A
+timing figure in stdout would break that on the first run. So v0.8.0 measures it
+and reports it on **stderr** (a verbose diagnostic), the second output stream
+design.md's Determinism Design reserves for environment-dependent metadata, and
+never in stdout (Requirement 19 AC2). It is measured, not omitted; it is simply
+kept off the byte-identical channel.
 
 ### Remediation Accuracy
 
-**Intended definition.** The share of `SuggestedRemediation` values that, when
-applied to the template, clear the Finding they were attached to without
-introducing a new one.
+Implemented as a diagnostic in v0.8.0.
 
-**Why deferred.** It needs a second review pass over a patched template, and it
-needs the patch to be applied -- which the plugin deliberately never does. Read
-Only by default is a security property of this project, not a convenience, so
-Remediation Accuracy has to be built as a benchmark-only harness that writes into
-a temporary copy, and the containment and cleanup rules for that are work in
-their own right. The metric is computable from the expectations that already
-exist, so no ground truth changes when it is added.
+**Definition.** The share of matched Findings whose `SuggestedRemediation`
+satisfies the case's declared remediation expectation. The match is a
+case-insensitive substring test rather than string equality, so a report that
+phrases the remediation more fully than the expectation still counts -- the same
+reason Finding text is never compared verbatim.
+
+**How it is computed.** From the ground truth alone, so it is deterministic and
+belongs in the byte-identical summary. An expectation declares its remediation in
+an optional `expected_remediation` field; a case that declares none records
+`remediation_accuracy: "N/A"`. Every v0.1 case declares none, so the figure is
+`N/A` throughout until a case opts in. Read Only by default is untouched: nothing
+is patched or re-reviewed, unlike the second-review-pass design once sketched
+for it.
+
+The **aggregate** Remediation Accuracy is the unweighted mean of the per-case
+rates that are not `N/A`, not a pool of the underlying cleared/declared counts.
+A case declaring one remediation and a case declaring ten therefore weigh
+equally in the aggregate. This is a deliberate choice -- the diagnostic answers
+"how well does the review remediate a typical case?" rather than "how many
+individual remediations were right?" -- and it is stated here because the two
+readings give different numbers. Human Intervention Count aggregates differently
+(it sums the declared counts) because a count is additive across cases in a way a
+rate is not.
 
 ### Human Intervention Count
 
-**Intended definition.** The number of human decisions needed to complete a
-review.
+Implemented as a diagnostic in v0.8.0.
 
-**Why deferred.** It is a property of a review *session*, not of a case, so no
-case file can carry it and no automated run can produce it. Measuring it means
-instrumenting a human workflow, which is a different kind of activity from
-running a harness in CI. It is recorded here because it is the metric that would
-tell a reader most about whether the tool is actually useful, and its absence
-should be visible rather than tacit.
+**Definition.** The number of human decisions a case declares it needs.
+
+**How it is computed.** A property of a review *session*, so it is a per-case
+declaration rather than something read off the findings: an optional top-level
+`expected_human_intervention_count` field. The diagnostic echoes the declared
+count and the aggregate sums the declared counts; a case that declares none
+records `human_intervention_count: "N/A"`. Every v0.1 case declares none. This is
+a recording of a stated expectation, not an instrumented measurement of a live
+workflow, which keeps it deterministic and CI-friendly.
+
+## Modes and repeat runs
+
+v0.8.0 adds two `--mode` values that read the reserved ground-truth arrays
+without a schema-version bump (Requirement 19 AC1). `agent-only` measures the
+Agent Review Source, reading `expected_findings_agent_only`. `human-review`
+reads `expected_findings_human_review` and is informational: it names findings
+the pipeline is not expected to produce, so it is never held to a threshold and
+cannot make a run fail. Both reserved arrays are empty in every v0.1 case, so
+both modes measure nothing there.
+
+`--agent-runs N` reviews each case N times and reports the Agent Source's
+variation across runs as a stderr diagnostic (Requirement 19 AC4) -- the v0.2
+candidate below, now available as an opt-in diagnostic. The deterministic
+Sources are still evaluated exactly once per case: only `agent-only` repeats, and
+the summary is computed from the first run, so the deterministic benchmark output
+stays reproducible (Requirement 19 AC7).
+
+## cfn-lint contribution series
+
+`benchmark/cfn-lint-contribution/` measures how many findings cfn-lint
+contributes, pinned to a stated cfn-lint version, and reports the count
+informationally -- never thresholded (Requirement 19 AC5). It is kept apart from
+the ground-truth cases so their pass/fail contract does not depend on the
+installed cfn-lint rule catalogue, which gains rules between releases. Its output
+records the cfn-lint version the counts were produced against, the one
+environment value the series exists to measure; everything else that varies by
+host is kept out, so two runs against one cfn-lint version print the same bytes.
 
 ## Bounding agent non-determinism
 

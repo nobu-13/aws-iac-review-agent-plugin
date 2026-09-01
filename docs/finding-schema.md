@@ -565,12 +565,18 @@ error_class, source, tool, exit_code, message,
 required_min_version, detected_version, remediation, stderr_head
 ```
 
-`error_class` is a closed set of 11 values that consumers may switch on:
-`invalid_arguments`, `input_not_found`, `parse_failure`, `tool_unavailable`,
-`tool_version`, `tool_execution`, `tool_timeout`, `path_violation`,
-`no_reviewable_template`, `schema_violation`, `unexpected`. `stderr_head` is
-capped at the first 5 lines of the tool's stderr, which bounds both the noise and
-the disclosure surface.
+`error_class` is a closed set of 12 values that consumers may switch on:
+`invalid_arguments`, `input_not_found`, `input_too_large`, `parse_failure`,
+`tool_unavailable`, `tool_version`, `tool_execution`, `tool_timeout`,
+`path_violation`, `no_reviewable_template`, `schema_violation`, `unexpected`.
+`input_too_large` (added in v0.8.0) is reported when a Template exceeds
+`iacreview.template.MAX_TEMPLATE_BYTES` or when a directory target's Templates
+exceed the orchestrator's `MAX_AGGREGATE_BYTES`: the file exists and is readable,
+but the plugin refuses to load it, so it is distinct from `input_not_found`.
+`stderr_head` is capped at the first 5 lines of the tool's stderr, and each
+retained line is redacted so no absolute host path survives into the report
+(v0.8.0); this bounds both the noise and the disclosure surface, and keeps the
+excerpt byte-identical between runs.
 
 Because `passed_all_checks` ignores `errors`, a report with an empty `findings`
 array and a non-empty `errors` array means "the Sources that ran found nothing",

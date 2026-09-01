@@ -46,6 +46,73 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.8.0] - 2026-09-01
+
+Robustness against untrusted input, a deterministic stderr excerpt, and an
+expanded benchmark. Read-only by default is unchanged, and the deterministic
+core's byte-identical output contract still holds.
+
+### Added
+
+- **Input size limits.** A single Template larger than
+  `iacreview.template.MAX_TEMPLATE_BYTES` (5 MiB) is refused without being read,
+  and a directory target whose Templates exceed `MAX_AGGREGATE_BYTES` (50 MiB in
+  the `iac-review` orchestrator) stops the walk at the file that would exceed the
+  limit. Both fail through the structured-error mechanism and name no absolute
+  host path (Requirement 17 AC1, AC2, AC9).
+- **YAML alias-expansion bound.** `iacreview.yamlcfn.MAX_ALIAS_EXPANSIONS`
+  (10000) caps alias expansion so a "billion laughs" style payload fails as a
+  parse failure with a position rather than exhausting memory (Requirement 17
+  AC3).
+- **Benchmark diagnostics.** The benchmark summary now carries a `diagnostics`
+  block, per case and in aggregate: Remediation Accuracy and Human Intervention
+  Count, computed from ground-truth expectations and recorded as `N/A` when a
+  case declares none (Requirement 19 AC3, AC6). They never affect PASS or FAIL.
+- **Benchmark modes `agent-only` and `human-review`.** They read the reserved
+  `expected_findings_agent_only` and `expected_findings_human_review` ground-truth
+  arrays without a schema-version bump; `human-review` is informational and never
+  thresholded (Requirement 19 AC1).
+- **`run_benchmark.py --agent-runs N`.** Repeats the Agent Source N times and
+  reports its variation across runs as a stderr diagnostic; the deterministic
+  Sources are still evaluated exactly once (Requirement 19 AC4).
+- **cfn-lint contribution series** (`benchmark/cfn-lint-contribution/`). A
+  measurement series, separate from the ground-truth cases, that records how many
+  findings cfn-lint contributes pinned to a stated cfn-lint version. It is
+  reported informationally and never thresholded, so the ground-truth pass/fail
+  contract does not depend on the installed cfn-lint rule catalogue
+  (Requirement 19 AC5).
+
+### Changed
+
+- **TOCTOU-safe Template reads.** A Template is opened once with `O_NOFOLLOW`,
+  and its `(st_dev, st_ino)` are checked against the resolved path on that one
+  descriptor, so a symlink or path substituted between the containment check and
+  the read cannot cause a file outside the workspace to be read (Requirement 17
+  AC5). A non-regular file (FIFO, device, directory) is refused (AC6).
+- **Process-group termination on timeout.** An external tool is started as a
+  session leader, and a timeout signals the whole process group, so no descendant
+  of a timed-out tool survives the review (Requirement 17 AC7).
+- **Review Time** is measured and reported on stderr as a diagnostic rather than
+  omitted; it stays out of the byte-identical summary (Requirement 19 AC2). Of
+  the three metrics deferred in v0.1, it is the only one still deferred from the
+  summary.
+
+### Fixed
+
+- **`stderr_head` is deterministic.** An absolute host path in an external tool's
+  stderr is redacted to a fixed `<path>` placeholder before it reaches the
+  report, reconciling the first-5-stderr-lines requirement with the
+  no-absolute-host-path, byte-identical output requirement (Requirement 18
+  AC2, AC3).
+
+### Security
+
+- **`input_too_large` error class.** Added to the closed `ERROR_CLASSES` set so a
+  read refused for size is distinguishable from a missing file. Refusing an
+  oversized file, bounding alias expansion, reaping process groups, and redacting
+  host paths from `stderr_head` close residual risks recorded in
+  `docs/security-model.md` (R-8, R-2, R-9, R-4), each pinned by a regression test.
+
 ## [0.7.0] - 2026-09-01
 
 ### Added
@@ -287,7 +354,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.8.0
 [0.7.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.7.0
 [0.6.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.6.0
 [0.5.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.5.0

@@ -40,7 +40,7 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 from benchmark.harness import metrics, run_benchmark
-from iacreview import bootstrap, cfnguard, cfnlint, exitcodes, iam, pathguard
+from iacreview import agentin, bootstrap, cfnguard, cfnlint, exitcodes, iam, pathguard
 from iacreview.errors import MappingFileError, ToolTimeoutError
 
 # tests/unit/test_run_benchmark.py -> tests/unit -> tests -> plugin root
@@ -227,14 +227,39 @@ def test_harness_exit_codes_include_the_two_verdicts_and_ok() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_the_four_modes_of_the_design_table_exist() -> None:
+def test_the_modes_of_the_design_table_exist() -> None:
+    # Requirement 11 AC11's four Source-subset modes, plus Requirement 19 AC1's
+    # agent-only and human-review. Sorted, because MODE_NAMES is.
     assert run_benchmark.MODE_NAMES == (
+        "agent-only",
         "cfn-guard-only",
         "cfn-lint-only",
         "combined",
+        "human-review",
         "iam-only",
     )
     assert run_benchmark.DEFAULT_MODE == "combined"
+
+
+def test_agent_only_reads_the_reserved_agent_array_and_filters_to_the_agent_source() -> None:
+    # Requirement 19 AC1: agent-only measures the Agent Source, whose expectations
+    # live in the reserved expected_findings_agent_only array. It enables agent
+    # findings by fixture, not by --sources, so cli_sources stays empty.
+    mode = run_benchmark.MODES["agent-only"]
+    assert mode.source == agentin.SOURCE_NAME
+    assert mode.cli_sources == ()
+    assert mode.expectation_field == "expected_findings_agent_only"
+    assert mode.thresholded is True
+
+
+def test_human_review_is_informational_and_reads_its_reserved_array() -> None:
+    # Requirement 19 AC1: human-review records the expectations only a human is
+    # expected to reach. It is never held to a threshold, so it cannot make a run
+    # FAIL, and it reads the reserved expected_findings_human_review array.
+    mode = run_benchmark.MODES["human-review"]
+    assert mode.expectation_field == "expected_findings_human_review"
+    assert mode.thresholded is False
+    assert mode.source is None
 
 
 def test_combined_filters_nothing_and_restates_no_default() -> None:
@@ -804,8 +829,9 @@ def test_the_summary_states_no_value_the_host_decides() -> None:
 
 
 def test_the_summary_carries_no_timing_field() -> None:
-    # Review Time is a deferred metric, and an environment-dependent value in
-    # stdout would break Requirement 16 AC11. It is not measured at all.
+    # Review Time is measured (v0.8.0 reports it on stderr as a verbose
+    # diagnostic), but it is an environment-dependent value that would break
+    # Requirement 16 AC11 in stdout, so it never reaches the summary.
     text = json.dumps(run_benchmark.Benchmark().summary())
     for name in metrics.DEFERRED_METRICS:
         assert name.lower().replace(" ", "_") not in text

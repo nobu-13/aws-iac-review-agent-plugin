@@ -27,7 +27,8 @@ may include fragments of the reviewed template, can reach the report.
 
 from __future__ import annotations
 
-from typing import ClassVar, FrozenSet, List, Optional, Sequence, Tuple
+import re
+from typing import ClassVar, FrozenSet, List, Optional, Pattern, Sequence, Tuple
 
 from iacreview import exitcodes
 
@@ -35,10 +36,13 @@ __all__ = [
     "ERROR_CLASSES",
     "STRUCTURED_ERROR_KEYS",
     "STDERR_HEAD_MAX_LINES",
+    "HOST_PATH_PLACEHOLDER",
     "os_error_detail",
+    "redact_host_paths",
     "IacReviewError",
     "InvalidArgumentsError",
     "InputNotFoundError",
+    "InputTooLargeError",
     "TemplateParseError",
     "ToolUnavailableError",
     "ToolVersionError",
@@ -54,14 +58,21 @@ __all__ = [
 
 #: Closed set of permitted ``error_class`` values (design.md, StructuredError
 #: schema). Consumers may switch on these strings, so the set is part of the
-#: output contract. Note it holds 11 values while 12 exception classes exist:
+#: output contract. Note it holds 12 values while 13 exception classes exist:
 #: ``InvalidArgumentsError`` / ``UnsafeArgumentError`` both report
 #: ``invalid_arguments``, since an unsafe argument is an argument validation
 #: failure from the caller's point of view.
+#:
+#: ``input_too_large`` (v0.8.0, Requirement 17 AC1/AC2/AC9) is distinct from
+#: ``input_not_found``: the file exists and is readable, but the plugin refuses
+#: to load it because its size, or the aggregate size of a directory target,
+#: exceeds a documented limit. Keeping it separate lets a consumer tell a
+#: read-refusal apart from a missing file.
 ERROR_CLASSES: FrozenSet[str] = frozenset(
     {
         "invalid_arguments",
         "input_not_found",
+        "input_too_large",
         "parse_failure",
         "tool_unavailable",
         "tool_version",
@@ -92,6 +103,27 @@ STRUCTURED_ERROR_KEYS: Tuple[str, ...] = (
 #: Maximum number of external tool stderr lines copied into a StructuredError.
 STDERR_HEAD_MAX_LINES = 5
 
+#: Fixed string every redacted absolute host path collapses to. Constant, not a
+#: per-path derivation, so a redacted ``stderr_head`` is byte-identical across
+#: runs of the same input (Requirement 18 AC3).
+HOST_PATH_PLACEHOLDER = "<path>"
+
+#: Matches a POSIX absolute-path-like token: a ``/`` that *begins* a path -- it
+#: is not preceded by a path-segment character (a word char, ``.``, ``-``, or
+#: another ``/``) -- followed by one or more non-whitespace characters, so it
+#: carries at least one segment.
+#:
+#: The negative lookbehind is what distinguishes a leading ``/`` from a
+#: mid-token one. It leaves relative fragments intact (``and/or``, ``read/write``
+#: -- the slash follows a letter) and a lone arithmetic ``/`` intact (a space
+#: follows, so ``\S+`` cannot match), while still catching a path embedded in
+#: the punctuation a tool wraps it in: ``open('/etc/passwd')`` and
+#: ``File "/opt/tool/x.py"`` redact because a quote is not a path-segment
+#: character. Trailing punctuation is captured with the token and collapses into
+#: the placeholder, which over-redacts by a character or two -- preferred over
+#: leaking a host path (steering/security.md, "判断が付かない場合は伏せる側に倒す").
+_HOST_PATH_TOKEN: Pattern[str] = re.compile(r"(?<![\w./-])/\S+")
+
 
 def os_error_detail(exc: OSError) -> str:
     """Describe an :class:`OSError` without the filename it carries.
@@ -120,17 +152,58 @@ def os_error_detail(exc: OSError) -> str:
     return ": ".join(parts)
 
 
+def redact_host_paths(line: str) -> str:
+    """Replace absolute-path-like tokens in ``line`` with :data:`HOST_PATH_PLACEHOLDER`.
+
+    External tool stderr is untrusted output that routinely names the files it
+    was handed, and in this plugin those are absolute paths (an external tool
+    has to be given one). Copying such a line verbatim into ``stderr_head`` would
+    disclose the reviewing machine's directory layout and make the report
+    environment-dependent, which Requirement 16 AC11 and Requirement 18 AC2/AC3
+    forbid. This is the single place that redaction happens; callers apply it per
+    retained line rather than reimplementing the pattern.
+
+    Only a ``/`` that *begins* a path is redacted: it must not be preceded by a
+    path-segment character (a word char, ``.``, ``-``, or another ``/``), and it
+    must be followed by at least one more non-whitespace character. Relative
+    fragments (``and/or``, ``read/write``) and a bare arithmetic ``/`` are left
+    untouched, while a genuine path is redacted whole -- including one wrapped in
+    the quotes or parens a tool emits (``open('/etc/passwd')``,
+    ``File "/opt/x.py"``). When the token is ambiguous, redaction wins: leaking a
+    host path is worse than collapsing a ``/foo/bar`` string that was never a
+    path (steering/security.md, "判断が付かない場合は伏せる側に倒す"). The scope is
+    absolute POSIX paths; PIDs and timestamps are out of scope for v0.8.0.
+
+    Args:
+        line: One line of captured tool stderr, already stripped of its ending.
+
+    Returns:
+        The line with every absolute-path-like token replaced by
+        ``<path>`` and the rest of the text left intact. A line with no such
+        token is returned unchanged, so the function is safe to apply to every
+        retained line.
+    """
+    return _HOST_PATH_TOKEN.sub(HOST_PATH_PLACEHOLDER, line)
+
+
 def _head_lines(stderr: Optional[str]) -> List[str]:
-    """Return the first :data:`STDERR_HEAD_MAX_LINES` lines of ``stderr``.
+    """Return the first :data:`STDERR_HEAD_MAX_LINES` lines of ``stderr``, redacted.
 
     ``None`` and the empty string both yield an empty list, so the
     ``stderr_head`` key is a list in every StructuredError. Line endings are
     dropped; ``splitlines`` also handles ``\\r\\n`` from tools running on
     Windows.
+
+    Redaction is applied *after* truncating to :data:`STDERR_HEAD_MAX_LINES`, to
+    each retained line, so that no absolute host path survives into the report.
+    This reconciles Requirement 15 AC7 (report the first 5 stderr lines) with
+    Requirement 16 AC11 / Requirement 18 AC2 (byte-identical output, no absolute
+    host path). Truncating first keeps the redaction cost bounded by the cap
+    rather than by the full stderr size.
     """
     if not stderr:
         return []
-    return stderr.splitlines()[:STDERR_HEAD_MAX_LINES]
+    return [redact_host_paths(line) for line in stderr.splitlines()[:STDERR_HEAD_MAX_LINES]]
 
 
 class IacReviewError(Exception):
@@ -214,6 +287,23 @@ class InputNotFoundError(IacReviewError):
     """Input path does not exist or cannot be read."""
 
     error_class: ClassVar[str] = "input_not_found"
+    exit_code: ClassVar[int] = exitcodes.INPUT_NOT_FOUND
+
+
+class InputTooLargeError(IacReviewError):
+    """Input exceeds a documented size limit and is refused without reading.
+
+    Raised when a single Template file is larger than
+    :data:`iacreview.template.MAX_TEMPLATE_BYTES`, or when the aggregate size of
+    the Templates read from a directory target exceeds the orchestration layer's
+    ``MAX_AGGREGATE_BYTES`` (Requirement 17 AC1, AC2). It is a read-refusal
+    rather than a missing file, so it shares :data:`INPUT_NOT_FOUND
+    <iacreview.exitcodes.INPUT_NOT_FOUND>`'s exit code while reporting the
+    distinct ``input_too_large`` error class (AC9). The message never names an
+    absolute host path (Requirement 16 AC11).
+    """
+
+    error_class: ClassVar[str] = "input_too_large"
     exit_code: ClassVar[int] = exitcodes.INPUT_NOT_FOUND
 
 
@@ -344,6 +434,7 @@ ERROR_CLASS_HIERARCHY: Sequence[type] = (
     IacReviewError,
     InvalidArgumentsError,
     InputNotFoundError,
+    InputTooLargeError,
     TemplateParseError,
     ToolUnavailableError,
     ToolVersionError,

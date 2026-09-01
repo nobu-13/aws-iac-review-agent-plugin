@@ -34,6 +34,15 @@ site:
     credentials structurally prevents an unexpected API call and prevents a
     credential value from surfacing in captured stderr (Requirement 9 AC2, AC3).
 
+``start_new_session=True`` + process-group termination
+    The child is started as the leader of a new session (and therefore a new
+    process group). On timeout the whole group is signalled with ``SIGTERM``,
+    then ``SIGKILL`` after a short grace period, so a grandchild the tool
+    spawned is reaped along with the tool rather than left orphaned
+    (Requirement 17 AC7). ``subprocess.run(timeout=...)`` killed only the direct
+    child; a ``cdk synth`` that forks ``node`` could leave that ``node`` behind.
+    Both facilities are POSIX (macOS, Linux); Windows is out of scope (O-6).
+
 The wrapper does not sandbox the child. Once started, cfn-lint, cfn-guard, and
 especially ``cdk synth`` can read and write anything the invoking user can. Path
 containment applies to this process, not to its children; ``docs/security-model.md``
@@ -44,6 +53,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import signal
 import subprocess
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Optional, Sequence
@@ -84,6 +94,12 @@ INHERITED_ENV_VARS: FrozenSet[str] = frozenset(
         "AWS_DEFAULT_REGION",
     }
 )
+
+#: Seconds to wait after ``SIGTERM`` before escalating a timed-out process group
+#: to ``SIGKILL``. Long enough for a tool that installs its own handler to flush
+#: and exit, short enough that reaping never adds a perceptible delay to a review
+#: that is already being abandoned for exceeding its timeout.
+_TERMINATE_GRACE_S: float = 2.0
 
 
 @dataclass(frozen=True)
@@ -231,24 +247,44 @@ def run(argv: List[str], timeout_s: int) -> ProcResult:
         )
 
     try:
-        completed = subprocess.run(  # noqa: S603 - shell=False, argv array
+        # start_new_session=True makes the child the leader of a new session,
+        # and therefore of a new process group, so a grandchild it forks stays
+        # in that group and can be signalled with it on timeout (Requirement 17
+        # AC7). Popen + explicit communicate replaces subprocess.run only to get
+        # a handle on the child before it is waited on; every other argument is
+        # what subprocess.run received: shell=False, stdin closed, stdout and
+        # stderr captured as text, the minimal env, and no cwd change.
+        proc_handle = subprocess.Popen(  # noqa: S603 - shell=False, argv array
             [resolved, *argv[1:]],
             shell=False,
             stdin=subprocess.DEVNULL,
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout_s,
             env=_minimal_env(),
             # cwd=None: inherit this process's working directory. Paths handed
             # to tools are already absolute and containment-checked, so no
             # directory change is needed and none is performed.
             cwd=None,
+            start_new_session=True,
         )
+    except OSError as exc:
+        # Found on PATH but unusable: not executable, a broken interpreter
+        # line, a dangling symlink. Popen raises this at spawn time, exactly
+        # where subprocess.run did.
+        raise ToolExecutionError(
+            "failed to execute {0}: {1}".format(tool, _os_error_detail(exc)),
+            tool=tool,
+        ) from exc
+
+    try:
+        stdout, stderr = proc_handle.communicate(timeout=timeout_s)
     except subprocess.TimeoutExpired as exc:
-        # subprocess.run kills the child and waits for it before re-raising, so
-        # no orphan of the direct child remains. Grandchildren it spawned are
-        # not tracked by CPython and may survive; that is a documented limit,
-        # not something this wrapper can fix without a process group.
+        # communicate() does not kill on timeout, so the whole group is
+        # terminated here: SIGTERM, a grace period, then SIGKILL for anything
+        # still alive. The final communicate() reaps the direct child so no
+        # zombie remains; killing the group reaps its descendants.
+        _terminate_process_group(proc_handle)
         raise ToolTimeoutError(
             "{0} exceeded its {1}s timeout and was terminated".format(
                 tool, timeout_s
@@ -259,20 +295,68 @@ def run(argv: List[str], timeout_s: int) -> ProcResult:
                 "Retry with a larger timeout, or review a smaller input."
             ),
         ) from exc
-    except OSError as exc:
-        # Found on PATH but unusable: not executable, a broken interpreter
-        # line, a dangling symlink.
-        raise ToolExecutionError(
-            "failed to execute {0}: {1}".format(tool, _os_error_detail(exc)),
-            tool=tool,
-        ) from exc
 
     return ProcResult(
-        exit_code=completed.returncode,
-        stdout=completed.stdout,
-        stderr=completed.stderr,
+        exit_code=proc_handle.returncode,
+        stdout=stdout,
+        stderr=stderr,
         timed_out=False,
     )
+
+
+def _terminate_process_group(proc_handle: "subprocess.Popen") -> None:
+    """Kill the process group led by ``proc_handle`` and reap the direct child.
+
+    Sends ``SIGTERM`` to the whole group, waits up to
+    :data:`_TERMINATE_GRACE_S` for it to exit, then sends ``SIGKILL`` to
+    whatever is left. The direct child is always reaped with a final
+    :meth:`~subprocess.Popen.communicate`, so no zombie remains; signalling the
+    group is what reaps the grandchildren the tool spawned (Requirement 17 AC7).
+
+    Args:
+        proc_handle: The still-running child started with
+            ``start_new_session=True``, so :func:`os.getpgid` returns a group
+            that contains only this tool and its descendants.
+
+    Note:
+        ``os.killpg`` and ``os.getpgid`` are POSIX. The child is the group
+        leader, so its PID is the group ID; a race in which the child has
+        already exited surfaces as :class:`ProcessLookupError` from either call
+        and means there is nothing left to kill.
+    """
+    try:
+        pgid = os.getpgid(proc_handle.pid)
+    except ProcessLookupError:
+        # The child exited between the timeout and this call; communicate below
+        # still reaps it.
+        pass
+    else:
+        _signal_group(pgid, signal.SIGTERM)
+        try:
+            proc_handle.wait(timeout=_TERMINATE_GRACE_S)
+        except subprocess.TimeoutExpired:
+            _signal_group(pgid, signal.SIGKILL)
+
+    # Reap the direct child and drain its pipes so no zombie and no leaked file
+    # descriptor is left behind, regardless of which branch above ran.
+    try:
+        proc_handle.communicate(timeout=_TERMINATE_GRACE_S)
+    except subprocess.TimeoutExpired:
+        proc_handle.kill()
+        proc_handle.communicate()
+
+
+def _signal_group(pgid: int, sig: "signal.Signals") -> None:
+    """Send ``sig`` to process group ``pgid``, tolerating an already-gone group.
+
+    A :class:`ProcessLookupError` means every member of the group has already
+    exited between the previous check and this signal; there is nothing left to
+    terminate, so it is not an error.
+    """
+    try:
+        os.killpg(pgid, sig)
+    except ProcessLookupError:
+        pass
 
 
 def _decode_partial(stream: Optional[object]) -> Optional[str]:

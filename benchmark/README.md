@@ -356,14 +356,50 @@ Both are reported because both are asked for; the equality is a consequence of
 the matching rule, not a coincidence, and `docs/benchmark-methodology.md` records
 it.
 
-Three further metrics are defined but not implemented in v0.1, and need no
-ground-truth field:
+Three further metrics were defined but not computed in v0.1. v0.8.0 implemented
+two of them as diagnostics (Requirement 19 AC3); one remains deferred, because
+it cannot enter a byte-identical document:
 
-| Metric | Intended definition | v0.1 |
+| Metric | Definition | Status |
 | --- | --- | --- |
-| Review Time | Wall-clock time to review one template, deterministic and agent phases separated | Not implemented. Measured at run time, and kept out of the report, which must stay byte-identical between runs. |
-| Remediation Accuracy | Share of `SuggestedRemediation` values that, when applied, clear their finding without introducing a new one | Not implemented. Computable from the existing expectations by re-reviewing the patched template. |
-| Human Intervention Count | Number of human decisions needed to complete a review | Not implemented. A property of a review session, not of a case. |
+| Review Time | Wall-clock time to review one template, deterministic and agent phases separated | Deferred from the summary. Measured and reported on **stderr** (a verbose diagnostic), never in stdout, which must stay byte-identical between runs. |
+| Remediation Accuracy | Share of matched findings whose `SuggestedRemediation` satisfies the case's declared remediation expectation | Implemented as a diagnostic. `N/A` for a case declaring no `expected_remediation`, which is every v0.1 case. Never affects PASS or FAIL. |
+| Human Intervention Count | Number of human decisions a case declares it needs | Implemented as a diagnostic. `N/A` for a case declaring no `expected_human_intervention_count`, which is every v0.1 case. Never affects PASS or FAIL. |
+
+Both implemented diagnostics appear in the summary under `diagnostics`, per case
+and in aggregate, and are also present on each case entry. A case that declares
+neither expectation records both as `N/A` (Requirement 19 AC6), so the block is
+the same shape whatever the cases measured.
+
+### Modes
+
+`--mode` selects which Source is measured. Beyond the four Source-subset modes
+(`combined`, `cfn-lint-only`, `cfn-guard-only`, `iam-only`), v0.8.0 adds two that
+read the reserved ground-truth arrays (Requirement 19 AC1):
+
+| Mode | Measures | Expectation array | Thresholded |
+| --- | --- | --- | --- |
+| `agent-only` | The Agent Review Source alone | `expected_findings_agent_only` | Yes |
+| `human-review` | Expectations only a human reviewer is expected to reach | `expected_findings_human_review` | No (informational) |
+
+`human-review` is never held to a threshold: its expectations name findings the
+pipeline is not expected to produce, so it reports `INFO` and cannot make a run
+fail. Both reserved arrays are empty in every v0.1 case, so both modes measure
+nothing there rather than measuring the wrong thing.
+
+`--agent-runs N` reviews each case N times and reports the Agent Source's
+variation across runs as a stderr diagnostic (Requirement 19 AC4). The
+deterministic Sources are evaluated exactly once whatever N is: only `agent-only`
+repeats, and the summary is computed from the first run.
+
+### cfn-lint contribution series
+
+`benchmark/cfn-lint-contribution/` is a separate measurement series, not a
+ground-truth case set. It records how many findings cfn-lint contributes, pinned
+to the installed cfn-lint version, and reports the count informationally --
+never as a threshold (Requirement 19 AC5). It is kept apart from the
+ground-truth cases so their pass/fail contract does not depend on the installed
+cfn-lint rule catalogue. See `benchmark/cfn-lint-contribution/README.md`.
 
 ## Pass and fail
 

@@ -157,6 +157,7 @@ if str(_PLUGIN_ROOT) not in sys.path:
 import argparse  # noqa: E402
 import dataclasses  # noqa: E402
 import json  # noqa: E402
+import time  # noqa: E402
 from types import MappingProxyType  # noqa: E402
 from typing import (  # noqa: E402
     Any,
@@ -171,6 +172,7 @@ from typing import (  # noqa: E402
 
 from benchmark.harness import metrics  # noqa: E402
 from iacreview import (  # noqa: E402
+    agentin,
     bootstrap,
     cfnguard,
     cfnlint,
@@ -205,6 +207,8 @@ __all__ = [
     "SUMMARY_KEYS",
     "CASE_KEYS",
     "COMBINED",
+    "AGENT_ONLY",
+    "HUMAN_REVIEW",
     "MODES",
     "MODE_NAMES",
     "DEFAULT_MODE",
@@ -374,13 +378,18 @@ SUMMARY_KEYS: Tuple[str, ...] = (
     "cases",
     "metrics",
     "categories",
+    "diagnostics",
     "status",
     "errors",
 )
 
 #: Keys of one entry of ``cases``. Fixed for an evaluated and an unevaluated case
 #: alike: an unevaluated one carries ``evaluated: false``, a ``reason`` from
-#: :data:`CASE_REASONS`, ``metrics: null``, ``status: null`` and no categories.
+#: :data:`CASE_REASONS`, ``metrics: null``, ``diagnostics: null``, ``status:
+#: null`` and no categories. ``diagnostics`` (Requirement 19 AC3) is the
+#: per-case diagnostic block :func:`metrics.compute_diagnostics` returns; it
+#: never bears on ``status``, and its values are :data:`metrics.NOT_APPLICABLE`
+#: for a case that declares no diagnostic expectation (AC6).
 CASE_KEYS: Tuple[str, ...] = (
     "case_id",
     "template",
@@ -388,6 +397,7 @@ CASE_KEYS: Tuple[str, ...] = (
     "reason",
     "metrics",
     "categories",
+    "diagnostics",
     "status",
 )
 
@@ -420,12 +430,28 @@ class Mode:
             :func:`review_mode` and the module docstring.
         sources_evaluated: Source names the mode measures, for the summary. Fixed
             per mode, so the key does not describe the host's installed tools.
+        expectation_field: Which ground-truth array supplies this mode's
+            expectations. ``expected_findings`` for the deterministic and
+            combined modes; the reserved ``expected_findings_agent_only`` for
+            ``agent-only`` and ``expected_findings_human_review`` for
+            ``human-review`` (Requirement 19 AC1). The reserved arrays are the
+            AC12 extension point: they exist so this can be added without a
+            schema-version bump, and every v0.1 case leaves them empty.
+        thresholded: Whether a missed ``deterministic`` expectation in this mode
+            is a FAIL. True for the modes that measure the pipeline against what
+            it is expected to produce; false for ``human-review``, whose
+            expectations name findings only a human reviewer is expected to
+            reach, so holding the pipeline to them would fail every run
+            (Requirement 19 AC1 records the mode without changing the pass/fail
+            contract).
     """
 
     name: str
     source: Optional[str]
     cli_sources: Tuple[str, ...]
     sources_evaluated: Tuple[str, ...]
+    expectation_field: str = "expected_findings"
+    thresholded: bool = True
 
 
 #: Every deterministic Source, in the orchestrator's collection order.
@@ -438,10 +464,26 @@ ALL_SOURCES: Tuple[str, ...] = (
 #: The mode that measures the pipeline as a user runs it.
 COMBINED = "combined"
 
-#: The four modes of design.md's Source subset table. Requirement 11 AC11 asks
-#: for at least ``cfn-lint only``, ``cfn-guard only`` and ``combined``;
-#: ``iam-only`` is the third deterministic Source, and the one that needs no
-#: external tool.
+#: The mode measuring only the Agent Review Source (Requirement 19 AC1). Agent
+#: Findings are enabled by supplying ``--agent-findings``, not by a ``--sources``
+#: value -- the orchestrator has no ``--sources`` spelling for the Agent Source
+#: on purpose -- so :attr:`Mode.cli_sources` is empty and the mode filters both
+#: documents to :data:`agentin.SOURCE_NAME`. Its expectations come from the
+#: reserved ``expected_findings_agent_only`` array, empty in every v0.1 case.
+AGENT_ONLY = "agent-only"
+
+#: The mode recording the expectations only a human reviewer is expected to reach
+#: (Requirement 19 AC1). Informational: its expectations name findings the
+#: pipeline is not expected to produce, so it is never held to a threshold
+#: (:attr:`Mode.thresholded` is false) and cannot make the run FAIL. Its
+#: expectations come from the reserved ``expected_findings_human_review`` array,
+#: empty in every v0.1 case.
+HUMAN_REVIEW = "human-review"
+
+#: The benchmark modes. Requirement 11 AC11 asks for at least ``cfn-lint only``,
+#: ``cfn-guard only`` and ``combined``; ``iam-only`` is the third deterministic
+#: Source. Requirement 19 AC1 adds ``agent-only`` and ``human-review``, which
+#: read the reserved ground-truth arrays rather than ``expected_findings``.
 MODES: Mapping[str, Mode] = MappingProxyType(
     {
         COMBINED: Mode(
@@ -467,6 +509,28 @@ MODES: Mapping[str, Mode] = MappingProxyType(
             source=iam.SOURCE_NAME,
             cli_sources=(IAM_SOURCE_CLI_ALIAS,),
             sources_evaluated=(iam.SOURCE_NAME,),
+        ),
+        AGENT_ONLY: Mode(
+            name=AGENT_ONLY,
+            source=agentin.SOURCE_NAME,
+            # No --sources: the Agent Source is enabled by --agent-findings, and
+            # the orchestrator has no --sources spelling for it. cli_sources
+            # stays empty so the review runs every Source and the filter keeps
+            # only the Agent Findings.
+            cli_sources=(),
+            sources_evaluated=(agentin.SOURCE_NAME,),
+            expectation_field="expected_findings_agent_only",
+        ),
+        HUMAN_REVIEW: Mode(
+            name=HUMAN_REVIEW,
+            # Not filtered to a Source: the expectations name findings no Source
+            # is expected to produce. combined's None keeps every Finding, and
+            # the reserved array supplies the expectations.
+            source=None,
+            cli_sources=(),
+            sources_evaluated=ALL_SOURCES,
+            expectation_field="expected_findings_human_review",
+            thresholded=False,
         ),
     }
 )
@@ -660,6 +724,19 @@ def build_parser() -> bootstrap.EntryPointParser:
             "without agent findings."
         ),
     )
+    parser.add_argument(
+        "--agent-runs",
+        type=int,
+        default=1,
+        metavar="N",
+        help=(
+            "Review each case N times so the Agent Source's variation across "
+            "runs can be reported as a diagnostic on stderr (Requirement 19 "
+            "AC4). The deterministic Sources are evaluated exactly once whatever "
+            "N is: only the agent-only mode repeats, and the summary is computed "
+            "from the first run. Default: 1."
+        ),
+    )
     return parser
 
 
@@ -766,41 +843,48 @@ def load_ground_truth(path: Path) -> Dict[str, Any]:
     return document
 
 
-def expectations_of(document: Mapping[str, Any]) -> List[Dict[str, Any]]:
+def expectations_of(
+    document: Mapping[str, Any], field: str = "expected_findings"
+) -> List[Dict[str, Any]]:
     """Return the expectations to evaluate, in ground truth's own order.
 
-    Only ``expected_findings``. ``expected_findings_agent_only`` and
-    ``expected_findings_human_review`` are the reserved arrays of Requirement 11
-    AC12: they exist so that adding a mode needs no format change, and v0.1 has
-    no mode that populates or reads them. Reading them here would evaluate
-    expectations against a review that was never asked to produce them.
+    ``field`` names which ground-truth array to read. The combined and
+    deterministic modes read ``expected_findings``; ``agent-only`` and
+    ``human-review`` read the reserved ``expected_findings_agent_only`` and
+    ``expected_findings_human_review`` arrays (Requirement 19 AC1, the AC12
+    extension point). The reserved arrays are empty in every v0.1 case, so those
+    modes measure nothing there rather than measuring the wrong thing: reading
+    ``expected_findings`` for an agent-only run would evaluate the deterministic
+    expectations against a review filtered to the Agent Source, reporting them
+    all as missed.
 
     Args:
         document: One parsed ``ground_truth.json``.
+        field: The expectation array to read. One of ``expected_findings``,
+            ``expected_findings_agent_only``, ``expected_findings_human_review``.
 
     Returns:
         A new list of the entries.
 
     Raises:
-        CaseError: ``expected_findings`` is absent, is not an array, or holds
-            something other than objects. An expectation set that cannot be read
-            is not an empty one -- that would report a perfect score for a broken
-            case.
+        CaseError: ``field`` is absent, is not an array, or holds something other
+            than objects. An expectation set that cannot be read is not an empty
+            one -- that would report a perfect score for a broken case. The
+            reserved arrays are ``required`` by the schema, so their absence is a
+            malformed case rather than a mode that does not apply.
     """
-    entries = document.get("expected_findings")
+    entries = document.get(field)
     if not isinstance(entries, list):
         raise CaseError(
             MALFORMED_GROUND_TRUTH,
-            "expected_findings must be an array, got {0}".format(
-                type(entries).__name__
-            ),
+            "{0} must be an array, got {1}".format(field, type(entries).__name__),
         )
     for index, entry in enumerate(entries):
         if not isinstance(entry, dict):
             raise CaseError(
                 MALFORMED_GROUND_TRUTH,
-                "expected_findings[{0}] must be an object, got {1}".format(
-                    index, type(entry).__name__
+                "{0}[{1}] must be an object, got {2}".format(
+                    field, index, type(entry).__name__
                 ),
             )
     return list(entries)
@@ -1056,6 +1140,7 @@ class Benchmark:
         self.mode: Mode = MODES[DEFAULT_MODE]
         self.filter_only: bool = False
         self.agent_dir: Optional[Path] = None
+        self.agent_runs: int = 1
         self.orchestrator: Optional[Path] = None
         self.entries: List[Dict[str, Any]] = []
         self.errors: List[Dict[str, str]] = []
@@ -1096,6 +1181,15 @@ class Benchmark:
         self.cases_dir = cases_dir
         self.mode = MODES[args.mode]
         self.filter_only = bool(args.filter_only)
+
+        # argparse's type=int has already rejected a non-integer; a value below 1
+        # is a caller asking for zero reviews, which measures nothing.
+        if args.agent_runs < 1:
+            raise InvalidArgumentsError(
+                "--agent-runs must be at least 1, got {0}".format(args.agent_runs),
+                remediation="Pass --agent-runs 1 or greater; the default is 1.",
+            )
+        self.agent_runs = int(args.agent_runs)
 
         if args.agent_findings:
             agent_dir = pathguard.resolve_within(args.agent_findings, self.root)
@@ -1191,17 +1285,17 @@ class Benchmark:
         # validation fails here instead of reviewing an unchecked path.
         assert self.cases_dir is not None and self.orchestrator is not None
         template_name: Optional[str] = None
+        document: Mapping[str, Any] = {}
 
         try:
             case_dir = self._case_directory(case_id)
             document = load_ground_truth(case_dir / GROUND_TRUTH_FILENAME)
-            expected_all = expectations_of(document)
+            expected_all = expectations_of(document, self.mode.expectation_field)
             template = template_path(case_dir, document)
             template_name = template.name
-            report_document = review(
-                self.orchestrator,
+            report_document = self._review_timed(
+                case_id,
                 self._relative_to_root(template),
-                review_mode(self.mode, self.filter_only),
                 self._agent_findings_for(case_id),
                 verbose=verbose,
             )
@@ -1250,10 +1344,20 @@ class Benchmark:
                 case_id, template_name, MALFORMED_GROUND_TRUTH
             )
 
-        self.pooled_expected.extend(namespaced(item, case_id) for item in expected)
-        self.pooled_actual.extend(namespaced(item, case_id) for item in actual)
+        diagnostics = metrics.compute_diagnostics(expected, actual, document)
 
-        status = case_status(per_category)
+        # An unthresholded mode (human-review) is only ever measured, never held
+        # to a threshold, so its expectations are kept out of the pool that
+        # decides the run's verdict. Pooling them would let a human-review
+        # expectation the pipeline cannot reach make the aggregate FAIL, which
+        # Requirement 19 AC1 forbids. Its per-case metrics are still reported.
+        if self.mode.thresholded:
+            self.pooled_expected.extend(namespaced(item, case_id) for item in expected)
+            self.pooled_actual.extend(namespaced(item, case_id) for item in actual)
+            status = case_status(per_category)
+        else:
+            status = metrics.STATUS_INFO
+
         bootstrap.verbose_diagnostic(
             "{0}: expected {1}, matched {2}, false positives {3}: {4}".format(
                 case_id,
@@ -1271,6 +1375,7 @@ class Benchmark:
             "reason": None,
             "metrics": measured,
             "categories": per_category,
+            "diagnostics": diagnostics,
             "status": status,
         }
 
@@ -1331,8 +1436,112 @@ class Benchmark:
             "reason": reason,
             "metrics": None,
             "categories": {},
+            "diagnostics": None,
             "status": None,
         }
+
+    def _review_timed(
+        self,
+        case_id: str,
+        target: str,
+        agent_findings: Optional[str],
+        *,
+        verbose: bool,
+    ) -> Dict[str, Any]:
+        """Review one case, measuring Review Time and reporting it on stderr.
+
+        Review Time is a diagnostic (Requirement 19 AC2) that must not enter the
+        byte-identical summary: it is wall-clock, so two runs would differ in it
+        (Requirement 16 AC11). It goes to stderr, the second channel design.md's
+        Determinism Design reserves for environment-dependent metadata, and never
+        to stdout. When ``--agent-runs`` is greater than one, the review runs that
+        many times and the variation across runs is reported too (Requirement 19
+        AC4); the report used for measurement is the first run's, so the
+        deterministic Sources are evaluated exactly once against a single report
+        whatever the repeat count.
+
+        Args:
+            case_id: The case, for the diagnostic line.
+            target: Workspace-relative template path.
+            agent_findings: The case's fixture, or ``None``.
+            verbose: Whether to echo the review's stderr.
+
+        Returns:
+            The first run's parsed Review_Report -- the one the metrics are
+            computed from.
+
+        Raises:
+            CaseError: The first review did not produce a report. Repeat runs
+                that fail are noted on stderr and do not abort the case: the
+                measurement already has its report.
+        """
+        reviewed_mode = review_mode(self.mode, self.filter_only)
+        elapsed: List[float] = []
+
+        start = time.monotonic()
+        first = review(
+            self.orchestrator, target, reviewed_mode, agent_findings, verbose=verbose
+        )
+        elapsed.append(time.monotonic() - start)
+
+        # Requirement 19 AC4: repeat runs characterise Agent variation. Only when
+        # the mode measures the Agent Source and a fixture is present is there
+        # anything that could vary; a deterministic mode's repeats would be
+        # identical by construction, so they are skipped rather than timed.
+        repeats = self.agent_runs - 1
+        if repeats > 0 and self.mode.source == agentin.SOURCE_NAME:
+            for _ in range(repeats):
+                try:
+                    start = time.monotonic()
+                    review(
+                        self.orchestrator,
+                        target,
+                        reviewed_mode,
+                        agent_findings,
+                        verbose=verbose,
+                    )
+                    elapsed.append(time.monotonic() - start)
+                except CaseError as exc:
+                    bootstrap.diagnostic(
+                        "warning: {0}: repeat agent run did not complete: "
+                        "{1}".format(case_id, exc)
+                    )
+
+        self._report_timing(case_id, elapsed, verbose=verbose)
+        return first
+
+    @staticmethod
+    def _report_timing(
+        case_id: str, elapsed: Sequence[float], *, verbose: bool
+    ) -> None:
+        """Report Review Time on stderr, never on stdout (Requirement 19 AC2).
+
+        Args:
+            case_id: The case measured.
+            elapsed: One wall-clock duration per completed review, in seconds.
+            verbose: Whether to emit the line; timing is a verbose-only
+                diagnostic, since a non-verbose run's stderr is reserved for
+                warnings.
+        """
+        if not elapsed:
+            return
+        if len(elapsed) == 1:
+            bootstrap.verbose_diagnostic(
+                "{0}: review time {1:.3f}s".format(case_id, elapsed[0]),
+                verbose=verbose,
+            )
+            return
+        bootstrap.verbose_diagnostic(
+            "{0}: review time over {1} runs min {2:.3f}s max {3:.3f}s "
+            "mean {4:.3f}s".format(
+                case_id,
+                len(elapsed),
+                min(elapsed),
+                max(elapsed),
+                sum(elapsed) / len(elapsed),
+            ),
+            verbose=verbose,
+        )
 
     # -- output -------------------------------------------------------------
 
@@ -1356,8 +1565,64 @@ class Benchmark:
             "cases": list(self.entries),
             "metrics": metrics.compute(self.pooled_expected, self.pooled_actual),
             "categories": per_category,
+            "diagnostics": self._aggregate_diagnostics(),
             "status": case_status(per_category),
             "errors": list(self.errors),
+        }
+
+    def _aggregate_diagnostics(self) -> Dict[str, Any]:
+        """Roll the per-case diagnostic blocks up into one (Requirement 19 AC3).
+
+        Diagnostics never bear on the run's verdict, so this is reporting rather
+        than arithmetic the pass/fail rule reads. A key is :data:`aggregated
+        <metrics.NOT_APPLICABLE>` unless at least one evaluated case declared it:
+        Human Intervention Count sums the declared counts, and Remediation
+        Accuracy is the *unweighted* mean of the declared per-case rates -- a
+        case declaring one remediation and a case declaring ten weigh equally,
+        not a pool of the underlying cleared/declared counts
+        (``docs/benchmark-methodology.md`` states why). When no case declared a
+        diagnostic, it stays :data:`metrics.NOT_APPLICABLE` (AC6), so the block's
+        shape is the same whatever the cases measured.
+
+        Returns:
+            A dict with exactly the keys of :data:`metrics.DIAGNOSTIC_KEYS`.
+        """
+        blocks = [
+            entry["diagnostics"]
+            for entry in self.entries
+            if entry.get("evaluated") and isinstance(entry.get("diagnostics"), dict)
+        ]
+
+        intervention_counts = [
+            block["human_intervention_count"]
+            for block in blocks
+            if isinstance(block["human_intervention_count"], int)
+            and not isinstance(block["human_intervention_count"], bool)
+        ]
+        if intervention_counts:
+            human_intervention: Any = sum(intervention_counts)
+        else:
+            human_intervention = metrics.NOT_APPLICABLE
+
+        # Average the declared per-case rates. Parsed back from the one-decimal
+        # strings compute_diagnostics produced, then re-formatted, so the
+        # aggregate is a percentage string like the per-case values and stays
+        # byte-stable.
+        rates = [
+            float(block["remediation_accuracy"])
+            for block in blocks
+            if block["remediation_accuracy"] != metrics.NOT_APPLICABLE
+        ]
+        if rates:
+            remediation_accuracy: Any = metrics.format_percentage(
+                sum(rates) / len(rates)
+            )
+        else:
+            remediation_accuracy = metrics.NOT_APPLICABLE
+
+        return {
+            "remediation_accuracy": remediation_accuracy,
+            "human_intervention_count": human_intervention,
         }
 
     def exit_code(self) -> int:

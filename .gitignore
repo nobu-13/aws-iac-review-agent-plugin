@@ -32,6 +32,9 @@ node_modules/
 *.review.json
 review-report.json
 
+# Semantic review notes - local working artifacts, not part of the plugin
+semantic-review/
+
 # Credentials and local secrets must never be committed
 .env
 .env.*

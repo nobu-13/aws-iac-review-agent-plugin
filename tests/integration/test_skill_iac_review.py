@@ -1076,3 +1076,73 @@ def test_sarif_and_json_agree_on_exit_code(tmp_path: Path, plugin_root: Path) ->
         cwd=workspace,
     )
     assert as_json.returncode == as_sarif.returncode
+
+
+# ---------------------------------------------------------------------------
+# Aggregate directory size limit (Requirement 17 AC2, v0.8.0)
+#
+# In-process so ``MAX_AGGREGATE_BYTES`` can be monkeypatched to a small value:
+# the limit is a named constant checked while walking a directory target, and a
+# portable test caps it low rather than writing tens of megabytes to disk
+# (Requirement 17 AC4). The IAM Source needs no external tool, so the run is
+# driven with ``--sources iam-review`` and an empty PATH.
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_over_the_limit_stops_reading_and_fails(
+    script_module: types.ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """Several individually-acceptable templates whose combined size trips the
+    aggregate cap fail with ``input_too_large`` (Requirement 17 AC2)."""
+    workspace = make_workspace(
+        tmp_path,
+        **{
+            "a.yaml": MIXED_TEMPLATE,
+            "b.yaml": MIXED_TEMPLATE,
+            "c.yaml": MIXED_TEMPLATE,
+        },
+    )
+    # One template's size sits under the cap, but two together exceed it.
+    one_size = (workspace / "a.yaml").stat().st_size
+    monkeypatch.setattr(script_module, "MAX_AGGREGATE_BYTES", one_size + 1)
+    monkeypatch.chdir(workspace)
+
+    code = script_module.main(["--target", ".", "--sources", "iam-review"])
+    captured = capsys.readouterr()
+
+    # Read-refusal exit code (shared with input_not_found), distinct class.
+    assert code == exitcodes.INPUT_NOT_FOUND
+    report = json.loads(captured.out)
+    assert "input_too_large" in error_classes(report)
+    # Requirement 16 AC11: the message names no absolute host path.
+    assert str(workspace) not in captured.out
+
+
+def test_aggregate_under_the_limit_reviews_every_template(
+    script_module: types.ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture,
+) -> None:
+    """A comfortable cap leaves the multi-file review unaffected."""
+    workspace = make_workspace(
+        tmp_path,
+        **{"a.yaml": MIXED_TEMPLATE, "b.yaml": MIXED_TEMPLATE},
+    )
+    total = (
+        (workspace / "a.yaml").stat().st_size
+        + (workspace / "b.yaml").stat().st_size
+    )
+    monkeypatch.setattr(script_module, "MAX_AGGREGATE_BYTES", total + 1)
+    monkeypatch.chdir(workspace)
+
+    code = script_module.main(["--target", ".", "--sources", "iam-review"])
+    captured = capsys.readouterr()
+
+    assert code == exitcodes.OK
+    report = json.loads(captured.out)
+    assert "input_too_large" not in error_classes(report)
+    assert sorted(report["target"]["files"]) == ["a.yaml", "b.yaml"]

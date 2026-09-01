@@ -151,6 +151,7 @@ from iacreview import (  # noqa: E402
 )
 from iacreview.errors import (  # noqa: E402
     IacReviewError,
+    InputTooLargeError,
     InvalidArgumentsError,
     NotReviewableError,
 )
@@ -173,6 +174,17 @@ from iacreview.toolcheck import (  # noqa: E402
     ToolInfo,
     require_known_tool,
 )
+
+#: Maximum aggregate size, in bytes, of the Template files read from the
+#: targets of one run (Requirement 17 AC2). Each Template opened for review has
+#: its ``stat().st_size`` added to a running total; once the total exceeds this
+#: limit the run stops reading further files and fails with
+#: :class:`~iacreview.errors.InputTooLargeError`. 50 MiB: ten times the
+#: single-file limit (:data:`iacreview.template.MAX_TEMPLATE_BYTES`), enough for
+#: a directory of legitimate templates while still refusing a directory packed
+#: with hostile input. This is the single definition of the aggregate limit
+#: (Requirement 17 AC8); documented in ``docs/security-model.md`` (R-8).
+MAX_AGGREGATE_BYTES = 50 * 1024 * 1024
 
 #: Program name in usage text. Written out rather than derived from
 #: ``sys.argv[0]``, so usage does not change with how the script was invoked.
@@ -229,6 +241,11 @@ PARTIAL_REPORT_ERROR_CLASSES: FrozenSet[str] = frozenset(
         "tool_version",
         "tool_execution",
         "tool_timeout",
+        # The aggregate size cap trips *during* the review loop, after some
+        # Templates were already read (Requirement 17 AC2). The report is the
+        # answer: it names the file that stopped the walk and carries whatever
+        # Findings the earlier Templates produced.
+        "input_too_large",
     }
 )
 
@@ -555,6 +572,59 @@ class IacReview:
         self.confirm_cdk_synth = bool(args.confirm_cdk_synth)
 
     # -- discovery ----------------------------------------------------------
+
+    def _charge_aggregate(self, path: Path, running_total: int) -> int:
+        """Add ``path``'s size to ``running_total`` and enforce the cap.
+
+        Charges the size of the file *about to be read*, before
+        :func:`iacreview.template.load_template` opens it, so the run stops at
+        the file that would push the aggregate over the limit rather than after
+        reading it (Requirement 17 AC2).
+
+        The charge is **best-effort**: it reads the size through a fresh
+        ``path.stat()`` lookup, not through the descriptor
+        :func:`iacreview.template.load_template` later opens and fstats, so a
+        file swapped between this ``stat`` and that open would be charged its old
+        size. This is deliberately weaker than the per-file read, which is
+        identity-checked and TOCTOU-safe (R-2): the aggregate is a resource
+        bound, not a containment control, so the worst outcome of a stale size is
+        a mischarged budget, never a file outside the workspace being read.
+
+        Args:
+            path: The Template file about to be reviewed.
+            running_total: Bytes charged for the Templates read so far.
+
+        Returns:
+            The new running total, ``path``'s size included.
+
+        Raises:
+            InputTooLargeError: The aggregate would exceed
+                :data:`MAX_AGGREGATE_BYTES`. The message names the file the way
+                the report does, never as an absolute host path (Requirement 16
+                AC11). An unreadable ``stat`` is left to
+                :func:`iacreview.template.load_template`, which reports it as
+                ``input_not_found``; here a missing size counts as zero.
+        """
+        try:
+            size = path.stat().st_size
+        except OSError:
+            return running_total
+
+        total = running_total + size
+        if total > MAX_AGGREGATE_BYTES:
+            raise InputTooLargeError(
+                "aggregate size of the reviewed templates exceeds the maximum "
+                "of {0} bytes; stopped at {1}".format(
+                    MAX_AGGREGATE_BYTES, self._relative(path)
+                ),
+                remediation=(
+                    "Point --target at fewer or smaller templates so their "
+                    "combined size stays under {0} bytes.".format(
+                        MAX_AGGREGATE_BYTES
+                    )
+                ),
+            )
+        return total
 
     def _relative(self, path: Path) -> str:
         """Render ``path`` as the workspace-relative string a report may carry.
@@ -1020,6 +1090,9 @@ class IacReview:
         Raises:
             NotReviewableError: No candidate Template was found under any
                 ``--target`` (exit 8, Requirement 3 AC5, Requirement 8 AC5).
+            InputTooLargeError: The aggregate size of the reviewed Templates
+                exceeded :data:`MAX_AGGREGATE_BYTES`; reading stops at that file
+                (exit 3, Requirement 17 AC2).
             ToolUnavailableError: The CDK CLI was absent after
                 ``--confirm-cdk-synth`` (exit 5).
             ToolExecutionError: ``cdk synth`` failed (exit 6).
@@ -1053,8 +1126,16 @@ class IacReview:
         self._verify_tools(verbose=verbose)
         self._build_specs()
 
+        # Running total of the bytes read across every Template of this run.
+        # Requirement 17 AC2 caps the aggregate so a directory packed with
+        # otherwise-individually-acceptable files cannot exhaust memory; a
+        # single file over MAX_TEMPLATE_BYTES is refused earlier, inside
+        # template.load_template.
+        aggregate_bytes = 0
+
         for file in candidates:
             path = Path(file)
+            aggregate_bytes = self._charge_aggregate(path, aggregate_bytes)
             try:
                 loaded = template.load_template(path)
             except IacReviewError as exc:

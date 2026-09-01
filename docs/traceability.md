@@ -307,6 +307,41 @@ Per-criterion counts, which `tests/unit/test_traceability.py` enforces:
 | AC10 | JSON on stdout, human-readable diagnostics on stderr | `tests/unit/test_bootstrap.py`, `tests/integration/test_skill_iac_review.py` | - |
 | AC11 | Identical input gives byte-identical stdout, with no environment-dependent values | `tests/property/test_prop_determinism.py`, `tests/regression/test_sec_no_host_path_in_errors.py` | Property 14. See the AC7 conflict note under Requirement 15 |
 
+## Requirement 17: Robustness against untrusted input (v0.8.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | A single Template over the documented size limit is refused without being read | `tests/unit/test_template.py`, `tests/unit/test_errors.py` | `MAX_TEMPLATE_BYTES` monkeypatched to a small value; size read from the fstat before any byte |
+| AC2 | A directory target's aggregate size is bounded, and reading stops at the file that would exceed it | `tests/integration/test_skill_iac_review.py` | `MAX_AGGREGATE_BYTES` monkeypatched; the file is charged before it is opened |
+| AC3 | YAML alias expansion is bounded so a billion-laughs payload fails as a positioned parse failure | `tests/unit/test_yamlcfn.py`, `tests/regression/test_sec_yaml_alias_bomb.py` | `MAX_ALIAS_EXPANSIONS`; joins the normal parse-failure path |
+| AC4 | The size and alias bounds are verified by a portable technique with no platform-specific resource-limit facility | `tests/unit/test_template.py`, `tests/unit/test_yamlcfn.py` | Monkeypatched constant plus a small fixture, identical on macOS and Linux |
+| AC5 | The containment check and the read use the same file object (TOCTOU safety) | `tests/regression/test_sec_path_traversal.py`, `tests/unit/test_template.py` | `os.open` + `os.fstat` `(st_dev, st_ino)` identity re-check |
+| AC6 | A non-regular file (FIFO, device, directory) is refused | `tests/unit/test_template.py`, `tests/regression/test_sec_non_regular_file.py` | `stat.S_ISREG`; reported as `path_violation` |
+| AC7 | A timed-out tool's descendants do not survive | `tests/regression/test_sec_process_group_reaped.py` | `start_new_session` + `os.killpg`; grandchild checked with `os.kill(pid, 0)` |
+| AC8 | The size limits and the alias bound are named constants, each in one place, documented | `tests/unit/test_docs.py`, `tests/unit/test_template.py` | Documented in `docs/security-model.md` R-8 |
+| AC9 | A robustness-limit overrun reports through the structured-error mechanism with no absolute host path | `tests/unit/test_errors.py`, `tests/integration/test_skill_iac_review.py` | `input_too_large` for size, `parse_failure` for the alias bound |
+
+## Requirement 18: Deterministic stderr excerpt (v0.8.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | A tool failure reports the first 5 lines of its stderr in `stderr_head` | `tests/unit/test_errors.py` | The five-line cap is unchanged from Requirement 15 AC7 |
+| AC2 | A line with an absolute host path is redacted to a fixed placeholder before it reaches the report | `tests/unit/test_errors.py`, `tests/regression/test_sec_no_host_path_in_errors.py` | `redact_host_paths` to `<path>` |
+| AC3 | The reported `stderr_head` is byte-identical between runs, with no environment-dependent value the plugin can recognize | `tests/regression/test_sec_no_host_path_in_errors.py`, `tests/property/test_prop_security.py` | Fixed placeholder, not a per-path derivation; PIDs/timestamps out of scope |
+| AC4 | The redaction is documented and pinned by a regression test | `tests/regression/test_sec_no_host_path_in_errors.py`, `tests/unit/test_docs.py` | Documented in `docs/security-model.md` R-4 and `docs/finding-schema.md` |
+
+## Requirement 19: Expanded measurement (v0.8.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | An `agent-only` mode and a `human-review` mode, using the reserved ground-truth arrays, without a schema-version bump | `tests/unit/test_run_benchmark.py`, `tests/integration/test_benchmark_harness.py` | `human-review` is informational and never thresholded |
+| AC2 | Review Time is recorded per case and in aggregate as a diagnostic that does not affect PASS or FAIL | `tests/integration/test_benchmark_harness.py` | On stderr, kept out of the byte-identical summary |
+| AC3 | Remediation Accuracy and Human Intervention Count are recorded as diagnostics that do not affect PASS or FAIL | `tests/unit/test_metrics.py`, `tests/integration/test_benchmark_harness.py` | `compute_diagnostics`; per case and in aggregate |
+| AC4 | The Agent Source can be run N times with the variation reported; the deterministic Sources are evaluated exactly once | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_run_benchmark.py` | `--agent-runs`; only `agent-only` repeats, summary from the first run |
+| AC5 | A cfn-lint contribution series pinned to a stated version, reported informationally and never thresholded | `tests/integration/test_cfn_lint_contribution.py` | `benchmark/cfn-lint-contribution/`, separate from the ground-truth cases |
+| AC6 | A diagnostic that cannot be computed is recorded as an explicit "not applicable" rather than omitted or zero | `tests/unit/test_metrics.py`, `tests/integration/test_benchmark_harness.py` | The `NOT_APPLICABLE` marker, with the key always present |
+| AC7 | The new metrics and modes are documented, and the deterministic benchmark output stays reproducible | `tests/unit/test_docs.py`, `tests/integration/test_benchmark_harness.py` | `docs/benchmark-methodology.md`; byte-identity pinned |
+
 ## The 31 correctness properties
 
 Every property in the design's "Correctness Properties" section is implemented

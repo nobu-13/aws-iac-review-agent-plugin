@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import pytest
-from hypothesis import HealthCheck, given, seed, settings
+from hypothesis import HealthCheck, assume, given, seed, settings
 from hypothesis import strategies as st
 
 import strategies as S
@@ -470,11 +470,20 @@ def test_report_metas_reach_both_template_groups() -> None:
 @SMOKE
 @given(S.stderr_texts())
 def test_stderr_texts_stay_within_the_transcription_bound(text: str) -> None:
-    """The input side of Property 23: any text, bounded output."""
+    """The input side of Property 23: any text, bounded output.
+
+    ``_head_lines`` also redacts absolute host paths from each retained line
+    (Task 34, Requirement 18 AC2), which is a separate concern with its own
+    tests. To keep this smoke check about the 5-line *bound* alone, the example
+    is restricted to text whose lines redact to themselves, so ``stderr_head``
+    equals the raw leading lines.
+    """
+    expected = text.splitlines()[: errors.STDERR_HEAD_MAX_LINES]
+    assume(all(errors.redact_host_paths(line) == line for line in expected))
     structured = errors.ToolExecutionError("tool failed", stderr=text).to_structured_error()
     head = structured["stderr_head"]
     assert len(head) <= errors.STDERR_HEAD_MAX_LINES
-    assert head == text.splitlines()[: errors.STDERR_HEAD_MAX_LINES]
+    assert head == expected
 
 
 def test_stderr_texts_span_the_transcription_bound() -> None:

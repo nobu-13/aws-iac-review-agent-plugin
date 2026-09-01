@@ -724,17 +724,21 @@ def test_a_file_that_parses_but_is_not_reviewable_names_the_file_and_no_position
 
 
 @pytest.mark.parametrize("entry", ALL_ENTRY_POINTS)
-def test_a_directory_where_a_template_is_expected_is_input_not_found(
+def test_a_directory_where_a_template_is_expected_is_refused(
     entry: EntryPoint,
     plugin_root: Path,
     workspace: Path,
     fake_tool_path: str,
 ) -> None:
-    """A directory is read as unreadable input, not as a parse failure.
+    """A directory passed where a single Template is expected is refused.
 
-    Exit 3 with an empty stdout, which is the row design.md's matrix assigns to
-    "入力ファイルが読めない": the file was never a document, so there is nothing
-    for a report to say about its contents.
+    A single-file Skill now opens its target through the TOCTOU-safe reader,
+    which confirms ``stat.S_ISREG`` on the opened descriptor. A directory is not
+    a regular file (Requirement 17 AC6), so it is refused as a ``path_violation``
+    -- exit 7 with an empty stdout, because the target was never a document there
+    is nothing for a report to say about its contents. This is a sharper outcome
+    than the previous ``input_not_found``: the path exists and opens, it simply
+    does not name a Template file.
 
     ``iac-review`` is the exception and is excluded from the assertion below: a
     directory is a legal target for it, and an empty one means nothing reviewable
@@ -755,7 +759,7 @@ def test_a_directory_where_a_template_is_expected_is_input_not_found(
         assert run.exit_code == exitcodes.NO_REVIEWABLE_TEMPLATE
         assert only_error(run)["error_class"] == "no_reviewable_template"
     else:
-        assert run.exit_code == exitcodes.INPUT_NOT_FOUND, run.stderr
+        assert run.exit_code == exitcodes.PATH_VIOLATION, run.stderr
         assert run.stdout == "", run.stdout
     assert_no_host_path(run, workspace)
 

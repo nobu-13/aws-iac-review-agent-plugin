@@ -419,13 +419,25 @@ defines what each number means and how far it generalizes.
 | Unit | 43 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis, secret detection, template quality |
 | Integration | 14 files running the seven entry points as real subprocesses over real templates, including 133 malformed-input cases |
 | Negative | Clean templates produce no false positive of the counted classes |
-| Regression | 8 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors |
+| Regression | 11 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors, YAML alias bombs, non-regular files, and process-group reaping on timeout |
 | Property | 13 files stating 31 named properties with `hypothesis`, including path containment against an independent oracle and an AST scan proving `iacreview.proc` is the only process-spawning path in the shipped code |
 | Coverage | `python3 -m pytest --cov=iacreview --cov=benchmark/harness --cov-fail-under=80` |
 | Benchmark | `python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined`, all categories `PASS` |
 
 Every command above was run against this repository. `docs/security-model.md`
 carries a table mapping each security claim to the test that pins it.
+
+v0.8.0 hardens the review against hostile input: a Template over 5 MiB, or a
+directory whose Templates exceed 50 MiB in aggregate, is refused without being
+read; a YAML alias bomb is bounded and fails as a parse error; a Template is read
+through a single file descriptor so a symlink cannot be swapped between the
+containment check and the read; a timed-out tool's descendants are reaped; and an
+absolute host path in a tool's stderr is redacted before it reaches the report.
+The benchmark harness additionally records Remediation Accuracy, Human
+Intervention Count and Review Time as diagnostics that never affect its pass/fail
+verdict, and offers `agent-only` and `human-review` modes alongside the
+Source-subset modes. `docs/security-model.md` (R-2, R-4, R-8, R-9) and
+`docs/benchmark-methodology.md` cover these.
 
 ## Security Considerations
 

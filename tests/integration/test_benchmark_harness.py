@@ -1282,3 +1282,159 @@ def test_the_harness_does_not_read_stdin(workspace: Path) -> None:
 
     assert completed.returncode == exitcodes.OK, completed.stderr
     assert json.loads(completed.stdout)["status"] == metrics.STATUS_PASS
+
+
+# ---------------------------------------------------------------------------
+# v0.8.0: diagnostics, the new modes, and --agent-runs (Requirement 19)
+# ---------------------------------------------------------------------------
+
+
+def test_the_summary_carries_a_diagnostics_block(workspace: Path) -> None:
+    """Requirement 19 AC3: diagnostics appear per case and in aggregate."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(["--cases", "cases", "--mode", "iam-only"], workspace)
+    summary = summary_of(completed)
+
+    assert sorted(summary["diagnostics"]) == sorted(metrics.DIAGNOSTIC_KEYS)
+    entry = case_entry(summary, "case-001-wildcard")
+    assert sorted(entry["diagnostics"]) == sorted(metrics.DIAGNOSTIC_KEYS)
+
+
+def test_a_case_declaring_no_diagnostic_expectation_reports_not_applicable(
+    workspace: Path,
+) -> None:
+    """Requirement 19 AC6: N/A, not 0, and the key is always present."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(["--cases", "cases", "--mode", "iam-only"], workspace)
+    diagnostics = summary_of(completed)["diagnostics"]
+
+    assert diagnostics["remediation_accuracy"] == metrics.NOT_APPLICABLE
+    assert diagnostics["human_intervention_count"] == metrics.NOT_APPLICABLE
+
+
+def test_human_intervention_count_aggregates_declared_values(workspace: Path) -> None:
+    """A case declaring the expectation has it echoed and summed (Requirement 19 AC3)."""
+    ground_truth = json.dumps(
+        {
+            "schema_version": "1.0.0",
+            "case_id": "case-001-wildcard",
+            "template": "template.yaml",
+            "description": "A synthetic case declaring a human-intervention count.",
+            "authored_before_review": True,
+            "expected_finding_count": 1,
+            "expected_findings": [expectation()],
+            "expected_findings_agent_only": [],
+            "expected_findings_human_review": [],
+            metrics.HUMAN_INTERVENTION_EXPECTATION_FIELD: 2,
+        },
+        indent=2,
+    )
+    write_case(workspace, "case-001-wildcard", ground_truth_text=ground_truth)
+
+    completed = run_harness(["--cases", "cases", "--mode", "iam-only"], workspace)
+    summary = summary_of(completed)
+
+    assert case_entry(summary, "case-001-wildcard")["diagnostics"][
+        "human_intervention_count"
+    ] == 2
+    assert summary["diagnostics"]["human_intervention_count"] == 2
+    # A diagnostic never changes the verdict.
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+
+def test_agent_only_reads_the_reserved_array_and_is_informational(
+    workspace: Path,
+) -> None:
+    """Requirement 19 AC1: agent-only measures the reserved array, empty in v0.1.
+
+    With an empty ``expected_findings_agent_only`` the case measures nothing and
+    reports INFO, and the run exits 0: the deterministic expectations are not
+    pulled in, so a wildcard IAM defect the review would flag does not make this
+    mode fail.
+    """
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(["--cases", "cases", "--mode", "agent-only"], workspace)
+    summary = summary_of(completed)
+
+    assert summary["mode"] == "agent-only"
+    assert summary["sources_evaluated"] == ["Agent Review"]
+    assert case_entry(summary, "case-001-wildcard")["status"] == metrics.STATUS_INFO
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+
+def test_human_review_never_fails_even_when_it_declares_expectations(
+    workspace: Path,
+) -> None:
+    """Requirement 19 AC1: human-review is informational, never thresholded.
+
+    Its reserved array names a deterministic expectation the pipeline never
+    produces here (no agent findings, no matching Source), yet the run exits 0:
+    the mode is not held to a threshold, so it cannot turn a human-review
+    expectation into a FAIL.
+    """
+    human_expectation = expectation(
+        resource="ManualReviewItem",
+        normalized_category="Other",
+        finding_type="BestPractice",
+        severity="LOW",
+        detected_by=("Agent Review",),
+    )
+    ground_truth = json.dumps(
+        {
+            "schema_version": "1.0.0",
+            "case_id": "case-001-wildcard",
+            "template": "template.yaml",
+            "description": "A synthetic case with a human-review expectation.",
+            "authored_before_review": True,
+            "expected_finding_count": 0,
+            "expected_findings": [],
+            "expected_findings_agent_only": [],
+            "expected_findings_human_review": [human_expectation],
+        },
+        indent=2,
+    )
+    write_case(workspace, "case-001-wildcard", ground_truth_text=ground_truth)
+
+    completed = run_harness(["--cases", "cases", "--mode", "human-review"], workspace)
+    summary = summary_of(completed)
+
+    assert summary["mode"] == "human-review"
+    assert summary["status"] == metrics.STATUS_INFO
+    assert completed.returncode == exitcodes.OK, completed.stderr
+
+
+def test_review_time_is_reported_on_stderr_never_in_stdout(workspace: Path) -> None:
+    """Requirement 19 AC2: Review Time is a diagnostic, kept out of the summary."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "iam-only", "--verbose"], workspace
+    )
+
+    assert "review time" in completed.stderr
+    assert "review time" not in completed.stdout
+    assert "review_time" not in completed.stdout
+
+
+def test_agent_runs_below_one_is_rejected(workspace: Path) -> None:
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    completed = run_harness(
+        ["--cases", "cases", "--mode", "agent-only", "--agent-runs", "0"], workspace
+    )
+
+    assert completed.returncode == exitcodes.INVALID_ARGUMENTS
+    assert completed.stdout == ""
+
+
+def test_the_new_modes_are_byte_identical_between_runs(workspace: Path) -> None:
+    """Requirement 16 AC11 holds for the modes v0.8.0 added."""
+    write_case(workspace, "case-001-wildcard", expectations=[expectation()])
+
+    for mode in ("agent-only", "human-review"):
+        first = run_harness(["--cases", "cases", "--mode", mode], workspace)
+        second = run_harness(["--cases", "cases", "--mode", mode], workspace)
+        assert first.stdout == second.stdout, mode
