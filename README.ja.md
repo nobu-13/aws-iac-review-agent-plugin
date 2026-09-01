@@ -399,13 +399,15 @@ harness は Agent を起動しないため、同じ case を 2 回実行する�
 | Unit | 決定論的モジュールを対象とする 43 ファイル。解析、正規化、severity 変換、重複排除、path 検証、exit code、network graph 解析、secret 検出、template 品質 |
 | Integration | 7 つの entry point を実際の subprocess として実テンプレートに対して動かす 14 ファイル。不正入力 133 件を含む |
 | Negative | clean なテンプレートが、数え上げた種類の false positive を出さないこと |
-| Regression | security 上の振る舞いと過去に見つけた defect を固定する 8 ファイル。path traversal、不正な YAML と JSON、shell metacharacter を含むファイル名、外部ツール未導入、不正な引数、symlink の循環、error に host path が出ないこと |
+| Regression | security 上の振る舞いと過去に見つけた defect を固定する 11 ファイル。path traversal、不正な YAML と JSON、shell metacharacter を含むファイル名、外部ツール未導入、不正な引数、symlink の循環、error に host path が出ないこと、YAML alias bomb、通常ファイル以外の拒否、timeout 時のプロセスグループ回収 |
 | Property | `hypothesis` により 31 個の named property を述べる 13 ファイル。独立した oracle に対する path containment の検証、および `iacreview.proc` が出荷コードで唯一のプロセス起動経路であることを示す AST 走査を含む |
 | Coverage | `python3 -m pytest --cov=iacreview --cov=benchmark/harness --cov-fail-under=80` |
 | Benchmark | `python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined`。全カテゴリ `PASS` |
 
 上記のコマンドはすべてこの repository に対して実行済みである。
 `docs/security-model.md` には、各 security 上の主張とそれを固定するテストの対応表がある。
+
+v0.8.0 は悪意ある入力に対する堅牢化を行った。5 MiB を超える単一 Template、あるいは合計 50 MiB を超えるディレクトリは読み込まずに拒否する。YAML alias bomb は上限を設けて parse エラーとして失敗させる。Template は単一の file descriptor 経由で読み、containment 検査と読み込みの間に symlink が差し替えられないようにする。timeout したツールの子孫プロセスは回収する。ツール stderr 中の絶対 host path は report へ届く前に伏せる。Benchmark harness は Remediation Accuracy、Human Intervention Count、Review Time を pass/fail に影響しない診断として記録し、Source サブセットモードに加えて `agent-only` / `human-review` モードを提供する。詳細は `docs/security-model.md` (R-2, R-4, R-8, R-9) と `docs/benchmark-methodology.md` を参照。
 
 ## Security 上の考慮事項
 
