@@ -188,7 +188,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 import strategies as S
-from iacreview import agentin, categories, cdk, cfnguard, cfnlint, exitcodes, iam, netgraph, pathguard
+from iacreview import agentin, categories, cdk, cfnguard, cfnlint, exitcodes, iam, netgraph, pathguard, secrets
 from iacreview.errors import (
     IacReviewError,
     ToolExecutionError,
@@ -289,6 +289,7 @@ _SOURCE_MODULES: Dict[str, ModuleType] = {
     cfnguard.SOURCE_NAME: cfnguard,
     iam.SOURCE_NAME: iam,
     netgraph.SOURCE_NAME: netgraph,
+    secrets.SOURCE_NAME: secrets,
 }
 
 #: Executable -> the Source whose tool it is, as ``_verify_tools`` pairs them.
@@ -302,7 +303,7 @@ _EXECUTABLE_SOURCES: Dict[str, str] = {
 #: ever merge: a Finding with no resource never merges (Requirement 14 AC6), and
 #: neither do two Findings on different resources, so every Source's Finding
 #: stays identifiable in the report regardless of how many Sources ran.
-_SOURCE_RESOURCES: Tuple[Optional[str], ...] = ("A", "B", "C", "D", None)
+_SOURCE_RESOURCES: Tuple[Optional[str], ...] = ("A", "B", "C", "D", "E", None)
 assert len(_SOURCE_RESOURCES) == len(SOURCES), (
     "one distinct resource per Source is needed so stub Findings never merge"
 )

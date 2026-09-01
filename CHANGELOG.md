@@ -46,6 +46,38 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.5.0] - 2026-09-01
+
+### Added
+
+- **Secret Review, a fifth deterministic Source** (`iacreview/secrets.py`). It
+  walks the value-bearing locations where a credential ends up in cleartext --
+  Lambda environment variables, EC2 UserData scripts, and Parameter defaults --
+  and reports a finding when a value has the shape of a secret. cfn-lint's
+  W1011 / W2501 warn about a parameter used as a password; this Source finds the
+  value written down directly.
+- **Three secret detectors**: `lambda_env_plaintext_secret`,
+  `userdata_plaintext_secret`, `parameter_default_secret`. Each recognizes AWS
+  access key IDs, provider tokens, PEM private keys, and high-entropy values
+  assigned to password/api-key/secret-named fields.
+- **Placeholder allowlist**: obvious placeholders (`EXAMPLE`, `changeme`,
+  `your-...`) and unresolved references (`!Ref`, `$Ellipsis`, `<...>`) never fire,
+  which is what keeps the Source from being trained away.
+- Every Secret Review finding carries a redacted excerpt, never the value
+  itself (steering/security.md). Findings are `DataProtection` / `Security` /
+  HIGH / `Confirmed`.
+- Secret Review is computed in process by `extract_facts.py`, so its findings
+  join `deterministic_findings_summary`.
+
+### Changed
+
+- `iacreview.finding.SOURCES` gains `"Secret Review"` (rank 4, before
+  `Agent Review`). The Source enum in `docs/finding-schema.md` and
+  `benchmark/ground_truth.schema.json` were updated together.
+- `iac-review --sources` accepts `Secret Review` and the alias `secret-review`.
+- Plaintext secrets in Lambda env / UserData, previously reachable only through
+  Agent reasoning (v0.3.0), are now detected deterministically.
+
 ## [0.4.0] - 2026-09-01
 
 ### Added
@@ -196,7 +228,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.5.0
 [0.4.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.4.0
 [0.3.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.2.0

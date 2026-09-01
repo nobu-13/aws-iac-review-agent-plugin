@@ -179,6 +179,7 @@
         "cfn-guard",
         "IAM Review",
         "Network Review",
+        "Secret Review",
         "Agent Review"
       ]
     }

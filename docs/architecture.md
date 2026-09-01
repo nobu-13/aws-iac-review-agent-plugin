@@ -18,7 +18,7 @@ validated rather than as a decision to be trusted.
 
 ```text
 IaC
- -> deterministic checks (cfn-lint, cfn-guard, IAM detectors, network graph analysis)
+ -> deterministic checks (cfn-lint, cfn-guard, IAM detectors, network graph analysis, secret detection)
  -> agent semantic review (IAM context, security, architecture, best practices)
  -> Finding normalization
  -> deduplication and merge

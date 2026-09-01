@@ -25,6 +25,7 @@ What it does today:
 | Organizational policy review | cfn-guard against 36 bundled `.guard` rules covering encryption, public access, logging, tagging, IAM, backup, availability and data protection |
 | Deterministic IAM review | 15 active detectors over wildcard permissions, privilege escalation actions, unrestricted `iam:PassRole` and `sts:AssumeRole`, missing confused-deputy conditions, cross-account and wildcard principals |
 | Deterministic network review | Resource-graph analysis over gateway attachment, default routes, internet reachability and orphaned network resources |
+| Deterministic secret review | Plaintext-secret detection in Lambda environment variables, EC2 UserData, and Parameter defaults, with values redacted in output |
 | Agent semantic review | Two Skills (`cloudformation-review`, `iam-review` layer 2) reason over deterministically extracted facts and produce findings the pipeline validates and merges |
 | One normalized report | Every finding carries the same 13 fields, one of 11 categories, and the sources that detected it. Equivalent findings merge. IDs are assigned deterministically |
 | Reviewing synthesized CDK output | Templates under `cdk.out/` are reviewed as a separate group. `cdk synth` runs only behind an explicit flag |
@@ -63,7 +64,7 @@ decision, including the three things an agent structurally cannot do.
 
 ```text
 IaC (untrusted)
- -> deterministic checks: cfn-lint, cfn-guard, IAM detectors, network graph analysis
+ -> deterministic checks: cfn-lint, cfn-guard, IAM detectors, network graph analysis, secret detection
  -> agent semantic review: IAM context, security, architecture, best practices
  -> Finding normalization
  -> deduplication and merge
@@ -403,7 +404,7 @@ defines what each number means and how far it generalizes.
 | What | How |
 | --- | --- |
 | Test suite | `python3 -m pytest`, over 3900 tests, zero failures |
-| Unit | 40 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis |
+| Unit | 41 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis, secret detection |
 | Integration | 14 files running the seven entry points as real subprocesses over real templates, including 133 malformed-input cases |
 | Negative | Clean templates produce no false positive of the counted classes |
 | Regression | 8 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors |
@@ -573,7 +574,7 @@ dashes in the original are written as `--` here to keep this file ASCII.
   Only 7 of the 66 `Warning` and `Informational` rules are marked, so a
   security-relevant condition that cfn-lint reports under a rule not on the list
   appears as `BestPractice` or `Informational` rather than `Security`. The
-  cfn-guard, IAM Review, Network Review, and Agent Review Sources cover security conditions
+  cfn-guard, IAM Review, Network Review, Secret Review, and Agent Review Sources cover security conditions
   independently of this list.
 - The survey covers the cfn-lint **1.46.0** catalogue. A rule added by a newer
   cfn-lint is classified from its level and never as `Security`.

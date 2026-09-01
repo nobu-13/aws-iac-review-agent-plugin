@@ -330,6 +330,7 @@ def test_deterministic_source_coverage_is_stated_per_source(
         "cfn-guard",
         "IAM Review",
         "Network Review",
+        "Secret Review",
     ]
     for entry in coverage:
         assert sorted(entry) == SOURCE_COVERAGE_KEYS
@@ -342,6 +343,7 @@ def test_deterministic_source_coverage_is_stated_per_source(
         "cfn-guard": False,
         "IAM Review": True,
         "Network Review": True,
+        "Secret Review": True,
     }
 
 
@@ -551,7 +553,7 @@ def test_supplied_reports_extend_the_summary(
         entry["name"]: entry["findings_summarized"]
         for entry in facts["deterministic_sources"]
     }
-    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1, "Network Review": 0}
+    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1, "Network Review": 0, "Secret Review": 0}
     # Recorded as a workspace-relative path, never as an absolute host path
     # (Requirement 16 AC11).
     assert facts["deterministic_reports"] == [report]
