@@ -501,8 +501,12 @@ Findings as though two Sources had independently confirmed one issue.
 
 ## Residual Risks
 
-These are known, accepted for v0.1, and stated so that you can decide whether
-they matter for your use.
+These are known and stated so that you can decide whether they matter for your
+use. Four of them -- R-1, R-5, R-6, R-7 -- are **deliberate positions as of
+v0.9.0**: they are not roadmap items awaiting a fix, but boundaries the plugin
+does not cross, each for a reason given in its entry. Naming them as settled is
+itself the security posture: a reader is entitled to know what the plugin will
+never do, not just what it has not done yet.
 
 **R-1: Containment is not a sandbox.** `pathguard` constrains path resolution
 inside this process. It does not constrain what a child process can reach. Once
@@ -510,6 +514,13 @@ cfn-lint, cfn-guard, or `cdk synth` starts, it can read and write anything the
 invoking user can, regardless of where the workspace root is. Agent Plugins
 1.0.0 says the same about its own containment model. Treat containment as a
 guarantee about this plugin's file access, not about the review as a whole.
+
+*Deliberate position.* Sandboxing the external tools would mean shipping and
+maintaining an OS-level isolation mechanism that behaves identically on macOS and
+Linux, which is out of proportion to a read-only reviewer and would make the
+plugin depend on a facility the supported platforms do not offer uniformly. The
+plugin's guarantee is scoped to its own file access; the trust placed in the
+toolchain the user already runs is the user's to manage.
 
 **R-2 (resolved in v0.8.0): the TOCTOU window between the containment check and
 the read is closed.** `resolve_within` still resolves and validates a path, but
@@ -563,22 +574,46 @@ minus the environment-specific paths, is still there -- and the five-line cap
 still bounds how much untrusted output reaches the report (Property 23 in
 `tests/property/test_prop_security.py`).
 
-**Limits of the redaction.** The scope is absolute POSIX paths, the one
-environment-dependent value the plugin can recognize in third-party output.
-Process identifiers and timestamps a tool might print are out of scope for
-v0.8.0: the plugin cannot reliably tell a PID or a timestamp from an ordinary
-number a tool emits, and guessing would corrupt the diagnostic. When a token is
-ambiguous, redaction wins -- collapsing a `/foo/bar` string that was never a path
-is preferred over leaking a host path, following the security guideline that an
-undecidable case is resolved on the side of concealment.
+**Extended in v0.9.0 (Requirement 20).** The redaction now also covers two more
+environment-dependent values, through `iacreview.errors.redact_stderr_line`
+(which composes the host-path primitive with the two below and is what
+`_head_lines` now calls):
+
+- a **labeled process identifier** -- the word `pid` followed by a separator and
+  digits -- has its value replaced with `<pid>`, keeping the label
+  (`pid 1234` -> `pid <pid>`);
+- a **recognized timestamp** -- an ISO-8601 / RFC-3339 date-time -- is replaced
+  with `<timestamp>`.
+
+**Limits of the redaction.** The reach is deliberately narrow (B=1 in the design
+decisions): the plugin only redacts what it can recognize without guessing. A PID
+is redacted only when an explicit `pid` label introduces it, and a timestamp only
+in the compound date-time form; a bare integer, a rule identifier, a line number,
+a byte count, and a version number a tool prints are all preserved, because
+over-redacting the diagnostic defeats the reason for capturing stderr. So a PID
+printed with no label, or a timestamp in a non-standard format, is *not* redacted
+-- this is a documented limit, not a defect. For absolute paths, where the
+leading `/` makes the token unambiguous, redaction still wins on the ambiguous
+edge: collapsing a `/foo/bar` string that was never a path is preferred over
+leaking a host path, following the security guideline that an undecidable case is
+resolved on the side of concealment.
 `tests/regression/test_sec_no_host_path_in_errors.py` reproduces a tool that
-writes an absolute path to stderr and pins that the path does not appear in the
-report (Requirement 18 AC4).
+writes an absolute path, a labeled PID, and an ISO-8601 timestamp to stderr and
+pins that none of them appears in the report while a bare rule id and line number
+survive (Requirement 18 AC4, Requirement 20 AC6).
 
 **R-5: `cdk synth` runs unsandboxed.** Stated in full above and quoted from
 `SYNTH_WARNING`. Reviewing untrusted CDK source starting from source code is an
 arbitrary code execution risk that this plugin does not mitigate beyond
 withholding AWS credentials and applying a timeout.
+
+*Deliberate position.* `cdk synth` executes project code and its dependency
+lifecycle scripts; sandboxing it is the same OS-isolation problem as R-1, and an
+incomplete sandbox misleads more than none. The plugin's stance is to require an
+explicit opt-in flag, print the `SYNTH_WARNING`, withhold credentials, and time
+out -- and otherwise to review already-synthesized templates, which run no code.
+Users who cannot trust the CDK source should synth it themselves in an
+environment they control and review the output.
 
 **R-6: `SIGKILL` leaves a temporary file behind.** The `atexit` hook and the
 `SIGTERM` / `SIGINT` handlers cover every termination Python can observe.
@@ -587,6 +622,12 @@ cleanup then falls to the operating system's temporary directory sweeper. The
 file is mode `0600` in the system temp directory, so what remains is readable
 only by the user who ran the review. No v0.1 code path creates one at all.
 
+*Deliberate position.* `SIGKILL` is uncatchable by definition, so no in-process
+handler can cover it; the standard answer -- a mode-`0600` file in the system
+temp directory left to the OS sweeper -- is the one taken. Adding a
+crash-recovery sweeper of our own would be a moving part that itself has to be
+correct across platforms, for a file that is already unreadable by other users.
+
 **R-7: Redaction is not secret detection.** The two triggers cover credentials
 the Template itself declares as sensitive (`NoEcho`) and locations a cfn-lint
 credential rule flags. A plaintext secret sitting in a Template under a key name
@@ -594,6 +635,18 @@ nothing recognizes will be quoted in an Excerpt if an agent Finding cites that
 location. The mitigation is upstream: do not put plaintext secrets in Templates,
 and use `NoEcho` for Parameters that carry them. See the rejected key-name
 pattern approach above for why the obvious extension is not an improvement.
+
+*Deliberate position.* Key-name pattern matching (redacting a value because its
+key is named `password`, `secret`, `token`, or `apikey`) was considered and
+rejected, and that rejection is final rather than deferred: it fails in both
+directions -- redacting `PasswordPolicy` and the IAM Findings that quote it,
+while still missing a credential stored under an unrelated key. Redaction hides
+what the Template *declares* sensitive; detecting an undeclared secret is a
+different tool's job, and the Secret Review Source already covers the plaintext
+value locations it can decide (Lambda env, UserData, Parameter defaults). The
+residual case -- a secret under a key nothing recognizes, quoted only if an agent
+Finding cites it -- is left to the upstream discipline of not putting plaintext
+secrets in Templates.
 
 **R-8 (resolved in v0.8.0): input size and YAML alias expansion are bounded.** A
 YAML alias bomb (`billion laughs`) is an availability attack: PyYAML expands
@@ -638,21 +691,25 @@ does not outlive the timeout.
 ## Roadmap Candidates
 
 R-2, R-4, R-8 and R-9 were residual risks in v0.1 and are **resolved in
-v0.8.0**; see their entries above. The residual risks that remain unmitigated,
-and are not claimed to be otherwise:
+v0.8.0**; see their entries above. R-4's redaction was **extended in v0.9.0** to
+cover labeled process identifiers and recognized timestamps as well as absolute
+host paths (Requirement 20); see the R-4 entry.
+
+The four risks that remain -- R-1, R-5, R-6, R-7 -- are **not roadmap
+candidates**. As of v0.9.0 each is a deliberate position stated in its entry
+above: a boundary the plugin does not cross, with the reason it does not. They
+are listed here so the posture is in one place, not because a fix is pending:
 
 - **R-1**: containment is not a sandbox for the child processes the review
-  starts.
-- **R-5**: `cdk synth` runs unsandboxed; mitigated only by an explicit
-  confirmation flag, withheld credentials, and a timeout.
-- **R-6**: `SIGKILL`, a hard crash, or a power loss can leave a mode-`0600`
-  temporary file for the operating system's sweeper to remove.
-- **R-7**: redaction is not secret detection; a plaintext secret under an
-  unrecognized key name can still be quoted in an Excerpt.
-
-Further out, `stderr_head` redaction covers absolute host paths but not process
-identifiers or timestamps a tool might print (R-4); recognizing those reliably is
-a candidate for a later release.
+  starts -- OS isolation is out of proportion to a read-only reviewer.
+- **R-5**: `cdk synth` runs unsandboxed -- mitigated by an opt-in flag, a
+  warning, withheld credentials, and a timeout; review synthesized output to
+  avoid it.
+- **R-6**: `SIGKILL` can leave a mode-`0600` temporary file for the OS sweeper --
+  `SIGKILL` is uncatchable, and the file is unreadable by other users.
+- **R-7**: redaction is not secret detection -- key-name matching was rejected
+  finally, not deferred; the Secret Review Source covers the value locations it
+  can decide.
 
 ## Where These Claims Are Tested
 

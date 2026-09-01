@@ -93,11 +93,15 @@ EXPECTED_CRITERION_COUNTS: Dict[int, int] = {
     17: 9,
     18: 4,
     19: 7,
+    # v0.9.0 (redaction reach, timing as data, settled positions).
+    20: 6,
+    21: 5,
+    22: 6,
 }
 
-#: The total the completion condition of Task 29.1 named for v0.1 (182), plus the
-#: 20 criteria the three v0.8.0 requirements add.
-EXPECTED_TOTAL_CRITERIA = 202
+#: The v0.1 total (182), plus the 20 criteria of the three v0.8.0 requirements,
+#: plus the 17 criteria of the three v0.9.0 requirements (R20 6, R21 5, R22 6).
+EXPECTED_TOTAL_CRITERIA = 219
 
 #: A level-2 heading of ``docs/traceability.md`` that opens a requirement's table.
 REQUIREMENT_HEADING_PATTERN = re.compile(r"^##\s+Requirement\s+(\d+):")

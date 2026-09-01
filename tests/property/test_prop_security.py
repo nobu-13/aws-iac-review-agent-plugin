@@ -152,7 +152,7 @@ from iacreview.errors import (
     STDERR_HEAD_MAX_LINES,
     STRUCTURED_ERROR_KEYS,
     ToolTimeoutError,
-    redact_host_paths,
+    redact_stderr_line,
 )
 from iacreview.finding import (
     AGENT_SOURCE,
@@ -849,20 +849,22 @@ def test_stderr_transcription_is_capped_and_copies_the_leading_lines(
     bound. That last one is what keeps the property from being satisfied by a
     field that is always empty.
 
-    Task 34 made :func:`iacreview.errors._head_lines` redact absolute host paths
-    from each retained line, which is a separate property (Requirement 18 AC2/AC3)
-    with its own tests. To keep *this* property -- the 5-line cap and the line
+    :func:`iacreview.errors._head_lines` redacts each retained line through
+    :func:`iacreview.errors.redact_stderr_line` -- absolute host paths (Task 34,
+    Requirement 18 AC2/AC3) and, from v0.9.0, labeled process identifiers and
+    recognized timestamps (Requirement 20). That is a separate property with its
+    own tests. To keep *this* property -- the 5-line cap and the line
     correspondence -- independent of that redaction, the example is restricted to
-    stderr text no line of which holds a ``/``-leading absolute-path token, so
-    redaction is a no-op and ``stderr_head`` equals the raw leading lines.
+    stderr text every line of which redacts to itself, so redaction is a no-op
+    and ``stderr_head`` equals the raw leading lines.
 
     ``deadline=None``: the funnel path resolves ``argv[0]`` on ``PATH``, which is
     a filesystem operation whose timing says nothing about this code.
     """
     expected = _lines_of(text)
-    # Independence from Task 34 redaction: only text whose lines redact to
-    # themselves reaches the cap assertions below.
-    assume(all(redact_host_paths(line) == line for line in expected))
+    # Independence from the redaction: only text whose lines redact to themselves
+    # reaches the cap assertions below.
+    assume(all(redact_stderr_line(line) == line for line in expected))
 
     direct = error_class("a tool failed", stderr=text).to_structured_error()
     assert set(direct) == set(STRUCTURED_ERROR_KEYS), error_class.__name__

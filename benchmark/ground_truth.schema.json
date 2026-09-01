@@ -60,11 +60,16 @@
       }
     },
     "expected_findings_human_review": {
-      "description": "Reserved for a future benchmark mode measuring findings only a human reviewer is expected to reach. Required, and empty in v0.1, so that adding the mode does not change this format. No maxItems constraint is imposed, so a future mode can populate it without a schema change.",
+      "description": "Reserved for a future benchmark mode measuring findings only a human reviewer is expected to reach. Required, and empty in v0.1; a case may populate it from v0.9.0, evaluated by the human-review mode, which is informational and never affects PASS or FAIL. No maxItems constraint is imposed.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/expectedFinding"
       }
+    },
+    "expected_human_intervention_count": {
+      "description": "Optional (added v0.9.0). Declares how many human decisions the case is expected to need, so the benchmark's Human Intervention Count diagnostic reports this value rather than \"not applicable\". A property of a review session recorded on the case; it is a diagnostic and never affects PASS or FAIL. Absent in the v0.1 cases.",
+      "type": "integer",
+      "minimum": 0
     }
   },
   "$defs": {
@@ -124,6 +129,11 @@
         },
         "note": {
           "description": "Which defect in the template this entry stands for, in prose. Not compared against Finding text: matching is by resource, FindingType and Normalized_Category, never by description string equality.",
+          "type": "string",
+          "minLength": 1
+        },
+        "expected_remediation": {
+          "description": "Optional (added v0.9.0). The substance of the remediation the review is expected to suggest for this finding. When present, the Remediation Accuracy diagnostic counts this expectation as satisfied if the matched finding's SuggestedRemediation contains this text (case-insensitive substring, not string equality). A diagnostic only; it never affects PASS or FAIL, and it does not enter the match key. Absent in the v0.1 cases.",
           "type": "string",
           "minLength": 1
         }

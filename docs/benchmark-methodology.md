@@ -517,11 +517,22 @@ harness's stdout at all. Review Time is environment-dependent by construction --
 it varies with the machine, the Python version, the external tool versions, and
 the load on the box -- and both the Review_Report and the benchmark summary must
 stay byte-identical between runs over the same input (Requirement 16 AC11). A
-timing figure in stdout would break that on the first run. So v0.8.0 measures it
-and reports it on **stderr** (a verbose diagnostic), the second output stream
-design.md's Determinism Design reserves for environment-dependent metadata, and
-never in stdout (Requirement 19 AC2). It is measured, not omitted; it is simply
-kept off the byte-identical channel.
+timing figure in stdout would break that on the first run. So it is reported on
+**stderr**, the second output stream design.md's Determinism Design reserves for
+environment-dependent metadata, and never in stdout (Requirement 19 AC2,
+Requirement 21 AC2). It is measured, not omitted; it is simply kept off the
+byte-identical channel.
+
+**Structured form (v0.9.0).** In addition to the human-readable `--verbose`
+line, `--timing-report` emits Review Time as a single JSON document on stderr
+(Requirement 21 AC1). Its shape is fixed: a `schema_version`, the `unit`
+(`"seconds"`), a `cases` array with one entry per case (`case_id`, `runs`, and
+the `min`/`max`/`mean` over those runs), and an `aggregate` (`case_count`,
+`total`, `mean_per_case`). When `--agent-runs N` repeats an `agent-only` case,
+that case's `runs` array carries the N per-run durations, so the variation is
+reportable (Requirement 21 AC4). The document is on stderr, so it is free to
+carry the wall-clock values the summary must not; stdout is byte-identical
+whether or not `--timing-report` is passed.
 
 ### Remediation Accuracy
 

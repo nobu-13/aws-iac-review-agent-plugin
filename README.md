@@ -439,6 +439,14 @@ verdict, and offers `agent-only` and `human-review` modes alongside the
 Source-subset modes. `docs/security-model.md` (R-2, R-4, R-8, R-9) and
 `docs/benchmark-methodology.md` cover these.
 
+v0.9.0 widens the stderr redaction to labeled process identifiers and recognized
+timestamps as well as host paths (a bare rule id, line number, or version is
+preserved), emits Review Time as structured JSON on stderr under
+`--timing-report`, settles the residual risks R-1, R-5, R-6 and R-7 as deliberate
+positions, and adds two benchmark measurement cases that populate the reserved
+arrays and the diagnostic expectation fields so the `agent-only` and
+`human-review` modes and the two diagnostics measure a declared expectation.
+
 ## Security Considerations
 
 This plugin processes Infrastructure as Code it has no reason to trust. Every
@@ -677,32 +685,14 @@ agent variation (`--agent-runs`), the Remediation Accuracy and Human
 Intervention Count diagnostics, and the `agent-only` and `human-review` modes.
 See CHANGELOG.md and `docs/security-model.md`.
 
-### v0.9.0 -- security hardening and measurement (remaining)
-
-Security hardening:
-
-- Extending `stderr_head` redaction beyond absolute host paths to process
-  identifiers and timestamps a tool may print, which the plugin cannot yet
-  recognize reliably (`docs/security-model.md`, R-4).
-- Addressing, or documenting the final position on, the residual risks that
-  remain by design rather than by omission: containment is not a child-process
-  sandbox (R-1), `cdk synth` runs unsandboxed (R-5), `SIGKILL` can leave a
-  temporary file for the OS sweeper (R-6), and redaction is not secret detection
-  (R-7).
-
-Measurement:
-
-- Folding Review Time into a form the summary can carry, or a second output
-  stream for it. It is measured on stderr today because a wall-clock figure
-  cannot enter the byte-identical summary.
-- Populating the reserved `expected_findings_agent_only` and
-  `expected_findings_human_review` arrays. The `agent-only` and `human-review`
-  modes that read them shipped in v0.8.0, but every bundled case still leaves
-  both arrays empty, so the modes measure nothing until cases opt in.
-- Authoring cases that declare `expected_remediation` and
-  `expected_human_intervention_count`, so the Remediation Accuracy and Human
-  Intervention Count diagnostics report a value rather than `N/A`
-  (`docs/benchmark-methodology.md`).
+**Delivered in v0.9.0.** `stderr_head` redaction now also covers labeled process
+identifiers and recognized timestamps, not just host paths (R-4); Review Time is
+emitted as a structured JSON diagnostic on stderr under `--timing-report`; the
+residual risks R-1, R-5, R-6, and R-7 are settled as deliberate positions in
+`docs/security-model.md` rather than open items; and two benchmark measurement
+cases now populate the reserved arrays and the `expected_remediation` /
+`expected_human_intervention_count` fields, so the `agent-only` and
+`human-review` modes and the two diagnostics measure a declared expectation.
 
 ### v0.10.0 -- additional IaC and analysis
 
