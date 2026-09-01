@@ -1,0 +1,11 @@
+# rules/logging/vpc_dns_hostnames.guard
+#
+# Category: logging (NetworkSecurity override)
+# Reports VPCs without DNS hostnames enabled.
+
+let vpcs = Resources.*[ Type == 'AWS::EC2::VPC' ]
+
+rule vpc_dns_hostnames when %vpcs !empty {
+  %vpcs.Properties.EnableDnsHostnames == true
+    << This VPC does not enable DNS hostnames. Set EnableDnsHostnames to true so that resources such as RDS instances receive resolvable endpoints. >>
+}

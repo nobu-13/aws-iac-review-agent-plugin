@@ -3,7 +3,7 @@
 This document is the reference for the normalized Finding produced by
 `aws-iac-review-agent-plugin`.
 
-Every review Source — cfn-lint, cfn-guard, IAM Review, and Agent Review —
+Every review Source — cfn-lint, cfn-guard, IAM Review, Network Review, and Agent Review —
 produces its own shape of output and normalizes to the one shape described here.
 A consumer that reads this document can read the `findings` array of any Skill's
 stdout without knowing which Sources ran.
@@ -141,7 +141,8 @@ array, because a merged Finding names every Source that detected it.
 | `cfn-lint` | 0 | cfn-lint results, normalized. | `Confirmed` |
 | `cfn-guard` | 1 | cfn-guard rule violations against the bundled `rules/`. | `Confirmed` |
 | `IAM Review` | 2 | The deterministic IAM pattern matching in `iacreview.iam`. | `Confirmed` |
-| `Agent Review` | 3 | Findings an agent produced by semantic reasoning. | `Likely`, `Contextual` |
+| `Network Review` | 3 | The deterministic network-relationship analysis in `iacreview.netgraph`. | `Confirmed` |
+| `Agent Review` | 4 | Findings an agent produced by semantic reasoning. | `Likely`, `Contextual` |
 
 The rank column is `finding.SOURCE_ORDER`, and it is the one order in which
 `Source` lists and `Evidence` lists appear. Deterministic Sources come before
@@ -785,7 +786,7 @@ with the list below.
   Only 7 of the 66 `Warning` and `Informational` rules are marked, so a
   security-relevant condition that cfn-lint reports under a rule not on the list
   appears as `BestPractice` or `Informational` rather than `Security`. The
-  cfn-guard, IAM Review, and Agent Review Sources cover security conditions
+  cfn-guard, IAM Review, Network Review, and Agent Review Sources cover security conditions
   independently of this list.
 - The survey covers the cfn-lint **1.46.0** catalogue. A rule added by a newer
   cfn-lint is classified from its level and never as `Security`.

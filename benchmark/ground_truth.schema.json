@@ -178,6 +178,7 @@
         "cfn-lint",
         "cfn-guard",
         "IAM Review",
+        "Network Review",
         "Agent Review"
       ]
     }

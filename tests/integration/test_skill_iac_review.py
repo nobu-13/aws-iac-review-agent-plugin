@@ -270,7 +270,7 @@ def test_all_sources_produce_one_valid_review_report(
     assert sorted(report) == sorted(REPORT_KEYS)
     assert report["schema_version"] == SCHEMA_VERSION
     assert report["errors"] == []
-    assert report["sources_enabled"] == ["cfn-lint", "cfn-guard", "IAM Review"]
+    assert report["sources_enabled"] == ["cfn-lint", "cfn-guard", "IAM Review", "Network Review"]
     assert report["target"] == {
         "files": ["template.yaml"],
         "cdk": {"detected": False, "synthesized_templates": []},
@@ -445,7 +445,7 @@ def test_a_failing_cfn_lint_keeps_cfn_guard_and_iam_findings(
     assert sources_of(report) == ["IAM Review", "cfn-guard"]
     # The failed Source is still listed as enabled: what it was asked to do is a
     # different fact from what it managed to do.
-    assert report["sources_enabled"] == ["cfn-lint", "cfn-guard", "IAM Review"]
+    assert report["sources_enabled"] == ["cfn-lint", "cfn-guard", "IAM Review", "Network Review"]
 
 
 def test_an_unparsable_template_among_several_is_reported_and_skipped(

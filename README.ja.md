@@ -22,8 +22,9 @@ Finding を折り込み、1 つの JSON `Review_Report` を stdout へ書き出�
 | 機能 | 実現方法 |
 | --- | --- |
 | CloudFormation の構文と resource property のレビュー | cfn-lint。結果は plugin の Finding schema へ正規化される |
-| 組織 policy のレビュー | 同梱の 35 個の `.guard` rule に対する cfn-guard。encryption / public access / logging / tagging / IAM / backup / availability / data protection を対象とする |
-| 決定論的な IAM レビュー | wildcard 権限、権限昇格 action、無制限の `iam:PassRole` と `sts:AssumeRole`、confused deputy 条件の欠落、cross-account および wildcard principal を対象とする 15 個の detector |
+| 組織 policy のレビュー | 同梱の 36 個の `.guard` rule に対する cfn-guard。encryption / public access / logging / tagging / IAM / backup / availability / data protection を対象とする |
+| 決定論的な IAM レビュー | wildcard 権限、権限昇格 action、無制限の `iam:PassRole` と `sts:AssumeRole`、confused deputy 条件の欠落、cross-account および wildcard principal を対象とする 15 個の有効な detector |
+| 決定論的な network レビュー | gateway アタッチ、default route、インターネット到達性、孤立した network リソースをリソースグラフ解析で検査する |
 | Agent による意味的レビュー | 2 つの Skill (`cloudformation-review`、`iam-review` の layer 2) が決定論的に抽出された事実を推論の入力とし、pipeline が検証してから統合する Finding を生成する |
 | 正規化された 1 つのレポート | すべての Finding が同じ 13 フィールド、11 カテゴリのいずれか 1 つ、検出した source を持つ。等価な Finding は統合される。ID は決定論的に付与される |
 | synth 済み CDK 出力のレビュー | `cdk.out/` 配下のテンプレートは別グループとしてレビューされる。`cdk synth` は明示的な flag を付けたときだけ実行される |
@@ -60,7 +61,7 @@ CloudFormation 固有 rule、暗号化、public access、logging、backup、tagg
 
 ```text
 IaC (untrusted)
- -> deterministic checks: cfn-lint, cfn-guard, IAM detectors
+ -> deterministic checks: cfn-lint, cfn-guard, IAM detectors, network graph analysis
  -> agent semantic review: IAM context, security, architecture, best practices
  -> Finding normalization
  -> deduplication and merge
@@ -85,7 +86,7 @@ Repository の構成。
 plugin.json          Agent Plugins 1.0.0 の manifest
 skills/              5 つの Skill。それぞれ SKILL.md と scripts/ を持つ
 iacreview/           共有される決定論的ライブラリ (import されるだけで install されない)
-rules/               6 つのカテゴリディレクトリに置かれた 35 個の cfn-guard rule
+rules/               6 つのカテゴリディレクトリに置かれた 36 個の cfn-guard rule
 benchmark/           測定対象の 12 case、ground truth、harness
 examples/            レビューを通ることを意図した小さなテンプレート
 tests/               unit / integration / negative / regression / property test
@@ -303,7 +304,7 @@ Benchmark harness は独自に 9 と 10 を追加する。これは意図的に 
 (`0.0.0.0/0`) またはすべての AWS account (`Principal: "*"`) からの到達可能性は
 `PublicAccess`、それ以外のネットワーク境界の懸念は `NetworkSecurity` である。
 
-同梱の cfn-guard rule は 6 ディレクトリに 35 ファイル。
+同梱の cfn-guard rule は 6 ディレクトリに 36 ファイル。
 
 ```text
 rules/
@@ -381,12 +382,12 @@ harness は Agent を起動しないため、同じ case を 2 回実行する�
 
 | 対象 | 方法 |
 | --- | --- |
-| テストスイート | `python3 -m pytest`。3300 件超、失敗 0 |
-| Unit | 決定論的モジュールを対象とする 34 ファイル。解析、正規化、severity 変換、重複排除、path 検証、exit code |
-| Integration | 6 つの entry point を実際の subprocess として実テンプレートに対して動かす 13 ファイル。不正入力 133 件を含む |
+| テストスイート | `python3 -m pytest`。3900 件超、失敗 0 |
+| Unit | 決定論的モジュールを対象とする 40 ファイル。解析、正規化、severity 変換、重複排除、path 検証、exit code、network graph 解析 |
+| Integration | 7 つの entry point を実際の subprocess として実テンプレートに対して動かす 14 ファイル。不正入力 133 件を含む |
 | Negative | clean なテンプレートが、数え上げた種類の false positive を出さないこと |
-| Regression | security 上の振る舞いと過去に見つけた defect を固定する 9 ファイル。path traversal、不正な YAML と JSON、shell metacharacter を含むファイル名、外部ツール未導入、不正な引数、symlink の循環、error に host path が出ないこと |
-| Property | `hypothesis` により 31 個の named property を述べる 15 ファイル。独立した oracle に対する path containment の検証、および `iacreview.proc` が出荷コードで唯一のプロセス起動経路であることを示す AST 走査を含む |
+| Regression | security 上の振る舞いと過去に見つけた defect を固定する 8 ファイル。path traversal、不正な YAML と JSON、shell metacharacter を含むファイル名、外部ツール未導入、不正な引数、symlink の循環、error に host path が出ないこと |
+| Property | `hypothesis` により 31 個の named property を述べる 13 ファイル。独立した oracle に対する path containment の検証、および `iacreview.proc` が出荷コードで唯一のプロセス起動経路であることを示す AST 走査を含む |
 | Coverage | `python3 -m pytest --cov=iacreview --cov=benchmark/harness --cov-fail-under=80` |
 | Benchmark | `python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined`。全カテゴリ `PASS` |
 
@@ -493,7 +494,7 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 
 **カバレッジ**
 
-- **同梱の cfn-guard rule は、名前を挙げた resource type だけを検査する。** 35 個の rule が
+- **同梱の cfn-guard rule は、名前を挙げた resource type だけを検査する。** 36 個の rule が
   対象とするのは特定の S3、RDS、IAM、CloudTrail、Security Group の設定である。どの rule も
   言及していない resource type からは cfn-guard の Finding が出ないが、それはその resource が
   適切に設定されている証拠ではない。独自 rule は `--rules-dir` で追加できる。
@@ -530,7 +531,7 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 - `Security` FindingType も cfn-lint の結果に対して保守的に付与される。`Warning` と
   `Informational` の 66 rule のうち 7 つだけが marking されているため、リストに無い rule で
   cfn-lint が報告した security 関連の条件は、`Security` ではなく `BestPractice` または
-  `Informational` として現れる。cfn-guard、IAM Review、Agent Review の各 Source は、この
+  `Informational` として現れる。cfn-guard、IAM Review、Network Review、Agent Review の各 Source は、この
   リストとは独立に security 上の条件を扱う。
 - 調査対象は cfn-lint **1.46.0** の catalogue である。新しい cfn-lint が追加した rule は
   level から分類され、`Security` にはならない。

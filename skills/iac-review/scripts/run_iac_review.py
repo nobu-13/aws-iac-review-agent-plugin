@@ -141,6 +141,7 @@ from iacreview import (  # noqa: E402
     dedup,
     exitcodes,
     iam,
+    netgraph,
     pathguard,
     report,
     template,
@@ -188,6 +189,7 @@ SOURCE_ORDER_FOR_COLLECTION: Tuple[str, ...] = (
     cfnlint.SOURCE_NAME,
     cfnguard.SOURCE_NAME,
     iam.SOURCE_NAME,
+    netgraph.SOURCE_NAME,
 )
 
 #: Accepted ``--sources`` spellings, mapped to the Source name the report uses.
@@ -200,6 +202,8 @@ SOURCE_ALIASES: Mapping[str, str] = {
     cfnguard.SOURCE_NAME: cfnguard.SOURCE_NAME,
     iam.SOURCE_NAME: iam.SOURCE_NAME,
     "iam-review": iam.SOURCE_NAME,
+    netgraph.SOURCE_NAME: netgraph.SOURCE_NAME,
+    "network-review": netgraph.SOURCE_NAME,
 }
 
 #: Failures whose report *is* the answer, so stdout carries a partial report
@@ -690,6 +694,16 @@ class IacReview:
                 )
             )
 
+        if netgraph.SOURCE_NAME in self.enabled:
+            specs.append(
+                SourceSpec(
+                    netgraph.SOURCE_NAME,
+                    functools.partial(
+                        netgraph.run_and_normalize, workspace_root=self.root
+                    ),
+                )
+            )
+
         # Sorted rather than trusted in append order, so the fixed Source order
         # survives an edit that reorders the blocks above.
         order = {name: index for index, name in enumerate(SOURCE_ORDER_FOR_COLLECTION)}
@@ -724,7 +738,7 @@ class IacReview:
 
         for spec in self.specs:
             call = spec.call
-            if spec.name == iam.SOURCE_NAME:
+            if spec.name in (iam.SOURCE_NAME, netgraph.SOURCE_NAME):
                 # The only Source that reads the Template itself rather than
                 # handing the path to a subprocess, so it is the only one that
                 # can reuse the parse. Bound here rather than in _build_specs

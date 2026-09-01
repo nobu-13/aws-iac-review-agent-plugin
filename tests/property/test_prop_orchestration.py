@@ -188,7 +188,7 @@ from hypothesis import given, settings
 from hypothesis import strategies as st
 
 import strategies as S
-from iacreview import agentin, categories, cdk, cfnguard, cfnlint, exitcodes, iam, pathguard
+from iacreview import agentin, categories, cdk, cfnguard, cfnlint, exitcodes, iam, netgraph, pathguard
 from iacreview.errors import (
     IacReviewError,
     ToolExecutionError,
@@ -288,6 +288,7 @@ _SOURCE_MODULES: Dict[str, ModuleType] = {
     cfnlint.SOURCE_NAME: cfnlint,
     cfnguard.SOURCE_NAME: cfnguard,
     iam.SOURCE_NAME: iam,
+    netgraph.SOURCE_NAME: netgraph,
 }
 
 #: Executable -> the Source whose tool it is, as ``_verify_tools`` pairs them.
@@ -296,14 +297,16 @@ _EXECUTABLE_SOURCES: Dict[str, str] = {
     CFN_GUARD: cfnguard.SOURCE_NAME,
 }
 
-#: Source -> the ``Resource`` its Finding names. Zipped against
-#: :data:`~tests.property.strategies.RESOURCE_POOL`, whose four members line up
-#: with the four Sources and whose ``None`` member lands on ``Agent Review``:
-#: a Finding with no resource never merges (Requirement 14 AC6), and neither do
-#: two Findings on different resources, so every Source's Finding stays
-#: identifiable in the report. The measurement test asserts the two lengths
-#: still match.
-_RESOURCE_FOR_SOURCE: Dict[str, Optional[str]] = dict(zip(SOURCES, S.RESOURCE_POOL))
+#: Source -> the ``Resource`` its Finding names. Each Source gets a distinct
+#: resource (and ``Agent Review`` gets ``None``) so that no two stub Findings
+#: ever merge: a Finding with no resource never merges (Requirement 14 AC6), and
+#: neither do two Findings on different resources, so every Source's Finding
+#: stays identifiable in the report regardless of how many Sources ran.
+_SOURCE_RESOURCES: Tuple[Optional[str], ...] = ("A", "B", "C", "D", None)
+assert len(_SOURCE_RESOURCES) == len(SOURCES), (
+    "one distinct resource per Source is needed so stub Findings never merge"
+)
+_RESOURCE_FOR_SOURCE: Dict[str, Optional[str]] = dict(zip(SOURCES, _SOURCE_RESOURCES))
 
 #: Vocabulary values the stub Findings carry, taken from the imported closed sets
 #: rather than written out. Which ``FindingType`` is irrelevant to both
@@ -1008,7 +1011,7 @@ def test_the_two_properties_reached_every_generated_case() -> None:
     # The Source-to-resource table stays a bijection: two Sources sharing a
     # resource would merge their Findings and Property 24's second clause would
     # be comparing a set it cannot distinguish.
-    assert len(S.RESOURCE_POOL) == len(SOURCES)
+    assert len(_SOURCE_RESOURCES) == len(SOURCES)
     assert len(set(_RESOURCE_FOR_SOURCE.values())) == len(SOURCES)
 
     failed_sources = {name for name, _ in _OBSERVED_FAILURES}

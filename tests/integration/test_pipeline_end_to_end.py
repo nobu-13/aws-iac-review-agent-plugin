@@ -218,6 +218,7 @@ SOURCE_VALUES: Tuple[str, ...] = (
     "cfn-lint",
     "cfn-guard",
     "IAM Review",
+    "Network Review",
     "Agent Review",
 )
 

@@ -329,17 +329,19 @@ def test_deterministic_source_coverage_is_stated_per_source(
         "cfn-lint",
         "cfn-guard",
         "IAM Review",
+        "Network Review",
     ]
     for entry in coverage:
         assert sorted(entry) == SOURCE_COVERAGE_KEYS
     in_process = {
         entry["name"]: entry["computed_in_process"] for entry in coverage
     }
-    # Only the IAM Source runs here, so only its zero would mean "clean".
+    # The IAM and Network Sources run here, so their zero would mean "clean".
     assert in_process == {
         "cfn-lint": False,
         "cfn-guard": False,
         "IAM Review": True,
+        "Network Review": True,
     }
 
 
@@ -549,7 +551,7 @@ def test_supplied_reports_extend_the_summary(
         entry["name"]: entry["findings_summarized"]
         for entry in facts["deterministic_sources"]
     }
-    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1}
+    assert coverage == {"cfn-lint": 1, "cfn-guard": 1, "IAM Review": 1, "Network Review": 0}
     # Recorded as a workspace-relative path, never as an absolute host path
     # (Requirement 16 AC11).
     assert facts["deterministic_reports"] == [report]

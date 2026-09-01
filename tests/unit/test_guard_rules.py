@@ -80,6 +80,7 @@ EXPECTED_GUARD_FILES = [
     "logging/cloudtrail_enabled.guard",
     "logging/logs_retention_set.guard",
     "logging/s3_access_logging.guard",
+    "logging/vpc_dns_hostnames.guard",
     "logging/vpc_flow_logs.guard",
     "public-access/alb_https_only.guard",
     "public-access/cloudfront_https.guard",
@@ -139,6 +140,7 @@ NORMALIZED_CATEGORY_OVERRIDES = {
     "lambda_timeout": "Availability",
     "asg_multi_az": "Availability",
     "ec2_ebs_optimized": "Availability",
+    "vpc_dns_hostnames": "NetworkSecurity",
 }
 
 # cfn-guard reports an unparseable rule file on stderr and exits 5. Both signals

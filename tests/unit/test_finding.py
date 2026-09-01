@@ -626,7 +626,7 @@ def test_orderings_hold_the_documented_ranks() -> None:
         "BestPractice": 1,
         "Informational": 0,
     }
-    assert fmod.SOURCE_ORDER == {"cfn-lint": 0, "cfn-guard": 1, "IAM Review": 2, "Agent Review": 3}
+    assert fmod.SOURCE_ORDER == {"cfn-lint": 0, "cfn-guard": 1, "IAM Review": 2, "Network Review": 3, "Agent Review": 4}
 
 
 def test_design_pseudocode_names_alias_the_same_objects() -> None:

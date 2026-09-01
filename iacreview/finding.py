@@ -151,7 +151,7 @@ CONFIDENCES: Tuple[str, ...] = ("Confirmed", "Likely", "Contextual")
 #: ``Source`` lists and ``Evidence`` lists are sorted by. Deterministic Sources
 #: come before ``Agent Review`` so that merge rules preferring "the first
 #: Source" prefer deterministic wording over agent wording.
-SOURCES: Tuple[str, ...] = ("cfn-lint", "cfn-guard", "IAM Review", "Agent Review")
+SOURCES: Tuple[str, ...] = ("cfn-lint", "cfn-guard", "IAM Review", "Network Review", "Agent Review")
 
 # ---------------------------------------------------------------------------
 # Orderings (single definition site; see module docstring)

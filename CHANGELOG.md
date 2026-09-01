@@ -46,6 +46,38 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.4.0] - 2026-09-01
+
+### Added
+
+- **Network Review, a fourth deterministic Source** (`iacreview/netgraph.py`).
+  It reasons about relationships between resources -- gateway attachment,
+  default routes, reachability, orphaned resources -- which single-resource
+  cfn-guard rules cannot express. Every finding is `Confidence: Confirmed`.
+- **Resource relationship graph engine**: builds a Ref / Fn::GetAtt / DependsOn
+  edge graph from the parsed template (pseudo-parameters excluded), used by the
+  network detectors.
+- **Four network detectors**: `igw_not_attached` (an Internet Gateway with no
+  VPCGatewayAttachment), `route_table_no_default_route` (a route table with no
+  0.0.0.0/0 route when an IGW exists), `rds_reachable_from_internet` (a public
+  RDS instance behind an internet path), and `orphaned_route_table` (a route
+  table nothing associates or references).
+- **`vpc_dns_hostnames` cfn-guard rule** (36 bundled rules total): a VPC without
+  EnableDnsHostnames.
+- Network Review is computed in process by `extract_facts.py`, so its findings
+  join `deterministic_findings_summary` and the Agent does not restate them.
+
+### Changed
+
+- `iacreview.finding.SOURCES` gains `"Network Review"` (rank 3, before
+  `Agent Review`). The Source enum in `docs/finding-schema.md` and
+  `benchmark/ground_truth.schema.json` were updated together.
+- `iac-review --sources` accepts `Network Review` and the alias
+  `network-review`.
+- These issues -- unattached IGW, missing default route -- were previously only
+  reachable through Agent reasoning (v0.3.0); they are now detected
+  deterministically.
+
 ## [0.3.0] - 2026-09-01
 
 ### Added
@@ -164,7 +196,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.4.0
 [0.3.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.1.0

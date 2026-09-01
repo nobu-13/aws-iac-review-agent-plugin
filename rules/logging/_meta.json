@@ -33,6 +33,13 @@
       "finding_type": "Security",
       "why_it_matters": "Without VPC Flow Logs, there is no record of network traffic patterns for security analysis.",
       "recommendation": "Add an AWS::EC2::FlowLog resource attached to the VPC."
+    },
+    "vpc_dns_hostnames": {
+      "severity": "MEDIUM",
+      "normalized_category": "NetworkSecurity",
+      "finding_type": "BestPractice",
+      "why_it_matters": "Without DNS hostnames, RDS and other resources in the VPC do not receive resolvable endpoints, breaking GetAtt references to them.",
+      "recommendation": "Set EnableDnsHostnames to true on the VPC."
     }
   }
 }

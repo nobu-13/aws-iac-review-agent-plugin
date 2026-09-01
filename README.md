@@ -22,8 +22,9 @@ What it does today:
 | Capability | How |
 | --- | --- |
 | CloudFormation syntax and resource property review | cfn-lint, results normalized into the plugin's Finding schema |
-| Organizational policy review | cfn-guard against 11 bundled `.guard` rules covering encryption, public access, logging, tagging, IAM and backup |
-| Deterministic IAM review | 15 detectors over wildcard permissions, privilege escalation actions, unrestricted `iam:PassRole` and `sts:AssumeRole`, missing confused-deputy conditions, cross-account and wildcard principals |
+| Organizational policy review | cfn-guard against 36 bundled `.guard` rules covering encryption, public access, logging, tagging, IAM, backup, availability and data protection |
+| Deterministic IAM review | 15 active detectors over wildcard permissions, privilege escalation actions, unrestricted `iam:PassRole` and `sts:AssumeRole`, missing confused-deputy conditions, cross-account and wildcard principals |
+| Deterministic network review | Resource-graph analysis over gateway attachment, default routes, internet reachability and orphaned network resources |
 | Agent semantic review | Two Skills (`cloudformation-review`, `iam-review` layer 2) reason over deterministically extracted facts and produce findings the pipeline validates and merges |
 | One normalized report | Every finding carries the same 13 fields, one of 11 categories, and the sources that detected it. Equivalent findings merge. IDs are assigned deterministically |
 | Reviewing synthesized CDK output | Templates under `cdk.out/` are reviewed as a separate group. `cdk synth` runs only behind an explicit flag |
@@ -62,7 +63,7 @@ decision, including the three things an agent structurally cannot do.
 
 ```text
 IaC (untrusted)
- -> deterministic checks: cfn-lint, cfn-guard, IAM detectors
+ -> deterministic checks: cfn-lint, cfn-guard, IAM detectors, network graph analysis
  -> agent semantic review: IAM context, security, architecture, best practices
  -> Finding normalization
  -> deduplication and merge
@@ -87,7 +88,7 @@ Repository layout:
 plugin.json          the Agent Plugins 1.0.0 manifest
 skills/              five Skills, each with SKILL.md and scripts/
 iacreview/           the shared deterministic library (imported, never installed)
-rules/               35 cfn-guard rules in 6 category directories
+rules/               36 cfn-guard rules in 6 category directories
 benchmark/           12 measured cases, ground truth, and the harness
 examples/            small templates that are meant to pass review
 tests/               unit, integration, negative, regression and property tests
@@ -310,7 +311,7 @@ closed set of 11. The authoritative list is the `categories` array of
 the internet (`0.0.0.0/0`) or from all AWS accounts (`Principal: "*"`) is
 `PublicAccess`; every other network boundary concern is `NetworkSecurity`.
 
-The bundled cfn-guard rules, 35 files in 6 directories:
+The bundled cfn-guard rules, 36 files in 6 directories:
 
 ```text
 rules/
@@ -320,7 +321,7 @@ rules/
                   elasticache_encryption, efs_encryption
   iam/            iam_policy_no_star_star
   logging/        s3_access_logging, cloudtrail_enabled, logs_retention_set,
-                  alb_access_logging, vpc_flow_logs
+                  alb_access_logging, vpc_flow_logs, vpc_dns_hostnames
   public-access/  s3_public_access_block, security_group_open_ingress,
                   rds_publicly_accessible, ec2_imdsv2_required,
                   alb_https_only, cloudfront_https
@@ -401,12 +402,12 @@ defines what each number means and how far it generalizes.
 
 | What | How |
 | --- | --- |
-| Test suite | `python3 -m pytest`, over 3300 tests, zero failures |
-| Unit | 34 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes |
-| Integration | 13 files running the six entry points as real subprocesses over real templates, including 133 malformed-input cases |
+| Test suite | `python3 -m pytest`, over 3900 tests, zero failures |
+| Unit | 40 files over the deterministic modules: parsing, normalization, severity mapping, dedup, path validation, exit codes, network graph analysis |
+| Integration | 14 files running the seven entry points as real subprocesses over real templates, including 133 malformed-input cases |
 | Negative | Clean templates produce no false positive of the counted classes |
-| Regression | 9 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors |
-| Property | 15 files stating 31 named properties with `hypothesis`, including path containment against an independent oracle and an AST scan proving `iacreview.proc` is the only process-spawning path in the shipped code |
+| Regression | 8 files pinning security behaviours and previously found defects: path traversal, malformed YAML and JSON, shell-metacharacter filenames, missing external tool, invalid arguments, symlink cycles, no host path in errors |
+| Property | 13 files stating 31 named properties with `hypothesis`, including path containment against an independent oracle and an AST scan proving `iacreview.proc` is the only process-spawning path in the shipped code |
 | Coverage | `python3 -m pytest --cov=iacreview --cov=benchmark/harness --cov-fail-under=80` |
 | Benchmark | `python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined`, all categories `PASS` |
 
@@ -529,7 +530,7 @@ reason is in the document named beside it.
 **Coverage**
 
 - **The bundled cfn-guard rules only inspect the resource types they name.** The
-  35 rules cover S3, RDS, IAM, CloudTrail, Security Group, Lambda, DynamoDB, SQS, SNS, EFS, Kinesis, Redshift, ElastiCache, ALB, CloudFront, ASG and EC2
+  36 rules cover S3, RDS, IAM, CloudTrail, Security Group, Lambda, DynamoDB, SQS, SNS, EFS, Kinesis, Redshift, ElastiCache, ALB, CloudFront, ASG, EC2 and VPC
   configurations. A resource type no rule mentions produces no cfn-guard finding,
   which is not evidence that it is well configured. Add your own rules with
   `--rules-dir`.
@@ -572,7 +573,7 @@ dashes in the original are written as `--` here to keep this file ASCII.
   Only 7 of the 66 `Warning` and `Informational` rules are marked, so a
   security-relevant condition that cfn-lint reports under a rule not on the list
   appears as `BestPractice` or `Informational` rather than `Security`. The
-  cfn-guard, IAM Review, and Agent Review Sources cover security conditions
+  cfn-guard, IAM Review, Network Review, and Agent Review Sources cover security conditions
   independently of this list.
 - The survey covers the cfn-lint **1.46.0** catalogue. A rule added by a newer
   cfn-lint is classified from its level and never as `Security`.
