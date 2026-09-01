@@ -29,8 +29,34 @@ the host agent runtime does, and only if you put a configuration in front of
 it. Adding a server therefore cannot make a review faster or more accurate on
 its own; it adds a capability the agent may use while reasoning.
 
-MCP enhancement is a v0.2 candidate in this project's plan. In v0.1 it is
-entirely yours to configure, and the default posture is no server at all.
+MCP enhancement is a roadmap candidate in this project's plan. It is entirely
+yours to configure, and the default posture is no server at all.
+
+## Optional: MCP for Agent Review (v0.3.0)
+
+v0.3.0 added `skills/cloudformation-review/scripts/build_prompt.py`, which turns
+a template's deterministic facts into a structured review prompt. That prompt is
+the natural payload for an MCP server that reaches a language model: the server
+sends the prompt, the model returns findings, and those findings are fed back
+through `iac-review --agent-findings`.
+
+The plugin does not ship such a server and does not open the connection. The
+division of labour is deliberate:
+
+| Step | Who does it | MCP involved |
+| --- | --- | --- |
+| Extract deterministic facts | `extract_facts.py` (plugin) | No |
+| Build the review prompt | `build_prompt.py` (plugin) | No |
+| Send the prompt to a model | host agent, or an MCP server you configure | Optional |
+| Validate and merge the findings | `iac-review` (plugin) | No |
+
+Because the prompt is a deterministic function of the facts, the two model-free
+steps are reproducible regardless of whether a model is ever called. If you
+configure an MCP server for the reasoning step, record it below like any other
+server: what it sends externally is the prompt, which embeds the template facts,
+so a template's resource names and property values leave your environment the
+moment that call is made. Treat that as data sent externally and decide
+accordingly.
 
 ## Before You Add a Server
 

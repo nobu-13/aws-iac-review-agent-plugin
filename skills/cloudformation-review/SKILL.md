@@ -127,6 +127,31 @@ functions in their long form (`{"Ref": "X"}`), so nothing has to be inferred
 from YAML shorthand. You may still open the template file to quote exact lines
 for `Evidence[].Excerpt`.
 
+### Building a review prompt (v0.3.0)
+
+`build_prompt.py` wraps the facts in a structured review prompt so the reasoning
+step has the scope, the output contract, and a checklist of design-level leads
+in one place. It runs no model and makes no network call; the prompt is a
+deterministic function of the facts.
+
+```bash
+# From a template, extracting facts in process:
+python3 skills/cloudformation-review/scripts/build_prompt.py --target templates/app.yaml
+
+# Or from a facts file produced earlier:
+python3 skills/cloudformation-review/scripts/extract_facts.py --target templates/app.yaml > facts.json
+python3 skills/cloudformation-review/scripts/build_prompt.py --facts facts.json
+```
+
+It writes one JSON object: `prompt` (the review instructions plus the embedded
+facts), `checklist` (design-level questions derived from the facts, such as an
+Internet Gateway with no attachment, a stateful resource that may sit in one
+Availability Zone, or a parameter nothing references), and `schema_version`.
+
+The prompt is what a host Agent reads directly, and it is also the payload an
+optional MCP server would send to a model. The plugin never opens that
+connection itself; `docs/mcp/README.md` describes the optional integration.
+
 ### The facts JSON
 
 Top-level keys, always all of them:

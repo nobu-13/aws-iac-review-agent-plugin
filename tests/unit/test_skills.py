@@ -172,7 +172,7 @@ ADVERTISED_ENTRY_POINTS: Dict[str, Tuple[str, ...]] = {
     "cfn-lint-review": ("scripts/run_cfn_lint.py",),
     "cfn-guard-review": ("scripts/run_cfn_guard.py",),
     "iam-review": ("scripts/extract_policies.py", "scripts/run_iam_scan.py"),
-    "cloudformation-review": ("scripts/extract_facts.py",),
+    "cloudformation-review": ("scripts/build_prompt.py", "scripts/extract_facts.py"),
     "iac-review": ("scripts/run_iac_review.py",),
 }
 

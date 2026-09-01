@@ -46,6 +46,36 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [0.3.0] - 2026-09-01
+
+### Added
+
+- **Agent review prompt builder** (`iacreview/agentprompt.py`): turns a
+  template's deterministic facts into a structured review prompt. It calls no
+  model and makes no network request; the prompt is a deterministic function of
+  the facts.
+- **`build_prompt.py`** entry point in the `cloudformation-review` Skill. It
+  accepts either `--target` (extract facts in process) or `--facts` (read a
+  facts file produced by `extract_facts.py`) and emits one JSON object with the
+  prompt, a design-level checklist, and a schema version.
+- **Design-level checklist**: the prompt builder surfaces leads no deterministic
+  rule expresses -- an Internet Gateway with no attachment, a missing default
+  route, a stateful resource that may sit in a single Availability Zone, an
+  unused parameter, and a condition whose logic may not match its name.
+- **MCP Agent-review documentation**: `docs/mcp/README.md` now describes the
+  optional path where an MCP server sends the built prompt to a model. The
+  plugin still opens no connection itself.
+
+### Changed
+
+- `iacreview/__init__.py` version aligned to the manifest (was left at 0.1.0).
+- `skills/cloudformation-review/SKILL.md` documents the new `build_prompt.py`
+  input path.
+- MCP remains optional and is never a required dependency: the two model-free
+  steps (extracting facts and building the prompt) stay reproducible whether or
+  not a model is ever called.
+
+
 ## [0.2.0] - 2026-08-28
 
 ### Added
@@ -134,6 +164,7 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.2.0
 [0.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.1.0

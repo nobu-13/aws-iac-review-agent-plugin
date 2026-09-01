@@ -227,6 +227,13 @@ python3 skills/cloudformation-review/scripts/extract_facts.py --target examples/
 python3 skills/iam-review/scripts/extract_policies.py --target examples/lambda-with-role/template.yaml
 ```
 
+A structured review prompt built from those facts, ready for a host agent or an
+optional MCP-connected model to reason over:
+
+```sh
+python3 skills/cloudformation-review/scripts/build_prompt.py --target examples/minimal-s3/template.yaml
+```
+
 Merging findings an agent produced back into the report:
 
 ```sh

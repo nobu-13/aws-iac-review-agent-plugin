@@ -222,6 +222,13 @@ python3 skills/cloudformation-review/scripts/extract_facts.py --target examples/
 python3 skills/iam-review/scripts/extract_policies.py --target examples/lambda-with-role/template.yaml
 ```
 
+抽出した事実から構造化レビュープロンプトを生成する。host agent または任意の MCP 接続
+モデルがこれを読んで推論する。
+
+```sh
+python3 skills/cloudformation-review/scripts/build_prompt.py --target examples/minimal-s3/template.yaml
+```
+
 Agent が生成した Finding をレポートへ統合する。
 
 ```sh
