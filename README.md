@@ -665,7 +665,8 @@ dashes in the original are written as `--` here to keep this file ASCII.
 ## Roadmap
 
 Planned, not implemented, and not available today. Nothing in the sections above
-depends on any of it.
+depends on any of it. Items are grouped by the release they are targeted at;
+targets are intentions, not commitments, and may move between releases.
 
 **Delivered in v0.8.0.** The security-hardening and measurement items this
 section listed at v0.1 have since shipped: input size limits and a YAML
@@ -676,29 +677,20 @@ agent variation (`--agent-runs`), the Remediation Accuracy and Human
 Intervention Count diagnostics, and the `agent-only` and `human-review` modes.
 See CHANGELOG.md and `docs/security-model.md`.
 
-**Additional IaC and analysis**
+### v0.9.0 -- security hardening and measurement (remaining)
 
-- Terraform support.
-- Pulumi support.
-- Runtime security analysis.
-- FinOps analysis.
-- A full Well-Architected review.
-- A web UI.
-
-Automatic deployment and automatic remediation are permanent non-goals rather
-than roadmap items: this plugin reports, and does not act.
-
-**Security hardening (remaining)**
+Security hardening:
 
 - Extending `stderr_head` redaction beyond absolute host paths to process
   identifiers and timestamps a tool may print, which the plugin cannot yet
   recognize reliably (`docs/security-model.md`, R-4).
-- The residual risks that remain by design rather than by omission: containment
-  is not a child-process sandbox (R-1), `cdk synth` runs unsandboxed (R-5),
-  `SIGKILL` can leave a temporary file for the OS sweeper (R-6), and redaction is
-  not secret detection (R-7).
+- Addressing, or documenting the final position on, the residual risks that
+  remain by design rather than by omission: containment is not a child-process
+  sandbox (R-1), `cdk synth` runs unsandboxed (R-5), `SIGKILL` can leave a
+  temporary file for the OS sweeper (R-6), and redaction is not secret detection
+  (R-7).
 
-**Measurement (remaining)**
+Measurement:
 
 - Folding Review Time into a form the summary can carry, or a second output
   stream for it. It is measured on stderr today because a wall-clock figure
@@ -712,7 +704,19 @@ than roadmap items: this plugin reports, and does not act.
   Intervention Count diagnostics report a value rather than `N/A`
   (`docs/benchmark-methodology.md`).
 
-**Packaging and experience**
+### v0.10.0 -- additional IaC and analysis
+
+- Terraform support.
+- Pulumi support.
+- Runtime security analysis.
+- FinOps analysis.
+- A full Well-Architected review.
+- A web UI.
+
+Automatic deployment and automatic remediation are permanent non-goals rather
+than roadmap items: this plugin reports, and does not act.
+
+### v1.0.0 -- packaging and experience
 
 - Verifying the Kiro Power load with a real installation, which is what
   Requirement 10 AC7 still owes.

@@ -604,20 +604,9 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 
 ## Roadmap
 
-計画であって実装ではなく、v0.1 では利用できない。上記のどの節も以下のいずれにも依存して
-いない。
-
-**IaC と分析の追加**
-
-- Terraform 対応。
-- Pulumi 対応。
-- Runtime security 分析。
-- FinOps 分析。
-- 完全な Well-Architected review。
-- Web UI。
-
-自動 deploy と自動 remediation は roadmap 項目ではなく恒久的な非目標である。この plugin は
-報告し、行動しない。
+計画であって実装ではなく、現時点では利用できない。上記のどの節も以下のいずれにも依存して
+いない。項目は目標とするリリースごとにまとめている。目標は意図であって確約ではなく、
+リリース間で移動しうる。
 
 **v0.8.0 で提供済み。** 本節が v0.1 時点で挙げていた security 強化と測定の項目は既に出荷
 された。入力サイズ上限と YAML alias 展開の予算 (R-8)、descriptor ベースの TOCTOU 安全な
@@ -626,16 +615,18 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 (`--agent-runs`)、Remediation Accuracy と Human Intervention Count の診断、`agent-only` と
 `human-review` モード。詳細は CHANGELOG.md と `docs/security-model.md` を参照。
 
-**Security 強化 (残り)**
+### v0.9.0 -- security 強化と測定 (残り)
+
+Security 強化:
 
 - `stderr_head` の redaction を絶対 host path 以外へ拡張すること。ツールが出力しうる
   process identifier や timestamp は、plugin がまだ確実に認識できない
   (`docs/security-model.md`、R-4)。
-- 設計上残る residual risk: containment は子プロセスの sandbox ではない (R-1)、`cdk synth`
-  は非 sandbox 実行 (R-5)、`SIGKILL` は一時ファイルを OS の sweeper に委ねる (R-6)、
-  redaction は secret 検出ではない (R-7)。
+- 設計上残る residual risk への対応、または最終的な方針の文書化: containment は子プロセスの
+  sandbox ではない (R-1)、`cdk synth` は非 sandbox 実行 (R-5)、`SIGKILL` は一時ファイルを
+  OS の sweeper に委ねる (R-6)、redaction は secret 検出ではない (R-7)。
 
-**測定 (残り)**
+測定:
 
 - Review Time を summary が持てる形にまとめるか、別の出力ストリームを用意すること。
   wall-clock 値は byte-identical な summary に入れられないため、現在は stderr で報告して
@@ -647,7 +638,19 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   Remediation Accuracy と Human Intervention Count の診断が `N/A` ではなく値を報告するように
   すること (`docs/benchmark-methodology.md`)。
 
-**パッケージングと体験**
+### v0.10.0 -- IaC と分析の追加
+
+- Terraform 対応。
+- Pulumi 対応。
+- Runtime security 分析。
+- FinOps 分析。
+- 完全な Well-Architected review。
+- Web UI。
+
+自動 deploy と自動 remediation は roadmap 項目ではなく恒久的な非目標である。この plugin は
+報告し、行動しない。
+
+### v1.0.0 -- パッケージングと体験
 
 - 実際の installation で Kiro Power の読み込みを検証すること。Requirement 10 AC7 が残して
   いる課題である。
