@@ -2,24 +2,19 @@
 name: iac-review
 description: >-
   Reviews CloudFormation templates, or a whole directory of them, with every
-  available source at once: cfn-lint for syntax and resource property
-  correctness, cfn-guard for the bundled policy rules covering encryption,
-  public access, logging, tagging, IAM and backup, and the deterministic IAM
-  detectors for wildcard permissions, privilege escalation patterns and
-  cross-account principals. It merges equivalent findings from those sources,
-  folds in findings produced by agent reasoning when they are supplied as a
-  file, and emits one normalized Review_Report with sequential IDs, per-source
-  attribution and a summary. Use this skill when the user asks for a review,
-  audit, security check or quality check of a CloudFormation template or a
-  directory of infrastructure as code, when synthesized CDK output under
-  cdk.out has to be reviewed, or whenever the request does not name a single
-  narrow concern. Do not use this skill when the user asks for exactly one of
-  those concerns and wants nothing else: cfn-lint-review, cfn-guard-review and
-  iam-review each answer their own question with a smaller report, and
-  cloudformation-review carries the design review guidance. This skill requires
-  Python 3.9 or newer; cfn-lint and cfn-guard are optional external runtime
-  dependencies, and the review continues with the remaining sources when either
-  is missing.
+  source at once: cfn-lint for syntax and resource properties, cfn-guard for
+  the bundled policy rules (encryption, public access, logging, tagging, IAM,
+  backup), and the IAM detectors for wildcard permissions, privilege
+  escalation, and cross-account principals. It merges equivalent findings,
+  folds in agent-reasoning findings supplied as a file, and emits one
+  normalized Review_Report with sequential IDs, per-source attribution, and a
+  summary. Use it to review, audit, or quality-check a template or an IaC
+  directory, when synthesized CDK output under cdk.out must be reviewed, or
+  whenever the request names no single narrow concern. Do
+  not use it for exactly one concern: cfn-lint-review, cfn-guard-review, and
+  iam-review each give a smaller report, and cloudformation-review carries the
+  design review. Requires Python 3.9+; cfn-lint and cfn-guard are optional, and
+  the review continues with the remaining sources when one is missing.
 ---
 
 # IaC Review

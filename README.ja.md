@@ -186,9 +186,11 @@ Power の読み込みが何に依存するか、この repository のどのフ�
 **[`docs/kiro-power.md`](docs/kiro-power.md)** に記載している。
 
 > **Status.** Power の読み込みが前提とする構造的条件は検証済みで、テストで固定されている。
-> 実際の Kiro installation にこのパッケージを読み込ませ、5 つの Skill が host agent に
-> 届くことを観測する作業は**行っていない**ため、install 手順は記載していない。Known
-> Limitations に記録している。
+> Kiro Power としての読み込みは一度試行した。Kiro はパッケージを読み込んだが、5 つの Skill
+> のうち 3 つが `SKILL.md` の `description` が Agent Skills の 1024 文字上限を超えていたため
+> 除外された。この不具合は修正済みでテストで防いでいるが、修正後に 5 つすべての Skill が
+> 読み込まれることの再観測は**まだ行っていない**。`docs/kiro-power.md` に実行結果と修正を
+> 記録しており、Known Limitations で残る再確認を追跡している。
 
 Kiro 固有の開発用ファイル (`.kiro/steering/`、`.kiro/specs/`) は plugin の実行には不要で
 ある。`skills/`、`iacreview/`、`rules/`、`benchmark/` 配下のいずれのファイルも `.kiro/`
@@ -527,12 +529,13 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   見るだけで、テンプレートの外側は一切参照しない。AWS account へ接続しないため、
   account レベルの設定、account 側にだけ存在する role、`Ref` / `Fn::GetAtt` /
   `Fn::ImportValue` が deploy 時に解決する値は、どの source からも見えない。
-- **Kiro での Power 読み込みは未検証である。** Power の読み込みが前提とする構造的条件は
-  機械的に検証されテストで固定されているが、実際の Kiro installation にこのパッケージを
-  読み込ませておらず、host agent が 5 つの Skill を列挙する様子も観測していない。Kiro で
-  Skill が discoverable であるという主張は観測ではなく構造的な議論に基づく。だから
-  `docs/kiro-power.md` は install 手順を記載していない。Requirement 10 AC7 は一部未達の
-  ままである。
+- **Kiro での Power 読み込みは一部のみ検証済みである。** Kiro Power としての読み込みを一度
+  試行し、実際の不具合を発見した。5 つの Skill のうち 3 つが `SKILL.md` の `description` が
+  Agent Skills の 1024 文字上限を超えていたため除外された。この不具合は修正済みで、上限超過
+  でテストが失敗するよう回帰テストを追加したが、修正後に 5 つすべての Skill が host agent に
+  届くことは再観測していない。したがって end-to-end の読み込みは構造的な議論と 1 回の部分的な
+  実行に基づいており、clean な観測には基づいていない。`docs/kiro-power.md` に実行結果・修正・
+  残る再確認を記録している。Requirement 10 AC7 は一部未達のままである。
 
 **Severity と FindingType の保守性**
 
@@ -648,8 +651,9 @@ R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として�
 
 ### v1.0.0 以降 -- パッケージングと体験 (一部未了)
 
-- 実際の installation で Kiro Power の読み込みを検証し結果を記録すること (手順は v1.0.0 で
-  出荷済み、実行は Kiro を持つ human に owed)。
+- v1.0.0 の description 修正後に Kiro Power の読み込みを再検証し、5 つすべての Skill が
+  host agent に届くことを記録すること (最初の実行では 2/5 しか読み込まれず、description の
+  上限超過という不具合を発見・修正済み。手順と最初の実行結果は `docs/kiro-power.md` にある)。
 - stated かつ checkable なユースケースが出た時点で具体的な MCP server を実装すること。MCP は
   opt-in のままで、中核のレビュー flow の依存にはならない。
 - v1.0.0 で追加した `target.cdk.synthesis` の可視化を超える CDK ソースレビュー体験の改善。
