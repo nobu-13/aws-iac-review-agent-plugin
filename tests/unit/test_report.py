@@ -547,7 +547,11 @@ def test_the_report_carries_exactly_the_schema_keys() -> None:
 
     assert tuple(sorted(report)) == tuple(sorted(REPORT_KEYS))
     assert sorted(report["target"]) == ["cdk", "files"]
-    assert sorted(report["target"]["cdk"]) == ["detected", "synthesized_templates"]
+    assert sorted(report["target"]["cdk"]) == [
+        "detected",
+        "synthesis",
+        "synthesized_templates",
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -672,13 +676,32 @@ def test_a_duplicated_tool_entry_is_refused() -> None:
 
 def test_cdk_detection_is_reported_with_its_synthesized_templates() -> None:
     report = report_of(
-        [], cdk_detected=True, synthesized_templates=(SYNTHESIZED_FILE,)
+        [],
+        cdk_detected=True,
+        synthesized_templates=(SYNTHESIZED_FILE,),
+        cdk_synthesis="ran",
     )
 
     assert report["target"]["cdk"] == {
         "detected": True,
+        "synthesis": "ran",
         "synthesized_templates": [SYNTHESIZED_FILE],
     }
+
+
+def test_cdk_synthesis_defaults_to_not_applicable() -> None:
+    # A review with no CDK project involved: the default outcome, so a consumer
+    # sees the field on every report (Requirement 23 AC1).
+    report = report_of([])
+
+    assert report["target"]["cdk"]["synthesis"] == "not_applicable"
+
+
+def test_cdk_synthesis_rejects_a_value_outside_the_closed_set() -> None:
+    # Requirement 23 AC1: the field is a closed set. An out-of-set value is a
+    # schema violation at the output boundary rather than a silent passthrough.
+    with pytest.raises(SchemaViolationError):
+        report_of([], cdk_synthesis="maybe")
 
 
 def test_errors_are_copied_rather_than_aliased() -> None:

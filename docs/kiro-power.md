@@ -116,6 +116,61 @@ comparable to the checks above:
 If point 3 turns out to be false, the change belongs under an `extensions`
 namespace as described below, and this document should record what was needed.
 
+## Verification procedure and result record
+
+This section makes the owed verification (Requirement 10 AC7) a repeatable
+procedure with a place to record its outcome. It does not claim the verification
+has been done: until someone runs the steps and fills in the record below, the
+[Status](#using-this-plugin-as-a-kiro-power) note and README Known Limitations
+stand, and the in-Kiro load remains unverified.
+
+### Procedure
+
+Kiro's own documentation is the authoritative and current source for the
+client-specific steps, so they are linked rather than restated (a copied
+procedure goes stale). Perform them in this order:
+
+1. **Obtain the package directory.** Use this repository's root as-is: it is the
+   package root, with `plugin.json` beside `skills/`, `iacreview/` and `rules/`.
+   No build step and no rearrangement is needed.
+2. **Install it as a Power from that local directory**, following
+   [Install powers](https://kiro.dev/docs/powers/installation/). Do not copy any
+   `mcp.json` into the root for this run; the load under test is the shipped
+   package.
+3. **Observe the Skills the host agent enumerates.** Confirm that all five --
+   `cfn-lint-review`, `cfn-guard-review`, `iam-review`, `cloudformation-review`,
+   `iac-review` -- are present, not a subset.
+4. **Run one Skill's entry point through the agent** (for example an
+   `iac-review` over `examples/minimal-s3/template.yaml`) and confirm it produces
+   a Review_Report, which shows the `parents[3]` path bootstrap resolved the
+   package root from wherever the Power was installed.
+5. **Note whether anything had to be added to the package** to make steps 3 and 4
+   succeed. If nothing did, the portable core loaded unchanged; if something did,
+   it belongs under a `dev.kiro` `extensions` namespace (see below) and the
+   addition is what this record should capture.
+
+The record is complete only when the exact Kiro version is noted, because a load
+that worked on one version is evidence about that version, not about Kiro in
+general.
+
+### Result record
+
+Copy this table into a verification run's notes, or into a fork of this file, and
+fill it in. An unfilled row means the verification has not been performed; a
+filled one is evidence for the Kiro version it names and no other.
+
+| Item | Result |
+| --- | --- |
+| Kiro version | |
+| Date performed | |
+| Skills observed | (list which of the five reached the host agent) |
+| A Skill entry point ran and produced a report | (yes / no; which Skill) |
+| Anything added to the package | (nothing / describe the `dev.kiro` extension needed) |
+| Outcome | (verified / not verified, and why) |
+
+Until a row of this table is filled in from a real run, this document states no
+result and the load stays recorded as unverified.
+
 ## The Kiro-specific files in this repository
 
 | Path | What it is | Needed to load the plugin |

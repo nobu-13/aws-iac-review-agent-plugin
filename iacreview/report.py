@@ -127,6 +127,10 @@ __all__ = [
     "REPORT_KEYS",
     "SUMMARY_KEYS",
     "TOOL_KEYS",
+    "CDK_SYNTHESIS_NOT_APPLICABLE",
+    "CDK_SYNTHESIS_SKIPPED_UNCONFIRMED",
+    "CDK_SYNTHESIS_RAN",
+    "CDK_SYNTHESIS_OUTCOMES",
     "ToolStatus",
     "ReportMeta",
     "normalize_output_path",
@@ -182,6 +186,30 @@ SUMMARY_KEYS: Tuple[str, ...] = (
 
 #: Keys of one entry of ``tools``.
 TOOL_KEYS: Tuple[str, ...] = ("name", "available", "version")
+
+#: ``target.cdk.synthesis`` value when the target held no ``cdk.json``: there was
+#: no CDK source to synthesize (Requirement 23 AC1).
+CDK_SYNTHESIS_NOT_APPLICABLE = "not_applicable"
+
+#: ``target.cdk.synthesis`` value when a CDK project was found but ``cdk synth``
+#: was not run because ``--confirm-cdk-synth`` was absent (Requirement 8 AC5,
+#: Requirement 23 AC1/AC5). Only already-synthesized templates, if any, were
+#: reviewed; an empty finding set here is a skipped synthesis, not a clean
+#: review.
+CDK_SYNTHESIS_SKIPPED_UNCONFIRMED = "skipped_unconfirmed"
+
+#: ``target.cdk.synthesis`` value when ``cdk synth`` ran (and succeeded, since a
+#: failed synth aborts the review rather than falling back, Requirement 8 AC7).
+CDK_SYNTHESIS_RAN = "ran"
+
+#: The closed set of ``target.cdk.synthesis`` values, so a consumer may switch on
+#: them. The value is a deterministic function of the target layout and the
+#: confirmation flag (Requirement 23 AC3): no wall-clock, no host path.
+CDK_SYNTHESIS_OUTCOMES: Tuple[str, ...] = (
+    CDK_SYNTHESIS_NOT_APPLICABLE,
+    CDK_SYNTHESIS_SKIPPED_UNCONFIRMED,
+    CDK_SYNTHESIS_RAN,
+)
 
 # design.md pseudocode name for the Severity ranking. The same object as the
 # definition in :mod:`iacreview.finding`, so merge order and report order cannot
@@ -243,7 +271,17 @@ class ReportMeta:
         synthesized_templates: Templates reviewed from the CDK output directory,
             as workspace-relative paths. Kept separate from ``files`` because
             Requirement 8 AC10 asks for the two groups to be reported separately;
-            the same split drives ``summary.by_template_group``.
+            the same split drives ``summary.by_template_group``. Its length is
+            the count of synthesized templates reviewed (Requirement 23 AC2).
+        cdk_synthesis: The synthesis outcome, one of
+            :data:`CDK_SYNTHESIS_OUTCOMES` (Requirement 23 AC1). It lets a
+            consumer tell "no CDK source" from "CDK source whose synthesis was
+            skipped" from "synthesis ran", so an empty finding set from a skipped
+            synthesis is not read as a clean review (AC5). Defaults to
+            :data:`CDK_SYNTHESIS_NOT_APPLICABLE`, the outcome for the common case
+            of a review with no CDK project involved. It is a deterministic
+            function of the target layout and the confirmation flag (AC3), so it
+            carries no environment-dependent value.
 
     Every field defaults to empty, so a report for a run that produced nothing
     but errors can be built without inventing values.
@@ -254,6 +292,7 @@ class ReportMeta:
     tools: Sequence[ToolStatus] = field(default_factory=tuple)
     cdk_detected: bool = False
     synthesized_templates: Sequence[Union[str, PurePath]] = field(default_factory=tuple)
+    cdk_synthesis: str = CDK_SYNTHESIS_NOT_APPLICABLE
 
 
 # ---------------------------------------------------------------------------
@@ -549,6 +588,13 @@ def build_report(
     synthesized = _normalize_path_list(
         meta.synthesized_templates, "target.cdk.synthesized_templates"
     )
+    if meta.cdk_synthesis not in CDK_SYNTHESIS_OUTCOMES:
+        raise schema_violation(
+            "target.cdk.synthesis",
+            "must be one of {0}, got {1!r}".format(
+                list(CDK_SYNTHESIS_OUTCOMES), meta.cdk_synthesis
+            ),
+        )
 
     return {
         "schema_version": SCHEMA_VERSION,
@@ -556,6 +602,7 @@ def build_report(
             "files": files,
             "cdk": {
                 "detected": bool(meta.cdk_detected),
+                "synthesis": meta.cdk_synthesis,
                 "synthesized_templates": synthesized,
             },
         },

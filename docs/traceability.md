@@ -374,6 +374,34 @@ Per-criterion counts, which `tests/unit/test_traceability.py` enforces:
 | AC5 | The schema permits the new fields, and the existing cases and their contract are unchanged | `tests/unit/test_ground_truth.py` | optional fields; `schema_version` unchanged |
 | AC6 | The `agent-only` findings are a fixed fixture rather than generated during the run | `tests/integration/test_benchmark_harness.py`, `tests/unit/test_ground_truth.py` | `benchmark/agent-findings/` |
 
+## Requirement 23: CDK synthesis legibility (v1.0.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | `target.cdk` carries a closed-set synthesis-outcome field | `tests/unit/test_report.py`, `tests/integration/test_cdk.py` | `not_applicable` / `skipped_unconfirmed` / `ran` |
+| AC2 | A confirmed successful synthesis reports the count of templates reviewed | `tests/integration/test_cdk.py` | the `synthesized_templates` array's length |
+| AC3 | The synthesis-outcome field is deterministic, with no host path or timestamp | `tests/integration/test_cdk.py`, `tests/unit/test_report.py` | derived from layout and the confirm flag |
+| AC4 | The field does not change the `cdk synth` gate or introduce a sandbox | `tests/integration/test_cdk.py`, `tests/property/test_prop_orchestration.py` | Property 25 non-regression |
+| AC5 | A skipped synthesis is distinguishable from a non-CDK target | `tests/integration/test_cdk.py`, `tests/integration/test_skill_iac_review.py` | `skipped_unconfirmed` vs `not_applicable` |
+
+## Requirement 24: Kiro Power verification procedure (v1.0.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | A concrete ordered procedure for loading the Power and observing all five Skills, deferring to Kiro's own docs | `tests/unit/test_docs.py` | `docs/kiro-power.md` verification section |
+| AC2 | A result-recording template capturing Kiro version, Skills observed, and additions needed | `tests/unit/test_docs.py` | `docs/kiro-power.md` result record |
+| AC3 | The document states the load is verified only when a human performs the procedure, and does not describe it as done | `tests/unit/test_docs.py` | Status note retained |
+| AC4 | Known Limitations continues to record the in-Kiro load as unverified | `tests/unit/test_root_docs.py` | README Known Limitations |
+
+## Requirement 25: MCP integration documented, not implemented (v1.0.0)
+
+| AC | Criterion | Verified by | Notes |
+| --- | --- | --- | --- |
+| AC1 | The integration design is described, and the plugin ships no server and opens no connection | `tests/unit/test_docs.py` | `docs/mcp/README.md` |
+| AC2 | MCP stays opt-in, no core capability depends on it, and no `mcp.json` ships in the root | `tests/unit/test_docs.py`, `tests/unit/test_manifest.py` | capability table all "No"; root has no `mcp.json` |
+| AC3 | The agent-to-server security boundary is recorded, including unsandboxed execution and non-applicable credential withholding | `tests/unit/test_docs.py` | boundary table in `docs/mcp/README.md` |
+| AC4 | MCP is not implemented in v1.0.0, and a concrete server requires a stated, checkable use case | `tests/unit/test_docs.py` | "Not implemented in v1.0.0" statement |
+
 ## The 31 correctness properties
 
 Every property in the design's "Correctness Properties" section is implemented

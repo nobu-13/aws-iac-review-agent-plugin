@@ -1003,8 +1003,35 @@ class IacReview:
                 synthesized_templates=[
                     f for f in self.synthesized_files if f in reviewed
                 ],
+                cdk_synthesis=self._cdk_synthesis_outcome(),
             ),
         )
+
+    def _cdk_synthesis_outcome(self) -> str:
+        """Classify what happened to CDK synthesis, for ``target.cdk.synthesis``.
+
+        A deterministic function of the target layout and the confirmation flag
+        (Requirement 23 AC3), derived from state the orchestration already holds
+        rather than from anything timed or environment-dependent:
+
+        - no ``cdk.json`` was seen -> ``not_applicable`` (Requirement 23 AC1);
+        - a CDK project was seen but ``--confirm-cdk-synth`` was absent ->
+          ``skipped_unconfirmed``, so an empty finding set is not misread as a
+          clean review (AC5); no ``cdk`` process was started on this path;
+        - a CDK project was seen and synthesis was confirmed -> ``ran``. Reaching
+          the report at all means synthesis succeeded: a failed ``cdk synth``
+          aborts the review rather than falling back (Requirement 8 AC7), so it
+          never gets here.
+
+        This classifies the outcome; it does not gate synthesis. The gate stays
+        in :func:`iacreview.cdk.synth_if_confirmed`, unchanged (Requirement 23
+        AC4).
+        """
+        if not self.cdk_detected:
+            return report.CDK_SYNTHESIS_NOT_APPLICABLE
+        if not self.confirm_cdk_synth:
+            return report.CDK_SYNTHESIS_SKIPPED_UNCONFIRMED
+        return report.CDK_SYNTHESIS_RAN
 
     def _tool_statuses(self) -> List[report.ToolStatus]:
         """Render the version checks as the report's ``tools`` array.

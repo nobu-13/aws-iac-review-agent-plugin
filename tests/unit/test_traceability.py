@@ -97,11 +97,15 @@ EXPECTED_CRITERION_COUNTS: Dict[int, int] = {
     20: 6,
     21: 5,
     22: 6,
+    # v1.0.0 (maturation: CDK legibility, Kiro Power verification, MCP docs).
+    23: 5,
+    24: 4,
+    25: 4,
 }
 
-#: The v0.1 total (182), plus the 20 criteria of the three v0.8.0 requirements,
-#: plus the 17 criteria of the three v0.9.0 requirements (R20 6, R21 5, R22 6).
-EXPECTED_TOTAL_CRITERIA = 219
+#: The v0.1 total (182), plus 20 for v0.8.0 (R17-R19), plus 17 for v0.9.0
+#: (R20-R22), plus 13 for v1.0.0 (R23 5, R24 4, R25 4).
+EXPECTED_TOTAL_CRITERIA = 232
 
 #: A level-2 heading of ``docs/traceability.md`` that opens a requirement's table.
 REQUIREMENT_HEADING_PATTERN = re.compile(r"^##\s+Requirement\s+(\d+):")

@@ -411,6 +411,8 @@ v0.8.0 は悪意ある入力に対する堅牢化を行った。5 MiB を超え�
 
 v0.9.0 は stderr redaction を host path に加えてラベル付き process identifier と認識可能な timestamp まで広げた (裸の rule id・行番号・version は保持する)。Review Time は `--timing-report` で構造化 JSON として stderr に出力する。residual risk R-1, R-5, R-6, R-7 を確定した方針として整理し、予約配列と診断期待フィールドを埋める benchmark 測定ケースを 2 件追加して、`agent-only` / `human-review` モードと 2 つの診断が宣言された期待値を測るようにした。
 
+v1.0.0 は CDK レビューの結果を report の `target.cdk.synthesis` で可視化し (synth skip を clean なレビューと誤読しないようにする)、負っていた Kiro Power 検証を記録テンプレート付きの再現可能な手順に整備し、MCP を「実装しない opt-in の設計文書」として確定した。`cdk synth` のゲートと非 sandbox の姿勢は不変。
+
 ## Security 上の考慮事項
 
 この plugin は、信頼する理由の無い Infrastructure as Code を処理する。入力テンプレート、
@@ -625,6 +627,13 @@ R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として�
 / `human-review` モードと 2 つの診断が宣言された期待値を測るようにした。詳細は CHANGELOG.md
 と `docs/benchmark-methodology.md` を参照。
 
+**v1.0.0 で提供済み。** CDK レビューの結果を report の `target.cdk.synthesis`
+(`not_applicable` / `skipped_unconfirmed` / `ran`) で可視化し、synth skip を clean な
+レビューと誤読しないようにした。負っていた Kiro Power 検証を、記録テンプレート付きの
+再現可能な手順として `docs/kiro-power.md` に整備した (in-Kiro load は human が実施するまで
+未検証のまま)。MCP は「実装しない opt-in の設計文書」として確定し、stated かつ checkable な
+ユースケースを待つ。`cdk synth` のゲートと非 sandbox の姿勢は不変。
+
 ### v0.10.0 -- IaC と分析の追加
 
 - Terraform 対応。
@@ -637,13 +646,13 @@ R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として�
 自動 deploy と自動 remediation は roadmap 項目ではなく恒久的な非目標である。この plugin は
 報告し、行動しない。
 
-### v1.0.0 -- パッケージングと体験
+### v1.0.0 以降 -- パッケージングと体験 (一部未了)
 
-- 実際の installation で Kiro Power の読み込みを検証すること。Requirement 10 AC7 が残して
-  いる課題である。
-- MCP enhancement。server が plugin にできないことを行う場合に限る。MCP は opt-in の
-  ままで、中核のレビュー flow の依存にはならない。
-- `cdk synth` の後にテンプレートをレビューするより良い CDK ソースレビュー体験。
+- 実際の installation で Kiro Power の読み込みを検証し結果を記録すること (手順は v1.0.0 で
+  出荷済み、実行は Kiro を持つ human に owed)。
+- stated かつ checkable なユースケースが出た時点で具体的な MCP server を実装すること。MCP は
+  opt-in のままで、中核のレビュー flow の依存にはならない。
+- v1.0.0 で追加した `target.cdk.synthesis` の可視化を超える CDK ソースレビュー体験の改善。
 
 ## Contributing
 

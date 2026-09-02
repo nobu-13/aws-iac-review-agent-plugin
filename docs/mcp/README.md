@@ -32,6 +32,16 @@ its own; it adds a capability the agent may use while reasoning.
 MCP enhancement is a roadmap candidate in this project's plan. It is entirely
 yours to configure, and the default posture is no server at all.
 
+**Not implemented in v1.0.0.** v1.0.0 documents the integration design and the
+security boundary but ships no MCP server and opens no connection (Requirement
+25 AC1, AC4). This is a deliberate scope decision, not an omission: the
+project's technical policy adds a dependency only when it does something the
+plugin cannot, and that value has to be stated and checkable rather than assumed
+(see [Before You Add a Server](#before-you-add-a-server)). Implementing a
+concrete server therefore waits on a stated, checkable use case; until one
+exists, the design below is the whole of the MCP work, and every core review
+capability runs without it (Requirement 10 AC4, AC5).
+
 ## Optional: MCP for Agent Review (v0.3.0)
 
 v0.3.0 added `skills/cloudformation-review/scripts/build_prompt.py`, which turns

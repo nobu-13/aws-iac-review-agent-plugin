@@ -273,7 +273,11 @@ def test_all_sources_produce_one_valid_review_report(
     assert report["sources_enabled"] == ["cfn-lint", "cfn-guard", "IAM Review", "Network Review", "Secret Review", "Quality Review"]
     assert report["target"] == {
         "files": ["template.yaml"],
-        "cdk": {"detected": False, "synthesized_templates": []},
+        "cdk": {
+            "detected": False,
+            "synthesis": "not_applicable",
+            "synthesized_templates": [],
+        },
     }
 
     findings = report["findings"]
@@ -551,6 +555,7 @@ def test_directory_target_separates_standalone_and_synthesized_templates(
     assert report["target"]["files"] == ["templates/app.yaml"]
     assert report["target"]["cdk"] == {
         "detected": True,
+        "synthesis": "skipped_unconfirmed",
         "synthesized_templates": ["cdk.out/Stack.template.json"],
     }
     # Both groups reviewed, and every Finding attributable to one of them.
