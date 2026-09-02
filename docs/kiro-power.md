@@ -13,14 +13,16 @@ This document carries the verification, and it is the file the README's
 
 > **Status.** The structural preconditions a Power load depends on are verified
 > mechanically and re-checked by the test suite on every run; the table in
-> [What was verified](#what-was-verified) lists each one. A Kiro Power load has
-> now been attempted once: Kiro loaded the package but dropped three of the five
-> Skills for an out-of-spec `description` field, which
-> [First recorded run](#first-recorded-run) documents along with the fix and the
-> regression test that guards it. That all five Skills reach the host agent after
-> the fix has **not** yet been re-observed, so Requirement 10 AC7 stays partly
-> owed and README Known Limitations (Task 27.1) still records the unverified
-> end-to-end load.
+> [What was verified](#what-was-verified) lists each one. The end-to-end Kiro
+> Power load is now **verified on Kiro 1.0.337**: all five Skills reached the
+> host agent, an `iac-review` entry point ran and produced a Review_Report, and
+> nothing had to be added to the package. A first load had dropped three Skills
+> for an out-of-spec `description`; that defect is fixed, guarded by a regression
+> test, and both runs are recorded in
+> [Verification procedure and result record](#verification-procedure-and-result-record).
+> Requirement 10 AC7 is satisfied for that version. README Known Limitations
+> (Task 27.1) notes the verification is version-specific, since a load observed
+> on one Kiro version is evidence about that version only.
 
 ## The package is portable, and Kiro adds nothing to it
 
@@ -91,24 +93,13 @@ a file rather than a directory and therefore not a discovery candidate.
 Requirement 10 AC8 is satisfied structurally by this shape rather than by
 anything a client does.
 
-## What was not verified
+## The load itself, and what remains version-specific
 
-The load itself. No Kiro installation was driven to install this package as a
-Power, and no host agent was observed enumerating the five Skills. That step
-needs a human with a Kiro installation, and until someone performs it the claim
-"the five Skills are discoverable in Kiro" rests on the structural argument
-above rather than on an observation.
-
-Because of that, this document states no installation steps. Kiro's own
-documentation is the authoritative and current procedure for installing a Power,
-including installing one from a local directory: see
-[Install powers](https://kiro.dev/docs/powers/installation/). Restating steps
-here that this project has not executed would be exactly the sort of claim
-Requirement 13 AC11 forbids, and a procedure copied into a second place is a
-procedure that goes stale.
-
-What a person doing the verification should look for, so the result is
-comparable to the checks above:
+The load was verified on Kiro 1.0.337:
+[Second recorded run](#second-recorded-run-after-the-fix----verified) records it.
+All five Skills reached the host agent, an entry point ran and produced a
+Review_Report, and nothing had to be added to the package. The three checks a
+verification should make -- listed below -- all held on that version.
 
 1. All five Skills -- `cfn-lint-review`, `cfn-guard-review`, `iam-review`,
    `cloudformation-review`, `iac-review` -- reach the host agent, not a subset.
@@ -117,16 +108,25 @@ comparable to the checks above:
    installed (see `docs/architecture.md`, "The shared package `iacreview/`").
 3. Nothing had to be added to the package to make either of those happen.
 
-If point 3 turns out to be false, the change belongs under an `extensions`
-namespace as described below, and this document should record what was needed.
+What remains is version scope, not an unverified claim: a load observed on one
+Kiro version is evidence about that version, not about Kiro in general. A
+materially different Kiro version should be re-checked with the same procedure,
+and the [Result record](#result-record) table is where such a run is captured.
+
+This document still states no installation steps of its own. Kiro's own
+documentation is the authoritative and current procedure for installing a Power,
+including from a local directory: see
+[Install powers](https://kiro.dev/docs/powers/installation/). A procedure copied
+into a second place is a procedure that goes stale, so the verification links to
+it rather than restating it.
 
 ## Verification procedure and result record
 
-This section makes the owed verification (Requirement 10 AC7) a repeatable
-procedure with a place to record its outcome. It does not claim the verification
-has been done: until someone runs the steps and fills in the record below, the
-[Status](#using-this-plugin-as-a-kiro-power) note and README Known Limitations
-stand, and the in-Kiro load remains unverified.
+This section is the repeatable procedure behind Requirement 10 AC7 and the place
+its outcomes are recorded. The load has been verified on Kiro 1.0.337
+([Second recorded run](#second-recorded-run-after-the-fix----verified)); the
+procedure remains here so a different Kiro version, or anyone reproducing the
+result, has the exact steps and a table to fill in.
 
 ### Procedure
 
@@ -197,6 +197,26 @@ two skills reached the host agent, because a valid directory with an out-of-spec
 the load result are different claims, and this run is the evidence that they can
 disagree.
 
+### Second recorded run (after the fix) -- verified
+
+The Power load was repeated on a Kiro installation carrying the description fix,
+and this time all five Skills reached the host agent and a Skill entry point ran
+end to end. This run resolves the load verification (Requirement 10 AC7).
+
+| Item | Result |
+| --- | --- |
+| Kiro version | 1.0.337 |
+| Skills observed | Five of five: `cfn-lint-review`, `cfn-guard-review`, `iam-review`, `cloudformation-review`, `iac-review`. Kiro reported no excluded component |
+| A Skill entry point ran and produced a report | Yes. The `iac-review` orchestrator was run through the agent over `benchmark/cases/case-001-iam-wildcard/template.yaml` and produced a Review_Report (two CRITICAL findings, exit 0), which shows the `parents[3]` path bootstrap resolved the package root from where the Power was installed |
+| Anything added to the package | Nothing. The portable core loaded unchanged; no `dev.kiro` extension and no `mcp.json` were introduced |
+| Outcome | Verified on Kiro 1.0.337. All five Skills load, an entry point runs, and nothing had to be added. This is evidence about Kiro 1.0.337; a materially different version should be re-checked with the same procedure |
+
+Between the two runs, the only change was shortening the three over-long
+`description` fields under the 1024-character cap; nothing else about the package
+layout, the manifest or the entry points moved. The description-length regression
+test in `tests/unit/test_skills.py` is what keeps a future edit from reopening the
+gap that the first run exposed.
+
 ## The Kiro-specific files in this repository
 
 | Path | What it is | Needed to load the plugin |
@@ -236,10 +256,10 @@ Kiro-specific manifest is needed. It is resolved as follows.
 | --- | --- |
 | Directory layout | Unchanged from the portable Agent Plugins 1.0.0 layout. `plugin.json` at the package root, five Skills as immediate children of `skills/`. No layout change was needed for Kiro |
 | Kiro-specific manifest | None. No file was added, and `extensions` stays absent |
-| Requirement 10 AC8 | Satisfied structurally: the preconditions a non-recursive discovery scan depends on are verified and pinned by tests. Not confirmed by observation in a running Kiro |
+| Requirement 10 AC8 | Satisfied. The preconditions a non-recursive discovery scan depends on are verified and pinned by tests, and confirmed by observation: Kiro 1.0.337 enumerated all five Skills |
 | Requirement 10 AC9 | Satisfied and mechanically checked: no Kiro-specific file participates in loading, and no runtime file reads from `.kiro/` |
-| Requirement 10 AC7 | Partly owed. This document separates the Kiro-specific material from the portable packaging, and points at Kiro's own installation documentation, but states no procedure of its own because none was executed |
-| O-7's "if verification is not possible" row | Applied. Only verified material appears here; the unverified load is disclosed in the Status note above and in README Known Limitations (Task 27.1) |
+| Requirement 10 AC7 | Satisfied on Kiro 1.0.337. The load was performed on a real installation, all five Skills reached the host agent, an entry point ran, and nothing had to be added. The result is version-specific by nature; a materially different version should be re-checked |
+| O-7's "if verification is not possible" row | No longer needed for the load, which was verified. The version-scope caveat is disclosed in the Status note above and in README Known Limitations (Task 27.1) |
 
 The decision that mattered was the conservative one: nothing was added to the
 portable core on the strength of an assumption about what Kiro might want. If

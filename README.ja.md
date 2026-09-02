@@ -186,11 +186,11 @@ Power の読み込みが何に依存するか、この repository のどのフ�
 **[`docs/kiro-power.md`](docs/kiro-power.md)** に記載している。
 
 > **Status.** Power の読み込みが前提とする構造的条件は検証済みで、テストで固定されている。
-> Kiro Power としての読み込みは一度試行した。Kiro はパッケージを読み込んだが、5 つの Skill
-> のうち 3 つが `SKILL.md` の `description` が Agent Skills の 1024 文字上限を超えていたため
-> 除外された。この不具合は修正済みでテストで防いでいるが、修正後に 5 つすべての Skill が
-> 読み込まれることの再観測は**まだ行っていない**。`docs/kiro-power.md` に実行結果と修正を
-> 記録しており、Known Limitations で残る再確認を追跡している。
+> end-to-end の読み込みは **Kiro 1.0.337 で検証済み**である。5 つの Skill すべてが host agent
+> に届き、`iac-review` のエントリポイントが実行されて Review_Report を生成し、パッケージへ
+> 追加したものは何もない。以前の読み込みでは `SKILL.md` の `description` が長すぎて 3 つの
+> Skill が除外されたが、この不具合は修正済みでテストで防いでいる。`docs/kiro-power.md` に
+> 両方の実行を記録している。この結果は version 固有であり、Known Limitations に記載している。
 
 Kiro 固有の開発用ファイル (`.kiro/steering/`、`.kiro/specs/`) は plugin の実行には不要で
 ある。`skills/`、`iacreview/`、`rules/`、`benchmark/` 配下のいずれのファイルも `.kiro/`
@@ -529,13 +529,13 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   見るだけで、テンプレートの外側は一切参照しない。AWS account へ接続しないため、
   account レベルの設定、account 側にだけ存在する role、`Ref` / `Fn::GetAtt` /
   `Fn::ImportValue` が deploy 時に解決する値は、どの source からも見えない。
-- **Kiro での Power 読み込みは一部のみ検証済みである。** Kiro Power としての読み込みを一度
-  試行し、実際の不具合を発見した。5 つの Skill のうち 3 つが `SKILL.md` の `description` が
-  Agent Skills の 1024 文字上限を超えていたため除外された。この不具合は修正済みで、上限超過
-  でテストが失敗するよう回帰テストを追加したが、修正後に 5 つすべての Skill が host agent に
-  届くことは再観測していない。したがって end-to-end の読み込みは構造的な議論と 1 回の部分的な
-  実行に基づいており、clean な観測には基づいていない。`docs/kiro-power.md` に実行結果・修正・
-  残る再確認を記録している。Requirement 10 AC7 は一部未達のままである。
+- **Kiro での Power 読み込みは 1 つの Kiro version で検証済みである。** Kiro 1.0.337 で
+  読み込みを実施した。5 つの Skill すべてが host agent に届き、`iac-review` のエントリポイントが
+  実行されて Review_Report を生成し、パッケージへ追加したものは何もなかった。ある version で
+  観測された読み込みはその version についての証拠であり Kiro 一般についてではないため、大きく
+  異なる Kiro version では `docs/kiro-power.md` の手順で再確認すべきである。(以前、version を
+  記録していない読み込みでは `SKILL.md` の `description` が長すぎて 3 つの Skill が除外された。
+  この不具合は修正済みで、1024 文字上限超過で回帰テストが失敗するようにした。)
 
 **Severity と FindingType の保守性**
 
@@ -632,10 +632,11 @@ R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として�
 
 **v1.0.0 で提供済み。** CDK レビューの結果を report の `target.cdk.synthesis`
 (`not_applicable` / `skipped_unconfirmed` / `ran`) で可視化し、synth skip を clean な
-レビューと誤読しないようにした。負っていた Kiro Power 検証を、記録テンプレート付きの
-再現可能な手順として `docs/kiro-power.md` に整備した (in-Kiro load は human が実施するまで
-未検証のまま)。MCP は「実装しない opt-in の設計文書」として確定し、stated かつ checkable な
-ユースケースを待つ。`cdk synth` のゲートと非 sandbox の姿勢は不変。
+レビューと誤読しないようにした。Kiro Power の読み込みを Kiro 1.0.337 で検証し (5 つの Skill
+すべてが読み込まれ、エントリポイントが実行される)、再現可能な手順と記録を
+`docs/kiro-power.md` に整備した。最初の読み込みで 3 つの Skill を除外していた `SKILL.md` の
+`description` 長超過は発見・修正済み。MCP は「実装しない opt-in の設計文書」として確定し、
+stated かつ checkable なユースケースを待つ。`cdk synth` のゲートと非 sandbox の姿勢は不変。
 
 ### v0.10.0 -- IaC と分析の追加
 
@@ -651,9 +652,9 @@ R-1, R-5, R-6, R-7 は `docs/security-model.md` に確定した方針として�
 
 ### v1.0.0 以降 -- パッケージングと体験 (一部未了)
 
-- v1.0.0 の description 修正後に Kiro Power の読み込みを再検証し、5 つすべての Skill が
-  host agent に届くことを記録すること (最初の実行では 2/5 しか読み込まれず、description の
-  上限超過という不具合を発見・修正済み。手順と最初の実行結果は `docs/kiro-power.md` にある)。
+- 大きく新しい Kiro version で Power の読み込みを再確認すること。読み込みは Kiro 1.0.337 で
+  検証済み (`docs/kiro-power.md`) だが、ある version で観測された読み込みはその version に
+  ついての証拠なので、将来の version では記録済みの手順を繰り返すのが望ましい。
 - stated かつ checkable なユースケースが出た時点で具体的な MCP server を実装すること。MCP は
   opt-in のままで、中核のレビュー flow の依存にはならない。
 - v1.0.0 で追加した `target.cdk.synthesis` の可視化を超える CDK ソースレビュー体験の改善。

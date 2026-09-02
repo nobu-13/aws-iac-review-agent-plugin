@@ -188,7 +188,7 @@ BENCHMARK_SECTIONS: Tuple[str, ...] = (
 KIRO_POWER_SECTIONS: Tuple[str, ...] = (
     "The package is portable, and Kiro adds nothing to it",
     "What was verified",
-    "What was not verified",
+    "The load itself, and what remains version-specific",
     "Verification procedure and result record",
     "The Kiro-specific files in this repository",
     "If a Kiro-specific hook is ever needed",
