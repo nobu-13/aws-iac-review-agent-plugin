@@ -189,9 +189,20 @@ KIRO_POWER_SECTIONS: Tuple[str, ...] = (
     "The package is portable, and Kiro adds nothing to it",
     "What was verified",
     "What was not verified",
+    "Verification procedure and result record",
     "The Kiro-specific files in this repository",
     "If a Kiro-specific hook is ever needed",
     "Open design decision O-7",
+)
+
+#: ``docs/kiro-power.md`` (Requirement 24 AC2): the result-record template must
+#: capture, at least, the Kiro version, which Skills were observed, and whether
+#: anything had to be added to the package. Matched case-insensitively against
+#: the flowed document.
+KIRO_POWER_RECORD_ITEMS: Tuple[str, ...] = (
+    "kiro version",
+    "skills observed",
+    "anything added to the package",
 )
 
 #: ``docs/mcp/README.md`` (Task 26.6): the nine per-server record items, as the
@@ -715,12 +726,21 @@ def test_benchmark_methodology_exit_codes_match_the_harness() -> None:
 
 
 def test_kiro_power_has_required_sections() -> None:
-    """Task 26.5: portability, what was verified, what was not, the
-    Kiro-specific files, the extension route, and O-7's resolution."""
+    """Task 26.5 and Requirement 24: portability, what was verified, what was
+    not, the verification procedure and result record, the Kiro-specific files,
+    the extension route, and O-7's resolution."""
     present = set(headings(read_document(KIRO_POWER), 2))
     assert set(KIRO_POWER_SECTIONS) <= present, "missing sections: {0}".format(
         sorted(set(KIRO_POWER_SECTIONS) - present)
     )
+
+
+def test_kiro_power_result_record_captures_the_required_items() -> None:
+    """Requirement 24 AC2: the result-record template captures the Kiro version,
+    which Skills were observed, and whether anything had to be added."""
+    text = read_document(KIRO_POWER).lower()
+    missing = [item for item in KIRO_POWER_RECORD_ITEMS if item not in text]
+    assert not missing, "the result record omits: {0}".format(missing)
 
 
 def test_no_runtime_file_reads_the_kiro_directory() -> None:
@@ -812,3 +832,14 @@ def test_mcp_readme_states_that_core_review_needs_no_server() -> None:
     assert set(needs_mcp.values()) == {"No"}, (
         "a capability is documented as requiring MCP: {0}".format(needs_mcp)
     )
+
+
+def test_mcp_readme_states_it_is_not_implemented_in_v1_and_needs_a_use_case() -> None:
+    """Requirement 25 AC1, AC4: v1.0.0 documents the integration but ships no
+    server, and implementing one waits on a stated, checkable use case."""
+    text = read_document(MCP_README).lower()
+    assert "not implemented in v1.0.0" in text
+    assert "use case" in text
+    # AC1: the design is described, and the plugin ships no server / opens no
+    # connection.
+    assert "opens no connection" in text or "open no connection" in text

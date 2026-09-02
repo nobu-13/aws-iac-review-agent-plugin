@@ -212,6 +212,9 @@ class Layout(NamedTuple):
         standalone: Expected ``target.files``, relative to the workspace root.
         synthesized: Expected ``target.cdk.synthesized_templates``.
         exit_code: Expected exit code of an unconfirmed run.
+        synthesis: Expected ``target.cdk.synthesis`` for an unconfirmed run
+            (Requirement 23 AC1): ``not_applicable`` for a non-CDK layout,
+            ``skipped_unconfirmed`` for a CDK project reviewed without the flag.
     """
 
     files: Dict[str, str]
@@ -219,6 +222,7 @@ class Layout(NamedTuple):
     standalone: List[str]
     synthesized: List[str]
     exit_code: int
+    synthesis: str
 
 
 #: The layouts of Task 24.6, keyed by the name the parametrized test IDs use.
@@ -235,6 +239,7 @@ LAYOUTS: Dict[str, Layout] = {
         # Requirement 8 AC5, second half: with nothing synthesized and no
         # confirmation, there is nothing reviewable at all.
         exit_code=exitcodes.NO_REVIEWABLE_TEMPLATE,
+        synthesis="skipped_unconfirmed",
     ),
     "cdk-json-and-assembly": Layout(
         files={
@@ -249,6 +254,7 @@ LAYOUTS: Dict[str, Layout] = {
         # review, so the skipped synthesis costs an errors[] entry and not the
         # exit code.
         exit_code=exitcodes.OK,
+        synthesis="skipped_unconfirmed",
     ),
     "cdk-json-standalone-and-assembly": Layout(
         files={
@@ -261,6 +267,7 @@ LAYOUTS: Dict[str, Layout] = {
         standalone=[STANDALONE_FILE],
         synthesized=[SYNTHESIZED_FILE],
         exit_code=exitcodes.OK,
+        synthesis="skipped_unconfirmed",
     ),
     "standalone-only": Layout(
         files={STANDALONE_FILE: _iam_template_yaml("StandaloneRole")},
@@ -268,6 +275,7 @@ LAYOUTS: Dict[str, Layout] = {
         standalone=[STANDALONE_FILE],
         synthesized=[],
         exit_code=exitcodes.OK,
+        synthesis="not_applicable",
     ),
 }
 
@@ -493,6 +501,9 @@ def test_each_layout_reports_its_detection_and_its_two_template_groups(
     assert run.report is not None
     target = run.report["target"]
     assert target["cdk"]["detected"] is layout.detected
+    # Requirement 23 AC1/AC5: the synthesis outcome tells a skipped synthesis
+    # apart from a non-CDK target, so an empty finding set is not read as clean.
+    assert target["cdk"]["synthesis"] == layout.synthesis
     assert target["files"] == layout.standalone
     assert target["cdk"]["synthesized_templates"] == layout.synthesized
 
@@ -788,6 +799,8 @@ def test_a_confirmed_synthesis_writes_into_the_project_and_is_reviewed(
     assert run.report is not None
     target = run.report["target"]
     assert target["cdk"]["detected"] is True
+    # Requirement 23 AC1: synthesis ran on the confirmed path.
+    assert target["cdk"]["synthesis"] == "ran"
     assert target["cdk"]["synthesized_templates"] == [
         "project/cdk.out/AppStack.template.json"
     ]

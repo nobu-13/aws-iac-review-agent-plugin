@@ -349,7 +349,11 @@ def test_the_full_review_of_minimal_s3_finds_nothing() -> None:
     assert report["summary"]["total"] == 0
     assert report["summary"]["passed_all_checks"] is True
     assert report["target"]["files"] == [MINIMAL_S3]
-    assert report["target"]["cdk"] == {"detected": False, "synthesized_templates": []}
+    assert report["target"]["cdk"] == {
+        "detected": False,
+        "synthesis": "not_applicable",
+        "synthesized_templates": [],
+    }
 
 
 @requires_cfn_lint

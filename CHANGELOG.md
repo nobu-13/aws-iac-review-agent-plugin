@@ -46,6 +46,37 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [1.0.0] - 2026-09-01
+
+A maturation release. No new Source, no new deterministic check, and no new
+dependency: it makes the CDK review outcome legible in the report, turns the
+owed Kiro Power verification into a repeatable procedure with a place to record
+its result, and pins MCP as a documented opt-in the plugin does not implement.
+The determinism contract, the read-only default, and the unsandboxed-`cdk synth`
+posture are unchanged.
+
+### Added
+
+- **`target.cdk.synthesis` in the report.** A closed-set field --
+  `not_applicable`, `skipped_unconfirmed`, or `ran` -- that tells a consumer
+  whether the target was a CDK project, whether synthesis was skipped for want
+  of `--confirm-cdk-synth`, or whether it ran. An empty finding set from a
+  skipped synthesis is no longer indistinguishable from a clean review
+  (Requirement 23). The value is a deterministic function of the target layout
+  and the confirmation flag, so the byte-identical stdout guarantee holds.
+- **A Kiro Power verification procedure and result record** in
+  `docs/kiro-power.md`: an ordered procedure for loading the package as a Power
+  and observing all five Skills, and a table to record the Kiro version, which
+  Skills were observed, and whether anything had to be added (Requirement 24).
+  The in-Kiro load remains recorded as unverified until a human performs it.
+
+### Changed
+
+- **`docs/mcp/README.md` states MCP is not implemented in v1.0.0** and that a
+  concrete server waits on a stated, checkable use case rather than being added
+  for convenience (Requirement 25). MCP stays opt-in and no core capability
+  depends on it; no `mcp.json` ships in the plugin root.
+
 ## [0.9.0] - 2026-09-01
 
 Closes the residual edges of v0.8.0: a wider deterministic `stderr_head`, Review
@@ -396,7 +427,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v1.0.0
 [0.9.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.9.0
 [0.8.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.8.0
 [0.7.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.7.0

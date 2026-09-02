@@ -756,7 +756,11 @@ def test_the_report_envelope_has_the_declared_shape(
     assert_fields(
         "{0}.target.cdk".format(case),
         report["target"]["cdk"],
-        (("detected", (bool,)), ("synthesized_templates", (list,))),
+        (
+            ("detected", (bool,)),
+            ("synthesis", (str,)),
+            ("synthesized_templates", (list,)),
+        ),
     )
 
     assert report["sources_enabled"], "a review with no source enabled is never meant"

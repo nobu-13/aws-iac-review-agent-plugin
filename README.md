@@ -447,6 +447,12 @@ positions, and adds two benchmark measurement cases that populate the reserved
 arrays and the diagnostic expectation fields so the `agent-only` and
 `human-review` modes and the two diagnostics measure a declared expectation.
 
+v1.0.0 makes the CDK review outcome legible in the report through
+`target.cdk.synthesis` (a skipped synthesis is no longer mistaken for a clean
+review), turns the owed Kiro Power verification into a repeatable procedure with
+a result-record template, and pins MCP as a documented opt-in the plugin does not
+implement. The `cdk synth` gate and the no-sandbox posture are unchanged.
+
 ## Security Considerations
 
 This plugin processes Infrastructure as Code it has no reason to trust. Every
@@ -694,6 +700,15 @@ cases now populate the reserved arrays and the `expected_remediation` /
 `expected_human_intervention_count` fields, so the `agent-only` and
 `human-review` modes and the two diagnostics measure a declared expectation.
 
+**Delivered in v1.0.0.** The CDK review outcome is legible in the report through
+`target.cdk.synthesis` (`not_applicable` / `skipped_unconfirmed` / `ran`), so a
+skipped synthesis is no longer mistaken for a clean review; the owed Kiro Power
+verification is now a repeatable procedure with a result-record template in
+`docs/kiro-power.md` (the in-Kiro load stays recorded as unverified until a human
+runs it); and MCP is pinned as a documented opt-in the plugin does not implement,
+awaiting a stated, checkable use case. The `cdk synth` gate and the no-sandbox
+posture are unchanged.
+
 ### v0.10.0 -- additional IaC and analysis
 
 - Terraform support.
@@ -706,14 +721,15 @@ cases now populate the reserved arrays and the `expected_remediation` /
 Automatic deployment and automatic remediation are permanent non-goals rather
 than roadmap items: this plugin reports, and does not act.
 
-### v1.0.0 -- packaging and experience
+### Beyond v1.0.0 -- packaging and experience (partly owed)
 
-- Verifying the Kiro Power load with a real installation, which is what
-  Requirement 10 AC7 still owes.
-- MCP enhancement, where a server does something the plugin cannot. MCP stays
-  opt-in and never a dependency of the core review flow.
-- A better CDK source review experience than `cdk synth` followed by a template
-  review.
+- Performing the Kiro Power load verification on a real installation and
+  recording the result (the procedure ships in v1.0.0; the run is owed to a
+  human with a Kiro installation).
+- Implementing a concrete MCP server once a stated, checkable use case exists.
+  MCP stays opt-in and never a dependency of the core review flow.
+- Further CDK source review experience work beyond the `target.cdk.synthesis`
+  legibility added in v1.0.0.
 
 ## Contributing
 
