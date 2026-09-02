@@ -3,21 +3,18 @@ name: iam-review
 description: >-
   Analyzes the IAM policies of a CloudFormation template (YAML or JSON) in two
   layers: a deterministic scan that reports wildcard permissions, privilege
-  escalation patterns, unrestricted iam:PassRole and sts:AssumeRole, missing
+  escalation, unrestricted iam:PassRole and sts:AssumeRole, missing
   confused-deputy conditions, and cross-account or wildcard principals as
-  normalized findings with Confidence 'Confirmed'; and an inventory of every
-  policy site that lets the agent reason about least privilege, excessive
-  authority across resources, and organizational policy concerns that pattern
-  matching cannot decide. Use this skill when a template contains IAM roles,
-  inline or managed policies, trust policies, resource-based policies such as
-  an S3 bucket policy or a KMS key policy, or an AWS::Lambda::Permission, and
-  the user asks about permissions, privilege escalation, least privilege,
-  cross-account access, or IAM security in general. Do not use this skill for
-  template syntax and resource property validation, for organizational policy
-  rules expressed as Guard rules, or for architecture and design review; those
-  are handled by cfn-lint-review, cfn-guard-review, and cloudformation-review
-  respectively. Use iac-review instead when the user wants one report covering
-  all of those concerns. Requires Python 3.9 or newer and no external review
+  Confirmed findings; and an inventory of every policy site that lets the agent
+  reason about least privilege and excessive authority pattern matching cannot
+  decide. Use it when a template has IAM roles, inline or managed
+  policies, trust or resource-based policies such as an S3 bucket or KMS key
+  policy, or an AWS::Lambda::Permission, and the user asks about permissions,
+  privilege escalation, least privilege, cross-account access, or IAM security.
+  Do not use it for syntax and property validation, for Guard policy rules, or
+  for design review; those belong to cfn-lint-review,
+  cfn-guard-review, and cloudformation-review. Use iac-review when the user
+  wants one report covering all concerns. Requires Python 3.9+ and no external
   tool.
 ---
 

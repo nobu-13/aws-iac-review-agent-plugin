@@ -77,6 +77,20 @@ posture are unchanged.
   for convenience (Requirement 25). MCP stays opt-in and no core capability
   depends on it; no `mcp.json` ships in the plugin root.
 
+### Fixed
+
+- **Three Skills were dropped by a real Kiro Power load** because their
+  `SKILL.md` `description` exceeded the Agent Skills 1.0.0 1024-character cap;
+  `cloudformation-review`, `iac-review` and `iam-review` did not reach the host
+  agent, while `cfn-lint-review` and `cfn-guard-review` did. The three
+  descriptions are shortened to stay under the cap with their capability and
+  selection guidance intact, and `tests/unit/test_skills.py` now measures the
+  folded length of every `description` and fails over the cap, so a skill can no
+  longer be lost to an over-long description without a red test. The first load
+  and this fix are recorded in `docs/kiro-power.md`
+  ([First recorded run](docs/kiro-power.md)); re-observing all five Skills load
+  after the fix is still owed.
+
 ## [0.9.0] - 2026-09-01
 
 Closes the residual edges of v0.8.0: a wider deterministic `stderr_head`, Review

@@ -11,10 +11,9 @@ description: >-
   "buckets must not be public", "logging is mandatory", "required tags must be
   present" or "backups must be retained", or when an organization-specific
   policy expressed as .guard rules has to be applied to a template. Do not use
-  this skill for template syntax and resource property validation, for IAM
-  policy risk analysis, or for architectural review; those are handled by
-  cfn-lint-review, iam-review, and cloudformation-review respectively. Requires
-  cfn-guard to be installed and available on the system PATH.
+  it for template syntax and resource property validation, for IAM risk
+  analysis, or for architectural review; those belong to cfn-lint-review,
+  iam-review, and cloudformation-review. Requires cfn-guard on the system PATH.
 ---
 
 # cfn-guard Review

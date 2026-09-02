@@ -13,11 +13,14 @@ This document carries the verification, and it is the file the README's
 
 > **Status.** The structural preconditions a Power load depends on are verified
 > mechanically and re-checked by the test suite on every run; the table in
-> [What was verified](#what-was-verified) lists each one. Driving a Kiro
-> installation to load this package and observing the five Skills reach the host
-> agent has **not** been done. No installation procedure is therefore stated
-> here, and Requirement 10 AC7 stays partly owed. README Known Limitations
-> (Task 27.1) records that.
+> [What was verified](#what-was-verified) lists each one. A Kiro Power load has
+> now been attempted once: Kiro loaded the package but dropped three of the five
+> Skills for an out-of-spec `description` field, which
+> [First recorded run](#first-recorded-run) documents along with the fix and the
+> regression test that guards it. That all five Skills reach the host agent after
+> the fix has **not** yet been re-observed, so Requirement 10 AC7 stays partly
+> owed and README Known Limitations (Task 27.1) still records the unverified
+> end-to-end load.
 
 ## The package is portable, and Kiro adds nothing to it
 
@@ -57,6 +60,7 @@ load failure in a client.
 | `extensions` is absent, and no reverse-domain extension directory exists at the package root | Yes | `tests/unit/test_manifest.py` |
 | `skills/` has exactly five child directories, each holding a `SKILL.md` | Yes | `tests/unit/test_skills.py` |
 | Each `SKILL.md` declares a front matter `name` equal to its directory name | Yes | `tests/unit/test_skills.py` |
+| Each `SKILL.md` front matter `description` is within the Agent Skills 1.0.0 1024-character cap, so no skill is dropped for an out-of-spec description | Yes, after the fix recorded below (was not, on the first load) | `tests/unit/test_skills.py` |
 | No child of `skills/` is skipped by discovery: all five parse and carry a top-level heading | Yes | `tests/unit/test_skills.py` |
 | Each of the six Skill entry points runs under plain `python3` and answers `--help` with exit 0 | Yes | `tests/integration/test_skill_*.py` run them for real; `tests/unit/test_bootstrap.py` pins the path bootstrap they depend on |
 | No file under `skills/`, `iacreview/`, `rules/` or `benchmark/` reads anything from `.kiro/` | Yes, no reference exists | -- (owed to Task 26.7) |
@@ -169,7 +173,29 @@ filled one is evidence for the Kiro version it names and no other.
 | Outcome | (verified / not verified, and why) |
 
 Until a row of this table is filled in from a real run, this document states no
-result and the load stays recorded as unverified.
+result for a run other than the one recorded below.
+
+### First recorded run
+
+A Kiro Power load was performed against this package. Kiro loaded the package as
+a Power and reported per-component results, so this row is filled from an
+observation rather than from the structural argument.
+
+| Item | Result |
+| --- | --- |
+| Kiro version | Not recorded on this run (a follow-up run must note it; see the caveat below) |
+| Skills observed | Two of five loaded: `cfn-lint-review` and `cfn-guard-review`. Three were dropped: `cloudformation-review`, `iac-review` and `iam-review` |
+| Reason the three were dropped | Kiro reported each skipped skill as *"SKILL.md frontmatter has an invalid `description` field"* |
+| Root cause | The Agent Skills 1.0.0 specification caps `description` at 1024 characters. The three dropped descriptions were 1217, 1345 and 1282 characters; the two that loaded were 720 and 1023. Kiro enforces the cap by dropping the whole skill, not by truncating |
+| Fix applied | The three over-long descriptions were shortened to stay under the cap while keeping the capability and the selection / rejection guidance. A regression test (`tests/unit/test_skills.py::test_description_is_within_the_specification_length_cap`) now measures the folded length of every `description` and fails over the cap, so this cannot recur silently |
+| Outcome | Not yet verified end to end. The over-length defect that this run exposed is fixed and guarded by a test, but that all five skills now load in Kiro has not been re-observed. A follow-up run must repeat the procedure, record the exact Kiro version, and confirm five of five |
+
+This is why the [What was verified](#what-was-verified) table's skill-count row is
+structural: the count of directories under `skills/` was always five, yet only
+two skills reached the host agent, because a valid directory with an out-of-spec
+`description` is dropped downstream of that check. The structural precondition and
+the load result are different claims, and this run is the evidence that they can
+disagree.
 
 ## The Kiro-specific files in this repository
 
