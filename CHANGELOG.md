@@ -86,10 +86,12 @@ posture are unchanged.
   descriptions are shortened to stay under the cap with their capability and
   selection guidance intact, and `tests/unit/test_skills.py` now measures the
   folded length of every `description` and fails over the cap, so a skill can no
-  longer be lost to an over-long description without a red test. The first load
-  and this fix are recorded in `docs/kiro-power.md`
-  ([First recorded run](docs/kiro-power.md)); re-observing all five Skills load
-  after the fix is still owed.
+  longer be lost to an over-long description without a red test. Both loads --
+  the first that dropped three Skills and the re-check after the fix -- are
+  recorded in `docs/kiro-power.md`. After the fix the load is **verified on Kiro
+  1.0.337**: all five Skills reached the host agent, an `iac-review` entry point
+  ran and produced a Review_Report, and nothing had to be added to the package
+  (Requirement 10 AC7).
 
 ## [0.9.0] - 2026-09-01
 

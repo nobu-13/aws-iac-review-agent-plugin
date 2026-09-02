@@ -190,12 +190,12 @@ on, which files in this repository are Kiro-specific and why they sit outside th
 portable package, and exactly how far the claim has been verified.
 
 > **Status.** The structural preconditions a Power load depends on are verified
-> and pinned by tests. A Kiro Power load has been attempted once: Kiro loaded the
-> package but dropped three of the five Skills because their `SKILL.md`
-> `description` exceeded the Agent Skills 1024-character cap. That defect is
-> fixed and guarded by a test; re-observing all five Skills load after the fix
-> has **not** yet been done. `docs/kiro-power.md` records the run and the fix,
-> and Known Limitations tracks the owed re-check.
+> and pinned by tests, and the end-to-end load is **verified on Kiro 1.0.337**:
+> all five Skills reached the host agent, an `iac-review` entry point ran and
+> produced a Review_Report, and nothing had to be added to the package. An
+> earlier load had dropped three Skills for an over-long `SKILL.md`
+> `description`; that defect is fixed and guarded by a test. `docs/kiro-power.md`
+> records both runs. The result is version-specific, as Known Limitations notes.
 
 The Kiro-specific development files (`.kiro/steering/`, `.kiro/specs/`) are not
 needed to run the plugin. No file under `skills/`, `iacreview/`, `rules/` or
@@ -587,14 +587,15 @@ reason is in the document named beside it.
   contacted, so account-level settings, roles that exist only in the account, and
   whatever a `Ref`, `Fn::GetAtt` or `Fn::ImportValue` resolves to at deploy time
   are outside what any source can see.
-- **The in-Kiro Power load is only partly verified.** A Kiro Power load was
-  attempted once and exposed a real defect: three of the five Skills were dropped
-  because their `SKILL.md` `description` exceeded the Agent Skills 1024-character
-  cap. That defect is fixed and a regression test now fails over the cap, but
-  that all five Skills reach the host agent after the fix has not been
-  re-observed. The end-to-end load therefore rests on a structural argument plus
-  one partial run, not on a clean observation; `docs/kiro-power.md` records the
-  run, the fix and the owed re-check. Requirement 10 AC7 stays partly owed.
+- **The in-Kiro Power load is verified on one Kiro version.** The load was
+  performed on Kiro 1.0.337: all five Skills reached the host agent, an
+  `iac-review` entry point ran and produced a Review_Report, and nothing had to
+  be added to the package. A load observed on one version is evidence about that
+  version, not about Kiro in general, so a materially different Kiro version
+  should be re-checked with the procedure in `docs/kiro-power.md`. (An earlier
+  load on an unrecorded version had dropped three Skills for an over-long
+  `SKILL.md` `description`; that defect is fixed and a regression test now fails
+  over the 1024-character cap.)
 
 **Severity and FindingType conservatism**
 
@@ -706,12 +707,13 @@ cases now populate the reserved arrays and the `expected_remediation` /
 
 **Delivered in v1.0.0.** The CDK review outcome is legible in the report through
 `target.cdk.synthesis` (`not_applicable` / `skipped_unconfirmed` / `ran`), so a
-skipped synthesis is no longer mistaken for a clean review; the owed Kiro Power
-verification is now a repeatable procedure with a result-record template in
-`docs/kiro-power.md` (the in-Kiro load stays recorded as unverified until a human
-runs it); and MCP is pinned as a documented opt-in the plugin does not implement,
-awaiting a stated, checkable use case. The `cdk synth` gate and the no-sandbox
-posture are unchanged.
+skipped synthesis is no longer mistaken for a clean review; the Kiro Power load is
+verified on Kiro 1.0.337 (all five Skills load and an entry point runs) with a
+repeatable procedure and result record in `docs/kiro-power.md`, after a first load
+exposed and a fix closed an over-long `SKILL.md` `description` that had dropped
+three Skills; and MCP is pinned as a documented opt-in the plugin does not
+implement, awaiting a stated, checkable use case. The `cdk synth` gate and the
+no-sandbox posture are unchanged.
 
 ### v0.10.0 -- additional IaC and analysis
 
@@ -727,10 +729,10 @@ than roadmap items: this plugin reports, and does not act.
 
 ### Beyond v1.0.0 -- packaging and experience (partly owed)
 
-- Re-running the Kiro Power load verification after the v1.0.0 description fix
-  and recording that all five Skills reach the host agent (the first run loaded
-  only two of five and exposed the over-length `description` defect, now fixed;
-  the procedure and the first run are in `docs/kiro-power.md`).
+- Re-checking the Kiro Power load on materially newer Kiro versions. The load is
+  verified on Kiro 1.0.337 (`docs/kiro-power.md`); a load observed on one version
+  is evidence about that version, so future versions warrant a repeat of the
+  recorded procedure.
 - Implementing a concrete MCP server once a stated, checkable use case exists.
   MCP stays opt-in and never a dependency of the core review flow.
 - Further CDK source review experience work beyond the `target.cdk.synthesis`
