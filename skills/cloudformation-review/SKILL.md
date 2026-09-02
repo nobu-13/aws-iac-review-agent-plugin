@@ -3,21 +3,17 @@ name: cloudformation-review
 description: >-
   Reviews the design of a CloudFormation template (YAML or JSON) by reasoning
   over deterministically extracted facts: the resource inventory, the Ref /
-  Fn::GetAtt reference graph, DependsOn edges, Parameters and Conditions, the
-  Availability Zone and Subnet properties of each resource, and a summary of
-  what the deterministic review sources already reported. Use this skill when
-  the user asks whether a template is well designed, whether resources are
-  wired together sensibly, whether a workload is exposed to a single point of
-  failure or a single Availability Zone, how severe an already reported issue
-  is in the context of this particular template, or which AWS best practices
-  the template does not follow. Do not use this skill to validate syntax,
-  resource property types, intrinsic functions, or deployability; do not use it
-  to check organizational policy compliance such as mandatory encryption,
-  logging, tagging, or backup; and do not use it for IAM policy risk analysis.
-  Those are handled by cfn-lint-review, cfn-guard-review, and iam-review
-  respectively, and this skill must not restate what they already report. This
-  skill runs no external tool and produces non-deterministic findings that are
-  never Confirmed.
+  Fn::GetAtt graph, DependsOn edges, Parameters, Conditions, and each
+  resource's Availability Zone and Subnet properties. Use it when the user asks
+  whether a template is well designed, whether resources are wired sensibly,
+  whether a workload has a single point of failure or sits in one Availability
+  Zone, how severe an already reported issue is in context, or which AWS best
+  practices the template misses. Do not use it to validate syntax, property
+  types, intrinsic functions, or deployability; to check policy compliance such
+  as encryption, logging, tagging, or backup; or for IAM risk analysis. Those
+  belong to cfn-lint-review, cfn-guard-review, and iam-review, and this skill
+  must not restate them. It runs no external tool and produces non-deterministic
+  findings that are never Confirmed.
 ---
 
 # CloudFormation Design Review

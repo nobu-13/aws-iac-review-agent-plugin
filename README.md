@@ -190,9 +190,12 @@ on, which files in this repository are Kiro-specific and why they sit outside th
 portable package, and exactly how far the claim has been verified.
 
 > **Status.** The structural preconditions a Power load depends on are verified
-> and pinned by tests. Driving a Kiro installation to load this package and
-> observing the five Skills reach the host agent has **not** been done, so no
-> installation procedure is stated. Known Limitations records this.
+> and pinned by tests. A Kiro Power load has been attempted once: Kiro loaded the
+> package but dropped three of the five Skills because their `SKILL.md`
+> `description` exceeded the Agent Skills 1024-character cap. That defect is
+> fixed and guarded by a test; re-observing all five Skills load after the fix
+> has **not** yet been done. `docs/kiro-power.md` records the run and the fix,
+> and Known Limitations tracks the owed re-check.
 
 The Kiro-specific development files (`.kiro/steering/`, `.kiro/specs/`) are not
 needed to run the plugin. No file under `skills/`, `iacreview/`, `rules/` or
@@ -584,13 +587,14 @@ reason is in the document named beside it.
   contacted, so account-level settings, roles that exist only in the account, and
   whatever a `Ref`, `Fn::GetAtt` or `Fn::ImportValue` resolves to at deploy time
   are outside what any source can see.
-- **The in-Kiro Power load is unverified.** The structural preconditions a Power
-  load depends on are verified mechanically and pinned by tests, but no Kiro
-  installation was driven to load this package, and no host agent was observed
-  enumerating the five Skills. The claim that the Skills are discoverable in Kiro
-  rests on a structural argument, not an observation, which is why
-  `docs/kiro-power.md` states no installation procedure. Requirement 10 AC7 stays
-  partly owed.
+- **The in-Kiro Power load is only partly verified.** A Kiro Power load was
+  attempted once and exposed a real defect: three of the five Skills were dropped
+  because their `SKILL.md` `description` exceeded the Agent Skills 1024-character
+  cap. That defect is fixed and a regression test now fails over the cap, but
+  that all five Skills reach the host agent after the fix has not been
+  re-observed. The end-to-end load therefore rests on a structural argument plus
+  one partial run, not on a clean observation; `docs/kiro-power.md` records the
+  run, the fix and the owed re-check. Requirement 10 AC7 stays partly owed.
 
 **Severity and FindingType conservatism**
 
@@ -723,9 +727,10 @@ than roadmap items: this plugin reports, and does not act.
 
 ### Beyond v1.0.0 -- packaging and experience (partly owed)
 
-- Performing the Kiro Power load verification on a real installation and
-  recording the result (the procedure ships in v1.0.0; the run is owed to a
-  human with a Kiro installation).
+- Re-running the Kiro Power load verification after the v1.0.0 description fix
+  and recording that all five Skills reach the host agent (the first run loaded
+  only two of five and exposed the over-length `description` defect, now fixed;
+  the procedure and the first run are in `docs/kiro-power.md`).
 - Implementing a concrete MCP server once a stated, checkable use case exists.
   MCP stays opt-in and never a dependency of the core review flow.
 - Further CDK source review experience work beyond the `target.cdk.synthesis`

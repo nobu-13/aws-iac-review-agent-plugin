@@ -85,12 +85,36 @@ REQUIRED_FRONT_MATTER_FIELDS: Tuple[str, ...] = ("name", "description")
 #: this fails only a description that stopped stating one of the two halves.
 MIN_DESCRIPTION_LENGTH = 200
 
+#: Upper bound on the length of ``description``, in characters. The Agent Skills
+#: 1.0.0 specification caps ``description`` at 1024 characters, and a host that
+#: enforces it (Kiro was observed to) does not merely truncate: it drops the
+#: whole Skill, so an over-long description silently removes the Skill from the
+#: agent's reach. Three of the five descriptions once crossed this line and were
+#: skipped on a real install; this bound is the regression guard for that.
+MAX_DESCRIPTION_LENGTH = 1024
+
 #: Phrases approximating the two halves of Requirement 2 AC11. The positive
-#: phrase carries the selection condition; the negative one is design.md's
+#: phrases carry the selection condition; the negative ones are design.md's
 #: addition, because five Skills cover adjacent ground and each description must
 #: also say when *not* to pick it.
-DESCRIPTION_SELECTION_PHRASE = "Use this skill when"
-DESCRIPTION_REJECTION_PHRASE = "Do not use this skill"
+#:
+#: Each half is a set of accepted spellings rather than one fixed string. The
+#: 1024-character cap (:data:`MAX_DESCRIPTION_LENGTH`) leaves no room for the
+#: longest phrasing in every description, so "Use it when" / "Use it for" and
+#: "Do not use it" stand in for the fuller "Use this skill when" / "Do not use
+#: this skill". What AC11 requires is that both halves are stated; it does not
+#: fix the exact verb phrase, so widening the accepted spellings does not weaken
+#: the criterion.
+DESCRIPTION_SELECTION_PHRASES: Tuple[str, ...] = (
+    "Use this skill when",
+    "Use it when",
+    "Use it for",
+    "Use it to",
+)
+DESCRIPTION_REJECTION_PHRASES: Tuple[str, ...] = (
+    "Do not use this skill",
+    "Do not use it",
+)
 
 #: Skills that launch an external tool, and the tool names their
 #: ``## Dependencies`` section must name (Requirement 15 AC2).
@@ -577,8 +601,34 @@ def test_description_states_capability_and_selection_conditions(
     assert front_matter is not None
     description = " ".join(str(front_matter["description"]).split())
     assert len(description) >= MIN_DESCRIPTION_LENGTH
-    assert DESCRIPTION_SELECTION_PHRASE in description
-    assert DESCRIPTION_REJECTION_PHRASE in description
+    assert any(phrase in description for phrase in DESCRIPTION_SELECTION_PHRASES), (
+        "no selection-condition phrase found"
+    )
+    assert any(phrase in description for phrase in DESCRIPTION_REJECTION_PHRASES), (
+        "no rejection-condition phrase found"
+    )
+
+
+@pytest.mark.parametrize("skill", SKILL_NAMES, indirect=True)
+def test_description_is_within_the_specification_length_cap(skill: SkillDoc) -> None:
+    """Requirement 2 AC11, upper bound: the Agent Skills cap on ``description``.
+
+    Measured on the parsed value -- the string the host reads after YAML folds
+    the ``>-`` block scalar -- not on the source lines, because that is the
+    length the host counts. Folding turns each line break into a space, so the
+    parsed value is longer than any single source line and a per-line check would
+    miss the overflow. The cap is enforced against the folded length directly,
+    with no whitespace normalization, so the test cannot read as passing while
+    the host reads the Skill as too long.
+    """
+    front_matter = parse_front_matter(skill.text)
+    assert front_matter is not None
+    length = len(str(front_matter["description"]))
+    assert length <= MAX_DESCRIPTION_LENGTH, (
+        "{0}: description is {1} characters, over the {2} cap".format(
+            skill.name, length, MAX_DESCRIPTION_LENGTH
+        )
+    )
 
 
 @pytest.mark.parametrize("skill", SKILL_NAMES, indirect=True)
