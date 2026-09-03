@@ -693,3 +693,26 @@ Apache License 2.0。`plugin.json` は `"license": "Apache-2.0"` を宣言し、
 3 つの外部ツールである。いずれも同梱も再配布もしていないため、その節はこのパッケージが
 果たす義務ではなく参考情報である。ソースファイルに license header は付いていない。
 Apache-2.0 はそれを要求しない。
+
+## Support
+
+サポートは project の GitHub repository
+[nobu-13/aws-iac-review-agent-plugin](https://github.com/nobu-13/aws-iac-review-agent-plugin)
+を通じて提供する。
+
+| 用途 | 場所 |
+| --- | --- |
+| Bug、質問、機能要望 | [Issue を開く](https://github.com/nobu-13/aws-iac-review-agent-plugin/issues) |
+| Contribute したい変更 | [`CONTRIBUTING.md`](CONTRIBUTING.md) を参照 |
+| Security または Privacy の脆弱性の疑い | public な issue ではなく repository の**非公開**報告 channel で報告する。[`CONTRIBUTING.md`](CONTRIBUTING.md#security-issue-handling) を参照 |
+
+Issue を開く前に、影響を受ける version または commit、platform、挙動を引き起こす入力、
+起きたこと、期待したことを含めてほしい。Credential や secret は issue に含めないこと。
+
+## Privacy Policy
+
+この plugin はローカルで read-only に動作する。個人データや telemetry を収集せず、
+自身では AWS API も外部サービスも呼び出さず、workspace に何も保存せず、すべての子プロセス
+から AWS credentials を秘匿する。host agent と optional な MCP の境界（データが plugin の
+制御を離れうる箇所）を含む完全な記述は
+[**`docs/privacy-policy.md`**](docs/privacy-policy.md) にある。
