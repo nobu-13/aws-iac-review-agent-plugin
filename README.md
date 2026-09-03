@@ -771,3 +771,27 @@ the three external tools invoked as subprocesses. None of them is bundled or
 redistributed here, so that section is informational rather than an obligation
 this package discharges. Source files carry no license header; Apache-2.0 does
 not require one.
+
+## Support
+
+Support is provided through the project's GitHub repository,
+[nobu-13/aws-iac-review-agent-plugin](https://github.com/nobu-13/aws-iac-review-agent-plugin):
+
+| Need | Where |
+| --- | --- |
+| A bug, a question, or a feature request | [Open an issue](https://github.com/nobu-13/aws-iac-review-agent-plugin/issues) |
+| A change you want to contribute | See [`CONTRIBUTING.md`](CONTRIBUTING.md) |
+| A suspected security or privacy vulnerability | Report it **privately** through the repository's private reporting channel, not as a public issue. See [`CONTRIBUTING.md`](CONTRIBUTING.md#security-issue-handling) |
+
+Before opening an issue, please include the affected version or commit, your
+platform, the input that triggers the behaviour, what happened, and what you
+expected. Do not include any credential or secret in an issue.
+
+## Privacy Policy
+
+This plugin runs locally and read-only. It collects no personal data and no
+telemetry, calls no AWS API and no external service of its own, stores nothing in
+your workspace, and withholds AWS credentials from every child process. The full
+statement, including the host-agent and optional-MCP boundaries where your data
+may leave the plugin's control, is in
+[**`docs/privacy-policy.md`**](docs/privacy-policy.md).
