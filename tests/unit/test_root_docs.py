@@ -1624,15 +1624,21 @@ def test_changelog_contains_no_absolute_host_path(changelog_text: str) -> None:
 # README.md structure (Task 27.1)
 # ---------------------------------------------------------------------------
 #
-# Requirement 13 AC1 names seventeen level-2 sections and names them in an order.
-# Task 27.1 asks for both, and for the nine limitations Requirement 13 AC2 and the
-# task itself require the "Known Limitations" section to carry. The three
-# assertions below are shaped so that each failure says something different:
+# Requirement 13 AC1 names seventeen level-2 sections, in an order, as the
+# minimum a README must contain. Task 27.1 asks for both, and for the nine
+# limitations Requirement 13 AC2 and the task itself require the "Known
+# Limitations" section to carry. The README currently has nineteen level-2
+# sections: the seventeen AC1 lists, followed by "Support" and "Privacy Policy",
+# which this repository added beyond that minimum. The three assertions below are
+# shaped so that each failure says something different:
 #
 # - presence, parametrized, so a dropped section is named;
-# - the exact sequence, so a reordered or *added* section fails. A README that
-#   gains an eighteenth level-2 heading still contains all seventeen, and the
-#   order AC1 lists is the reading order a newcomer is promised;
+# - the exact sequence of the nineteen current sections, so a reordered or
+#   *added* section fails. A README that gains another level-2 heading still
+#   contains every expected one, so only the sequence notices it; the failure is
+#   a prompt to update the expected sequence deliberately, not a claim that AC1
+#   forbids the addition. The order AC1 lists is the reading order a newcomer is
+#   promised;
 # - the nine limitations, parametrized, matched on the phrase each turns on
 #   rather than on a sentence, so the prose can be rewritten while a limitation
 #   that quietly disappeared still fails.
@@ -1643,9 +1649,11 @@ def test_changelog_contains_no_absolute_host_path(changelog_text: str) -> None:
 # resource-based-policy list, tool version drift -- and steering/documentation.md
 # is explicit that those are recorded rather than downplayed.
 
-#: The seventeen level-2 sections Requirement 13 AC1 requires, in the order the
-#: criterion lists them. Order is part of the requirement, so this is a sequence
-#: and it is compared as one.
+#: The nineteen level-2 sections the README currently has, in order. The first
+#: seventeen, through "License", are the minimum Requirement 13 AC1 requires, in
+#: the order the criterion lists them. "Support" and "Privacy Policy" are sections
+#: this repository added beyond that minimum. Order is part of the requirement, so
+#: this is a sequence and it is compared as one.
 README_REQUIRED_SECTIONS: Tuple[str, ...] = (
     "What is aws-iac-review-agent-plugin",
     "Why this project exists",
@@ -1664,6 +1672,8 @@ README_REQUIRED_SECTIONS: Tuple[str, ...] = (
     "Roadmap",
     "Contributing",
     "License",
+    "Support",
+    "Privacy Policy",
 )
 
 #: The nine limitations Task 27.1 requires "Known Limitations" to list, each as a
@@ -1748,27 +1758,35 @@ def readme_level_2_headings(text: str) -> Tuple[str, ...]:
 
 @pytest.mark.parametrize("title", README_REQUIRED_SECTIONS)
 def test_readme_has_required_section(readme_text: str, title: str) -> None:
-    """Requirement 13 AC1: each of the seventeen sections is present, and has a
-    body.
+    """Requirement 13 AC1: each expected section is present, and has a body.
+
+    The parameters are the seventeen sections AC1 requires plus the two this
+    repository added ("Support", "Privacy Policy"); all nineteen are held to the
+    same presence-and-content check.
 
     Asserted through :func:`readme_section`, which fails on a missing heading, so
     a renamed section reports as missing rather than as empty.
     """
     assert readme_section(readme_text, title).strip(), (
-        "Requirement 13 AC1 requires a level-2 section {0!r} with content".format(title)
+        "README level-2 section {0!r} must exist and contain content".format(title)
     )
 
 
 def test_readme_level_2_headings_are_exactly_the_required_sequence(
     readme_text: str,
 ) -> None:
-    """Requirement 13 AC1: those seventeen sections, in that order, and no others.
+    """Requirement 13 AC1: the nineteen current sections, in that order, and no others.
+
+    AC1 requires seventeen sections at minimum and does not forbid more; the
+    expected sequence is those seventeen followed by "Support" and "Privacy
+    Policy". "No others" is this test's choice, not the criterion's.
 
     Compared as a sequence rather than as a set for two reasons. The order is
     what the criterion states, and it is the reading order the document promises:
-    a newcomer meets "what is this" before "how do I install it". And an
-    eighteenth section of someone's own invention passes every presence check
-    above while moving a claim out of the section a reader looks for it in.
+    a newcomer meets "what is this" before "how do I install it". And a further
+    section added without updating :data:`README_REQUIRED_SECTIONS` passes every
+    presence check above while possibly moving a claim out of the section a
+    reader looks for it in, so it is surfaced here for a deliberate decision.
     """
     assert readme_level_2_headings(readme_text) == README_REQUIRED_SECTIONS
 
@@ -1828,9 +1846,11 @@ def test_known_limitations_records_each_required_limitation(
 # English original. So the assertions are relational. The section count and the
 # section order are read out of ``README.md`` rather than restated here, which is
 # the same rule the license assertions follow -- one fact, two files, and the
-# disagreement between them is what is worth catching. If Requirement 13 AC1 ever
-# gains an eighteenth section, the test above is the one that fails, and these
-# keep measuring correspondence rather than a stale count of seventeen.
+# disagreement between them is what is worth catching. If the English README
+# gains a section beyond its current nineteen (the seventeen Requirement 13 AC1
+# requires plus "Support" and "Privacy Policy"), the exact-sequence test above is
+# the one that fails, and these keep measuring correspondence rather than a
+# stale count.
 
 README_JA_PATH: Path = REPO_ROOT / "README.ja.md"
 
@@ -1858,6 +1878,8 @@ README_JA_SECTION_TITLES: Tuple[Tuple[str, str], ...] = (
     ("Roadmap", "Roadmap"),
     ("Contributing", "Contributing"),
     ("License", "License"),
+    ("Support", "Support"),
+    ("Privacy Policy", "Privacy Policy"),
 )
 
 #: What the supplement has to say about its own standing, written as escapes so
@@ -1924,10 +1946,11 @@ def test_readme_ja_has_one_section_per_english_section(
 ) -> None:
     """Task 27.5 completion condition: the section structure corresponds.
 
-    Counted against ``README.md`` rather than against the literal seventeen, so
-    that a section added to the English original is reported here as a section
-    the supplement is missing, rather than both files passing a count that is no
-    longer what Requirement 13 AC1 asks for.
+    Counted against ``README.md`` rather than against a literal number (neither
+    the seventeen Requirement 13 AC1 requires at minimum nor the nineteen the
+    README currently has), so that a section added to the English original is
+    reported here as a section the supplement is missing, rather than both files
+    passing a count that no longer describes the English original.
     """
     english = readme_level_2_headings(readme_text)
     japanese = readme_level_2_headings(readme_ja_text)
@@ -1954,7 +1977,7 @@ def test_readme_ja_sections_follow_the_english_order(readme_ja_text: str) -> Non
 def test_no_readme_ja_section_is_left_empty(readme_ja_text: str) -> None:
     """Task 27.5: "corresponds to the English section structure", with content.
 
-    Seventeen headings and nothing under them corresponds to the structure and to
+    Every heading present and nothing under them corresponds to the structure and to
     none of the substance. Checked here rather than by comparing lengths with the
     English section, which would turn every editorial decision about how much
     detail to translate into a test failure.
