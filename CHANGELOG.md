@@ -44,7 +44,47 @@ than kept as an empty heading, which is why the first release below carries
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- **The Delta_Tool (v1.1): `python3 -m iacreview.deltacli`.** A read-only
+  comparison of a Base and a Head CloudFormation Template (the Semantic Diff:
+  added, removed and modified positions with qualifiers, limitations and
+  uncompared paths) and/or a Base and a Head Review_Report (the Finding Delta:
+  each Finding matched in two deterministic stages and classified `New`,
+  `Resolved`, `Unchanged`, `Unconfirmed` or `Ambiguous`). Assumptions the tool
+  cannot check are given with `--declare` and recorded as
+  `declared_not_verified`; without them a one-sided Finding is `Unconfirmed`,
+  and a failed comparability, integrity or correspondence condition makes it
+  `Ambiguous` whatever was declared. Output is one Delta_Report JSON document
+  with its own `delta_schema_version` `1.0.0`, anonymized by default
+  (`--plain-identifiers` writes identifiers; Template values and Finding text are
+  never written), byte-identical for identical inputs, and fail-closed at the
+  input limits (5 MiB per Template or Report, 10000 Findings, depth 64, 3000000
+  logical nodes, 200000 Change_Entries, 128 MiB of output). The schema, closed
+  sets, failure Codes and known limitations are documented in
+  `docs/delta-schema.md`. It is a module entry point, not a Skill: the existing
+  Skills, the 13-field Finding, the Review_Report and its `schema_version`
+  `1.0.0`, the exit code table and the run-time dependencies are unchanged.
+  Markdown output and Git ref inputs are not part of it.
+- **Delta_Tool: `--reviewed-template-path PATH` for both pairs in one run.**
+  With a Template_Pair and a Report_Pair, it declares the workspace-relative
+  path at which both Reports reviewed the Template, so that the Template /
+  Report correspondence check can pass and `New` / `Resolved` can appear. The
+  declaration is recorded as `finding_delta.reviewed_template_path` with the
+  status `declared_not_verified` (`null` without it); the file is not read and
+  nothing about it is verified. Report integrity, Comparable, the required
+  declarations, rename hints and the limits are unchanged. A refused value
+  exits 2 before any input is read.
+- **Delta_Tool output safety.** C1 control characters and the bidirectional
+  controls are written as `\uXXXX` escapes in the JSON (the decoded values are
+  unchanged). An integer of a Finding `TemplatePath` is written as a list index
+  only when the Finding is in the compared Template path and the index lies
+  inside a list; otherwise it is a Token, so a digit-only key is not written in
+  plain form by default.
+- **Delta_Tool memory at the output limit.** The 128 MiB output limit is
+  checked against a lower bound of the output size before rendering and while
+  serializing, so the full text of an oversized output is never built. Output
+  bytes, the schema and the failure Codes are unchanged.
 
 ## [1.0.0] - 2026-09-01
 

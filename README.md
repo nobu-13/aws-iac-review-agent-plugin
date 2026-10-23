@@ -264,6 +264,137 @@ top of the bundled ones, `--format {json,sarif}` (default `json`),
 `--agent-findings`, `--confirm-cdk-synth`, `--verbose`.
 Each `SKILL.md` documents its own options and output in full.
 
+**Comparing two revisions (Delta_Tool, v1.1, unreleased).** `iacreview/deltacli.py`
+compares a Base and a Head CloudFormation Template (the Semantic Diff) and/or a
+Base and a Head Review_Report (the Finding Delta), and writes one Delta_Report
+JSON document to stdout. It is a comparison tool, not a quality gate: no field
+says that anything improved, was fixed, is safe or passed. It is read-only: it
+reads only the files named on the command line, starts no process, opens no
+network connection and writes no file. It is a Python module entry point, not a
+Skill, and it changes nothing in the existing Skills, the Finding, the
+Review_Report or the exit code table above. Run it from the workspace root, with
+the Plugin root on `PYTHONPATH` when the workspace is another directory; every
+path must resolve inside the workspace.
+
+The examples below were run in a scratch workspace holding two checkouts of one
+stack. The Head adds an `AWS::IAM::ManagedPolicy` allowing `*` on `*`, removes an
+`AWS::IAM::Role` that had the same, and keeps a role that may pass any role.
+
+A Semantic Diff of the two Templates (exit 0):
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-template checkout-base/stack/template.yaml \
+  --head-template checkout-head/stack/template.yaml
+```
+
+```text
+semantic_diff: analysis_state=analyzed observation=changes_observed structural_completeness=complete
+  added    ["Resources", "id-000001"]  resource_type {base: null, head: AWS::IAM::ManagedPolicy}
+  removed  ["Resources", "id-000002"]  resource_type {base: AWS::IAM::Role, head: null}
+```
+
+The Reports are made by reviewing each checkout at the same relative path, so
+that `Location.File` and `target` agree on both sides:
+
+```sh
+(cd checkout-base && python3 <plugin_root>/skills/iac-review/scripts/run_iac_review.py \
+  --target stack/template.yaml --sources iam-review > ../base.json)
+(cd checkout-head && python3 <plugin_root>/skills/iac-review/scripts/run_iac_review.py \
+  --target stack/template.yaml --sources iam-review > ../head.json)
+```
+
+A Finding Delta of the two Reports with the five Report declarations (exit 0):
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-report base.json --head-report head.json \
+  --declare reports_unmodified --declare same_plugin_version --declare same_rule_set \
+  --declare same_tool_configuration --declare same_agent_findings_input
+```
+
+```text
+finding_delta: analysis_state=analyzed classification_completeness=complete comparable=true
+  New        head_only  Resource id-000002  (the added managed policy)
+  Resolved   base_only  Resource id-000004  (the removed role)
+  Unchanged  matched    Resource id-000005  match_stage 1
+```
+
+The same command without the `--declare` options classifies the two one-sided
+Findings as `Unconfirmed` with `input_declaration_absent`, and lists the five
+missing Codes in `missing_declarations`.
+
+Both pairs in one run, with the sixth declaration and the path at which both
+Reports reviewed the Template (exit 0):
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-template checkout-base/stack/template.yaml \
+  --head-template checkout-head/stack/template.yaml \
+  --base-report base.json --head-report head.json \
+  --declare reports_unmodified --declare same_plugin_version --declare same_rule_set \
+  --declare same_tool_configuration --declare same_agent_findings_input \
+  --declare reports_match_templates \
+  --reviewed-template-path stack/template.yaml
+```
+
+```text
+semantic_diff: added id-000001 (AWS::IAM::ManagedPolicy), removed id-000003 (AWS::IAM::Role)
+finding_delta: classification_completeness=complete template_report_correspondence=consistent_by_name_only
+  reviewed_template_path {"path": "stack/template.yaml", "status": "declared_not_verified"}
+  New        head_only  Resource id-000001
+  Resolved   base_only  Resource id-000003
+  Unchanged  matched    Resource id-000004  match_stage 1
+```
+
+`--reviewed-template-path` is a declaration, not a verification. The tool does
+not read the file at that path (it need not exist) and does not check that the
+Templates given are the ones the Reports reviewed. It only replaces the path
+that the Template / Report correspondence check compares with each Report's
+`target`, as a string after normalization (`/` separators, `.` and empty
+segments removed), and it is recorded as `reviewed_template_path` with the
+status `declared_not_verified`. A different letter case,
+Unicode normalization or symlink name gives `inconsistent`. Report integrity,
+Comparable, the required declarations, rename hints and the limits apply
+unchanged, so a doubtful input still gives `Unconfirmed` or `Ambiguous`, never
+`New` or `Resolved`. Without the option, one run with both pairs gives
+`inconsistent` and `Ambiguous` (`template_report_mismatch`) for these two
+Findings. An absolute path, a `..` segment, a path that leaves the workspace
+through a symlink, or the option without both pairs exits 2. Excerpts above
+are abridged from the JSON; the full output and the commands are reproducible
+as written.
+
+The classifications of a Delta_Entry:
+
+- `New` / `Resolved`: the matching procedure found no corresponding Finding on
+  the other side, every recorded condition held (the Source is comparable for the
+  file in both Reports, the Reports pass the internal-consistency checks, the
+  Template / Report correspondence is not `inconsistent` or `unknown`, no rename
+  hint), and every required declaration was given. It is not evidence that a
+  problem was fixed or introduced.
+- `Unchanged`: the procedure matched a Base and a Head Finding (stage 1 or 2). It
+  does not mean that they share a root cause.
+- `Unconfirmed`: a one-sided Finding for which a required `--declare` Code is
+  missing. The missing Codes are listed.
+- `Ambiguous`: not uniquely matched, or a recorded condition does not hold. The
+  reasons are listed. Declarations never turn `Ambiguous` into `New` or
+  `Resolved`.
+
+A declaration is recorded as `declared_not_verified`; the tool does not check it.
+By default the output is anonymized: Logical IDs, entry names, property and
+mapping keys, unknown Resource Types and RuleIds are replaced by Identifier_Tokens
+(`id-000001`, ...) that are stable only within one Delta_Report, and Template
+values, Finding text and input error text are never written. Section names,
+`AWS::` Resource Types, Categories, closed-set values and workspace-relative file
+paths stay plain. `--plain-identifiers` writes identifiers as they are; values
+and free text are still never written. Exit 0 means every requested comparison
+was analyzed, whatever it observed. An input that cannot be compared exits with
+the code of the first failure (3, 4, 7, 8, or 1 for a parser divergence), marks
+that comparison `unanalyzable` and still writes the other comparison in full. An
+invalid argument exits 2 and an unexpected exception exits 1, both with no
+Delta_Report. `docs/delta-schema.md` is the reference for every key,
+closed set, failure Code and limit.
+
 ### Report envelope
 
 stdout is exactly seven keys, in every run, whichever sources ran:
@@ -680,6 +811,78 @@ dashes in the original are written as `--` here to keep this file ASCII.
   ground truth is authored before any review is run is enforced by human review
   today; the CI check that a case's `ground_truth.json` appears in the same
   commit as its `template.yaml`, or earlier, is still owed.
+
+**Delta_Tool (v1.1, unreleased)**
+
+`docs/delta-schema.md` keeps the full list; these are the ones most likely to
+mislead.
+
+- **It compares the declared Templates only.** Intrinsic functions, Conditions,
+  Transforms, Macros, dynamic references, Parameter values and nested stacks are
+  not evaluated. `complete` with `no_changes_observed` does not mean the deployed
+  stacks are equivalent.
+- **Matching uses stages 1 and 2 only.** There is no similarity or text matching.
+  Mis-pairing can hide a `New` or a `Resolved` behind an `Unchanged`; it cannot
+  create one.
+- **Report authenticity and the Report / Template correspondence are not
+  verified.** `report_authenticity` is always `unverified`, declarations are
+  recorded and not checked, and `consistent_by_name_only` is a name check, not
+  proof that a Report came from a Template.
+- **Both pairs in one run need `--reviewed-template-path`, and it is not
+  verified.** Without it, each Template path must be in its own Report's
+  `target` and Findings are matched only on the same `Location.File`; two
+  revisions read in one workspace sit at two different paths, so the one-sided
+  entries are `Ambiguous` (`template_report_mismatch`, or
+  `source_not_comparable` with `template_not_reviewed`) and no `New` or
+  `Resolved` appears. With it, the declared path replaces the Template path in
+  that check only. The tool cannot tell whether the Templates given are the
+  ones the Reports reviewed beyond the Logical ID check, so a wrong declaration
+  whose Logical IDs happen to agree is not detected. A Report_Pair alone has no
+  rename hint and no correspondence check, so a renamed Logical ID can appear
+  as `Resolved` plus `New`.
+- **Path mismatches fail closed.** A Template path is compared with the Report
+  `target` as a workspace-relative string after `./`, `..` and symlinks are
+  resolved. A Report recorded under a symlink name, a different letter case or a
+  different Unicode normalization (NFC / NFD) gives `inconsistent` (or `unknown`
+  when the file system then cannot find the file), and a path outside the
+  workspace exits 7 with `unknown`. In every case no `New` or
+  `Resolved` is produced.
+- **List indexes in a Finding `TemplatePath` are shown only when the Template
+  can be walked.** v1.0 Reports record list indexes and digit-only mapping keys
+  both as integers. With a Report_Pair alone, for a side whose Template is
+  unanalyzable, and for a Finding whose `Location.File` is not the compared
+  Template path (the `--reviewed-template-path` value, else the Template's own
+  path), the two cannot be told apart, and so can an index past the end of the
+  list. Every such integer is written as a Token (a decimal string with
+  `--plain-identifiers`), so a digit-only key such as an account ID is never
+  written in plain form by default.
+- **Only reorders that keep a Report internally consistent are neutral.** v1.1
+  Requirement 11 AC5 covers reorders that keep the `report.build_report` order
+  and pass the internal-consistency checks; they change nothing but the Report
+  digest and the per-side `ID` values. Reordering the raw `findings[]` of a
+  built Report fails the `rebuild_mismatch` check, and its one-sided entries
+  become `Ambiguous` with `report_integrity_failed`.
+- **The JSON output is data, not display text.** C1 control characters and the
+  bidirectional controls (U+202A to U+202E, U+2066 to U+2069, U+200E, U+200F,
+  U+061C) are written as `\uXXXX` escapes, so the raw JSON does not reorder what
+  a terminal shows. The decoded values are unchanged: a program that decodes the
+  JSON and prints a path can still show them, and other invisible or confusable
+  Unicode characters are written as they are. Escape decoded values before
+  showing them to people. stderr carries no input-derived string and replaces
+  control and bidirectional characters with `\u{XXXX}`. There is no Markdown
+  output.
+- **An input that ends in `output_size_limit_exceeded` still costs memory and
+  time.** The tool compares a lower bound of the output size with the 128 MiB
+  limit before rendering and stops serializing once the limit is passed, so no
+  full text of an oversized output is built. When the bound is under the limit,
+  every Change_Entry is still rendered before serialization starts. In a local
+  measurement on one machine (macOS, Python 3.9; not a guarantee), inputs that had used about
+  2.3 and 2.9 GiB peaked at about 250 and 520 MiB, and inputs whose bound is
+  just under the limit used about 0.7 to 0.75 GiB and 14 to 16 seconds.
+  The result is fail-closed: only the minimal Delta_Report is written.
+- **Not available:** Markdown output, a stage-3 (similarity) match, Git ref, URL,
+  stdin or directory inputs. Python 3.11 / 3.13 and GitHub CI runs of the v1.1
+  tests are not verified yet; local verification used Python 3.9.
 
 ## Roadmap
 
