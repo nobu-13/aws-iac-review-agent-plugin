@@ -1,0 +1,38 @@
+{
+  "case": "parameter_default_changed",
+  "covers": [
+    "R15.4 Parameter Default change",
+    "R4.10",
+    "R4.11"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Parameters",
+          "Env",
+          "Default"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "Parameters",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "indirect_effects_not_evaluated"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

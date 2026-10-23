@@ -1,0 +1,7 @@
+Resources:
+  Child:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://example.com/templates/child-v2.yaml
+      Parameters:
+        Env: dev

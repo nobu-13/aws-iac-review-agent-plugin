@@ -1,0 +1,15 @@
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue
+  Bucket:
+    Properties:
+      VersioningConfiguration:
+        Status: Enabled
+      BucketName: example-bucket
+    DeletionPolicy: Retain
+    Type: AWS::S3::Bucket
+Parameters:
+  Env:
+    Default: dev
+    Type: String
+Description: Delta fixture

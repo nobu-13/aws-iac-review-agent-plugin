@@ -1,0 +1,190 @@
+{
+  "case": "correspondence_inconsistent",
+  "covers": [
+    "R15.6 template_report_correspondence inconsistent",
+    "R8.6",
+    "R7.2 template_report_mismatch"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input",
+      "reports_match_templates"
+    ],
+    "none": [],
+    "one_missing": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "topic encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "none": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "topic encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "one_missing": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "topic encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "template_report_mismatch"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "inconsistent"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": {
+    "base": {
+      "file": "template.yaml",
+      "workspace_path": "templates/app.yaml"
+    },
+    "head": {
+      "file": "template.yaml",
+      "workspace_path": "templates/app.yaml"
+    }
+  }
+}

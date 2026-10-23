@@ -1,0 +1,21 @@
+{
+  "case": "notation_comments_and_quoting",
+  "covers": [
+    "R15.4 notation: comments, whitespace, YAML quoting",
+    "R3.8"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

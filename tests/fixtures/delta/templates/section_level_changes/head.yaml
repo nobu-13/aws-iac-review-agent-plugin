@@ -1,0 +1,17 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: after
+Metadata:
+  Owner: team-b
+Mappings:
+  RegionMap:
+    us-east-1:
+      Ami: ami-0000000b
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Extra: 2
+Outputs:
+  Out:
+    Value: v2
+CustomSection:
+  Knob: 2

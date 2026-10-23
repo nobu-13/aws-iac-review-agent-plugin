@@ -1,0 +1,23 @@
+{
+  "case": "dynamic_reference_unchanged",
+  "covers": [
+    "R15.4 dynamic reference without change",
+    "R4.8 dynamic_reference_unresolved"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [
+      "dynamic_reference_unresolved"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

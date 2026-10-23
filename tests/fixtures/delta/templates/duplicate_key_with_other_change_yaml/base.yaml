@@ -1,0 +1,11 @@
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: bucket-a
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      Environment:
+        Variables:
+          MODE: one

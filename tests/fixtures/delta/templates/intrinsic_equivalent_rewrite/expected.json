@@ -1,0 +1,65 @@
+{
+  "case": "intrinsic_equivalent_rewrite",
+  "covers": [
+    "R15.4 equivalent intrinsic rewrite",
+    "R3.10",
+    "R4.3",
+    "R4.6"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "removed",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "QueueName",
+          "Ref"
+        ],
+        "qualifiers": [
+          "expression_unevaluated",
+          "external_value"
+        ],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "added",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "QueueName",
+          "Fn::Sub"
+        ],
+        "qualifiers": [
+          "expression_unevaluated"
+        ],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

@@ -1,0 +1,7 @@
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      BuiltAt: 2012-10-17T00:00:00Z
+    Properties:
+      BucketName: example-bucket

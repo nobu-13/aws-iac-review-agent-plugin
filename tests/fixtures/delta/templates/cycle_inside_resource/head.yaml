@@ -1,0 +1,4 @@
+Resources:
+  R: &a
+    Type: AWS::S3::Bucket
+    Properties: {Loop: *a}

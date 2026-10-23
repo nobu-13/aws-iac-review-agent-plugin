@@ -1,0 +1,44 @@
+{
+  "case": "aws_include",
+  "covers": [
+    "R15.4 AWS::Include",
+    "R4.7",
+    "R4.8"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "BucketName"
+        ],
+        "qualifiers": [
+          "pre_transform"
+        ],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "transform_not_expanded"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

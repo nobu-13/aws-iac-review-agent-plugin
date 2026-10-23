@@ -1,0 +1,112 @@
+{
+  "case": "section_level_changes",
+  "covers": [
+    "R3.4 entry-level sections",
+    "R3.5 section-level sections",
+    "R3.6 unknown top-level key"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "added",
+        "hints": [],
+        "path": [
+          "AWSTemplateFormatVersion"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "AWSTemplateFormatVersion",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Description"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "Description",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Metadata"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "Metadata",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Mappings",
+          "RegionMap",
+          "us-east-1",
+          "Ami"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "Mappings",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Extra"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Outputs",
+          "Out",
+          "Value"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "Outputs",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "CustomSection"
+        ],
+        "qualifiers": [],
+        "resource_type": null,
+        "section": "CustomSection",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "indirect_effects_not_evaluated"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

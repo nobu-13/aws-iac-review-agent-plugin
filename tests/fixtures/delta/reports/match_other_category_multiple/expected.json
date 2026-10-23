@@ -1,0 +1,63 @@
+{
+  "case": "match_other_category_multiple",
+  "covers": [
+    "R15.5 several Other Findings on the same Resource",
+    "R6.5"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "complete",
+        "entries": [
+          {
+            "base": "other finding one",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "other finding one",
+            "match_stage": 2,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "other finding two",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "other finding two",
+            "match_stage": 2,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          }
+        ],
+        "observation": "no_changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

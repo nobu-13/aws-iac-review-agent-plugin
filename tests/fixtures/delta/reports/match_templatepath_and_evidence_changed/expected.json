@@ -1,0 +1,67 @@
+{
+  "case": "match_templatepath_and_evidence_changed",
+  "covers": [
+    "R15.5 dedup-eligible Finding with TemplatePath and Evidence both changed",
+    "R6.4",
+    "R6.13"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "complete",
+        "entries": [
+          {
+            "base": "bucket encryption",
+            "changes": [
+              "Evidence",
+              "Location.TemplatePath"
+            ],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [
+              {
+                "RuleId": "ebs_volume_encrypted",
+                "Source": "cfn-guard",
+                "source_comparable": true
+              }
+            ],
+            "evidence_absent_in_head": [
+              {
+                "RuleId": "s3_bucket_encryption",
+                "Source": "cfn-guard",
+                "source_comparable": true
+              }
+            ],
+            "head": "bucket encryption",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

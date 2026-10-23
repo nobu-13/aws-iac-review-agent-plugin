@@ -1,0 +1,36 @@
+{
+  "case": "duplicate_key_json",
+  "covers": [
+    "R15.4 duplicate key: JSON (section name and inside a Resource)",
+    "R2.5"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Description"
+        ],
+        "reason": "duplicate_key"
+      },
+      {
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties"
+        ],
+        "reason": "duplicate_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "limits": {}
+}

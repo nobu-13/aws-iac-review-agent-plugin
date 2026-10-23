@@ -1,0 +1,21 @@
+{
+  "case": "notation_short_vs_long_form",
+  "covers": [
+    "R15.4 notation: short form vs long form",
+    "R3.9"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

@@ -1,0 +1,37 @@
+{
+  "case": "resource_type_changed",
+  "covers": [
+    "R15.4 Resource Type change",
+    "R3.2"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Store"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": true
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

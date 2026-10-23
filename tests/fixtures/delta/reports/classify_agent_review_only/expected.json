@@ -1,0 +1,148 @@
+{
+  "case": "classify_agent_review_only",
+  "covers": [
+    "R15.6 Finding whose only Source is Agent Review",
+    "R7.2 non_deterministic_source"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ],
+    "none": [],
+    "one_missing": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "agent architecture note",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "non_deterministic_source"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "New",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": []
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "none": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "agent architecture note",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "non_deterministic_source"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Unconfirmed",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [
+              "reports_unmodified",
+              "same_plugin_version",
+              "same_rule_set",
+              "same_tool_configuration",
+              "same_agent_findings_input"
+            ],
+            "observation": "head_only",
+            "reasons": [
+              "input_declaration_absent"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "one_missing": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "agent architecture note",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "non_deterministic_source"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Unconfirmed",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [
+              "same_rule_set"
+            ],
+            "observation": "head_only",
+            "reasons": [
+              "input_declaration_absent"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

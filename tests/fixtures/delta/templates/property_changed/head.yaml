@@ -1,0 +1,9 @@
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: example-bucket
+      VersioningConfiguration:
+        Status: Enabled
+      AccelerateConfiguration:
+        AccelerationStatus: Enabled

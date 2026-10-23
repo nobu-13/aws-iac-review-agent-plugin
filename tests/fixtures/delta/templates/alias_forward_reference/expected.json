@@ -1,0 +1,24 @@
+{
+  "case": "alias_forward_reference",
+  "covers": [
+    "R2.12 an undefined forward alias is an ordinary parse failure (Design F-15)"
+  ],
+  "expected": {
+    "analysis_state": "unanalyzable",
+    "changes": [],
+    "failure": {
+      "code": "template_parse_failure",
+      "input": "template",
+      "side": "head"
+    },
+    "observation": null,
+    "semantic_limitations": [],
+    "structural_completeness": null,
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

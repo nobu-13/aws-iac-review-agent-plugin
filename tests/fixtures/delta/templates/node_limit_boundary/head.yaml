@@ -1,0 +1,8 @@
+Resources:
+  R:
+    Type: AWS::S3::Bucket
+    Properties:
+      A: &a [1, 2, 3]
+      B: *a
+      C: *a
+      D: 1

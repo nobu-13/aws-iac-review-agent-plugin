@@ -1,0 +1,5 @@
+Resources:
+  Store:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: example-store

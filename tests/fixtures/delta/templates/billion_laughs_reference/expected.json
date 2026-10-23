@@ -1,0 +1,32 @@
+{
+  "case": "billion_laughs_reference",
+  "covers": [
+    "R15.4 tests/fixtures/invalid/billion_laughs.yaml under the shipped alias budget",
+    "R14.6"
+  ],
+  "expected": {
+    "analysis_state": "unanalyzable",
+    "changes": [],
+    "failure": {
+      "code": "template_node_limit_exceeded",
+      "input": "template",
+      "side": "head"
+    },
+    "observation": null,
+    "semantic_limitations": [],
+    "shapes": {
+      "head": {
+        "containers": 11,
+        "depth": 12,
+        "nodes": 1234567901
+      }
+    },
+    "structural_completeness": null,
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head_ref": "tests/fixtures/invalid/billion_laughs.yaml"
+  },
+  "limits": {}
+}

@@ -1,0 +1,98 @@
+{
+  "case": "list_order_changed",
+  "covers": [
+    "R15.4 list order change",
+    "R3.12"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "Tags",
+          0,
+          "Key"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "Tags",
+          0,
+          "Value"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "Tags",
+          1,
+          "Key"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "Tags",
+          1,
+          "Value"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

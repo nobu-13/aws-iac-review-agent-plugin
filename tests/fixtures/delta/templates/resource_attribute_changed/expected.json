@@ -1,0 +1,87 @@
+{
+  "case": "resource_attribute_changed",
+  "covers": [
+    "R15.4 Resource Attribute change",
+    "R3.3"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "DeletionPolicy"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "added",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "UpdateReplacePolicy"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "DependsOn"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Metadata",
+          "Owner"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

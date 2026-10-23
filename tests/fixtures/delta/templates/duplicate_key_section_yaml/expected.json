@@ -1,0 +1,28 @@
+{
+  "case": "duplicate_key_section_yaml",
+  "covers": [
+    "R15.4 duplicate key: section name",
+    "R2.5 top-level duplicate leaves the section uncompared"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources"
+        ],
+        "reason": "duplicate_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

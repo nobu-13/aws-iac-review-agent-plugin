@@ -1,0 +1,21 @@
+{
+  "case": "notation_yaml_vs_json",
+  "covers": [
+    "R15.4 notation: YAML vs JSON",
+    "R3.8"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.json"
+  },
+  "limits": {}
+}

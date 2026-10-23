@@ -1,0 +1,3 @@
+Resources:
+  R: [*a]
+  S: &a [1]

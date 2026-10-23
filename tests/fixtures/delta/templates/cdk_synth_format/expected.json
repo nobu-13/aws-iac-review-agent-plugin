@@ -1,0 +1,74 @@
+{
+  "case": "cdk_synth_format",
+  "covers": [
+    "R15.4 CDK synth format",
+    "R4.14 CDK-generated content is not dropped"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Handler886CB40B",
+          "Properties",
+          "Code",
+          "S3Key"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::Lambda::Function",
+          "head": "AWS::Lambda::Function"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Handler886CB40B",
+          "Metadata",
+          "aws:asset:path"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::Lambda::Function",
+          "head": "AWS::Lambda::Function"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "CDKMetadata",
+          "Properties",
+          "Analytics"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::CDK::Metadata",
+          "head": "AWS::CDK::Metadata"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "limits": {}
+}

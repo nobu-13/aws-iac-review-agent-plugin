@@ -1,0 +1,52 @@
+{
+  "case": "resource_added_removed",
+  "covers": [
+    "R15.4 Resource added and removed",
+    "R3.1"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "removed",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": null
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "added",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Topic"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": null,
+          "head": "AWS::SNS::Topic"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}
