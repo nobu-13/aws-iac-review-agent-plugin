@@ -86,6 +86,31 @@ than kept as an empty heading, which is why the first release below carries
   serializing, so the full text of an oversized output is never built. Output
   bytes, the schema and the failure Codes are unchanged.
 
+### Fixed
+
+- **JSON nesting depth is bounded explicitly, the same on every Python
+  version.** A JSON Template nested deeper than 512 arrays and objects
+  (`iacreview.template.MAX_JSON_NESTING_DEPTH`) is refused before it is decoded,
+  as a `parse_failure` (exit 4) with `error_type` `RecursionError` at line 1,
+  column 1 and a fixed message. Before, the outcome depended on the
+  interpreter's recursion limit: Python 3.9 failed near 990 levels (fewer with
+  a deeper call stack), while Python 3.13 decoded about 10,000 levels and
+  reviewed the document. Observable change: a valid JSON document nested 513 to
+  about 990 levels, which Python 3.9 used to review, is now a parse failure on
+  every version. The deepest Template in this repository nests 12 levels, and
+  no YAML Template can exceed PyYAML's own limit (about 330). A document past
+  the limit that also has a syntax error is reported as the depth failure.
+  Pinned by `tests/unit/test_template.py` and
+  `tests/regression/test_sec_malformed_json.py`.
+- **A symlink cycle is `invalid_arguments` (exit 2) on Python 3.13 too.**
+  CPython 3.13's `Path.resolve` no longer detects cycles, so a candidate path
+  that is a cycle, or that traverses one, was reported as `input_not_found`
+  (exit 3). The path check now detects the cycle itself when the OS reports
+  `ELOOP`, without recursion, and reports it with the class and message Python
+  3.9 gives. A long chain of links that is not a cycle still resolves as
+  before, and every other symlink shape keeps its outcome. Pinned by
+  `tests/regression/test_sec_symlink_loop.py` and `tests/unit/test_pathguard.py`.
+
 ## [1.0.0] - 2026-09-01
 
 A maturation release. No new Source, no new deterministic check, and no new

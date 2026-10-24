@@ -606,6 +606,11 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   ではレビューできない。`$` は利用者が与える path で拒否される 7 つの shell metacharacter
   の 1 つである。拒否は明示的で名前の付いたエラーになる。値を sanitize せず拒否するのは、
   その文字を除去すると読み込み先が黙って別のファイルへ変わってしまうからである。
+- **512 段より深い JSON Template は parse failure になる。** `MAX_JSON_NESTING_DEPTH`
+  (512) を超えて入れ子になった array と object は、decode の前に `parse_failure` (exit 4)
+  として拒否され、これはどの Python version でも同じである。実在の CloudFormation Template
+  がこの深さに近づくことはないが、Python 3.9 が以前 review していた 513〜約 990 段の文書は
+  拒否されるようになった。
 - **`errors[].stderr_head` は外部ツールの出力を持つが、絶対 host path は伏せられる
   (v0.8.0)。** crash したツールからコピーした最大 5 行であり、各行を走査して絶対 host path
   を固定の `<path>` プレースホルダへ置換してから report へ渡すため、同一入力に対して抜粋は

@@ -671,6 +671,11 @@ reason is in the document named beside it.
   user-supplied paths. The rejection is an explicit, named error. Values are
   rejected rather than sanitized, because stripping the character would silently
   redirect the read to a different file.
+- **A JSON Template nested deeper than 512 levels is a parse failure.** Arrays
+  and objects nested past `MAX_JSON_NESTING_DEPTH` (512) are refused before
+  decoding, as `parse_failure` (exit 4), on every Python version. No real
+  CloudFormation Template comes near it, but a document that Python 3.9 used to
+  review at 513 to about 990 levels is now refused.
 - **`errors[].stderr_head` carries external tool output, with absolute host
   paths redacted (v0.8.0).** It is up to five lines copied from a crashing tool,
   and each line is scanned so an absolute host path is replaced with a fixed
