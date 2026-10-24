@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Type
+from typing import Dict, Optional, Tuple, Type
 
 import pytest
 
@@ -246,6 +246,48 @@ NON_CYCLE_OUTCOMES: Dict[str, Optional[Type[Exception]]] = {
 }
 
 
+def _resolve_names_the_whole_path(version: Tuple[int, ...]) -> bool:
+    """Whether ``Path.resolve`` on ``version`` names the whole unresolved path.
+
+    The same definition as in ``tests/regression/test_sec_symlink_loop.py``;
+    each file pins it with the same boundary table, so the two cannot drift
+    apart unnoticed. CPython 3.9.23 and later (a backport of bpo-43757 /
+    bpo-25264 shipped with the gh-135034 tarfile fix; see the 3.9.23 changelog
+    and cpython#136755), and 3.10 through 3.12, resolve through
+    ``os.path.realpath`` and name the link followed by the components not yet
+    resolved. 3.9.0 through 3.9.22 walk the path and name the link alone.
+    """
+    if (3, 9, 23) <= version[:3] < (3, 10):
+        return True
+    return (3, 10) <= version[:2] < (3, 13)
+
+
+#: The naming of the interpreter running the suite.
+RESOLVE_NAMES_THE_WHOLE_PATH = _resolve_names_the_whole_path(
+    tuple(sys.version_info[:3])
+)
+
+
+@pytest.mark.parametrize(
+    ("version", "whole_path"),
+    [
+        ((3, 9, 6), False),
+        ((3, 9, 22), False),
+        ((3, 9, 23), True),
+        ((3, 9, 25), True),
+        ((3, 10, 0), True),
+        ((3, 12, 9), True),
+        ((3, 13, 0), False),
+        ((3, 14, 0), False),
+    ],
+)
+def test_resolve_naming_follows_the_cpython_release_that_changed_it(
+    version: Tuple[int, int, int], whole_path: bool
+) -> None:
+    """Both sides of every boundary, so neither naming can go unexercised."""
+    assert _resolve_names_the_whole_path(version) is whole_path
+
+
 @pytest.fixture()
 def symlink_shapes(tmp_path: Path) -> Path:
     """A workspace root holding every shape the two tables above name."""
@@ -310,12 +352,13 @@ def test_symlink_loop_origin_agrees_with_path_resolve_where_it_raises(
 
     On those versions ``Path.resolve(strict=False)`` raises
     ``RuntimeError("Symlink loop from ...")`` exactly when it meets a cycle, so
-    the detector must find one exactly then. 3.9 names the link that closes the
-    cycle, which the detector must match exactly; 3.10-3.12 name the path
-    ``os.path.realpath`` returned, which is that link followed by the
-    components not yet resolved. 3.13 removed the detection and has no oracle;
-    there the same candidates are checked against the specification table
-    instead, in this same test, so it runs and asserts on every version.
+    the detector must find one exactly then. 3.9.0-3.9.22 name the link that
+    closes the cycle, which the detector must match exactly; 3.9.23 and later
+    and 3.10-3.12 name the path ``os.path.realpath`` returned, which is that
+    link followed by the components not yet resolved. 3.13 removed the
+    detection and has no oracle; there the same candidates are checked against
+    the specification table instead, in this same test, so it runs and asserts
+    on every version.
     """
     root = symlink_shapes.resolve()
     path = root / candidate
@@ -326,7 +369,7 @@ def test_symlink_loop_origin_agrees_with_path_resolve_where_it_raises(
             path.resolve(strict=False)
         except RuntimeError as exc:
             assert detected is not None
-            if sys.version_info < (3, 10):
+            if not RESOLVE_NAMES_THE_WHOLE_PATH:
                 assert str(exc) == "Symlink loop from {0!r}".format(detected)
             else:
                 remainder = Path(candidate).relative_to(

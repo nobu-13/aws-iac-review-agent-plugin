@@ -152,13 +152,15 @@ def _resolve_root(root: Path) -> Path:
 def _symlink_loop_origin(path: str) -> Optional[str]:
     """Return the link at which resolving ``path`` enters a cycle, or ``None``.
 
-    The same walk CPython 3.9 through 3.12 perform in non-strict
-    ``Path.resolve``: components are joined one at a time, every symbolic link
-    met is expanded in place, and a link met again *while its own expansion is
-    still in progress* is a cycle. A link met again after its expansion finished
-    is not -- its result is reused -- so two links to one target, or a long
-    chain, are not cycles. A missing component or one that is not a link is kept
-    as it is, as non-strict resolution does.
+    The same walk CPython 3.9.0 through 3.9.22 perform in non-strict
+    ``Path.resolve`` (3.9.23 and later, and 3.10 through 3.12, detect the same
+    cycles through ``os.path.realpath`` and name the whole unresolved path
+    instead of the link): components are joined one at a time, every symbolic
+    link met is expanded in place, and a link met again *while its own
+    expansion is still in progress* is a cycle. A link met again after its
+    expansion finished is not -- its result is reused -- so two links to one
+    target, or a long chain, are not cycles. A missing component or one that is
+    not a link is kept as it is, as non-strict resolution does.
 
     Iterative, with an explicit stack instead of the recursion CPython uses, so
     the depth of a chain cannot exhaust the interpreter's stack. It terminates
@@ -273,7 +275,10 @@ def _resolve_under_root(candidate: str, root: Path) -> Path:
         #
         # ``RuntimeError`` is in the tuple for symlink cycles. On CPython 3.9
         # through 3.12, ``Path.resolve`` detects a cycle itself and raises
-        # ``RuntimeError("Symlink loop from ...")``. 3.13 stopped raising for
+        # ``RuntimeError("Symlink loop from ...")`` (naming the link on 3.9.0
+        # through 3.9.22, and the whole unresolved path on 3.9.23 and later
+        # and 3.10 through 3.12, which resolve through ``os.path.realpath``).
+        # 3.13 stopped raising for
         # the non-strict case and returns the path with the cycle unresolved,
         # so the cycle is also detected explicitly above, by the same walk and
         # with the same message, and raised as the same ``RuntimeError``. A

@@ -107,7 +107,8 @@ than kept as an empty heading, which is why the first release below carries
   that is a cycle, or that traverses one, was reported as `input_not_found`
   (exit 3). The path check now detects the cycle itself when the OS reports
   `ELOOP`, without recursion, and reports it with the class and message Python
-  3.9 gives. A long chain of links that is not a cycle still resolves as
+  3.9.0-3.9.22 gives (3.9.23 and later, like 3.10-3.12, name the whole
+  unresolved path in the message; the class and exit code are the same). A long chain of links that is not a cycle still resolves as
   before, and every other symlink shape keeps its outcome. Pinned by
   `tests/regression/test_sec_symlink_loop.py` and `tests/unit/test_pathguard.py`.
 

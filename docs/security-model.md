@@ -552,8 +552,9 @@ cannot be reviewed until the cycle is removed. The failure mode is worth naming
 because it was once worse than that: on CPython 3.9 through 3.12, `Path.resolve`
 detects the cycle itself and raises `RuntimeError` rather than letting the kernel
 report `ELOOP` as an `OSError`, and `RuntimeError` was outside the caught tuple,
-so an entry point died with a traceback and an undefined exit status. Both
-resolution sites now catch it. CPython 3.13 stopped detecting the cycle in the
+so an entry point died with a traceback and an undefined exit status. (From
+3.9.23, 3.9 detects it through `os.path.realpath` as 3.10 through 3.12 do; only
+the path the message names differs.) Both resolution sites now catch it. CPython 3.13 stopped detecting the cycle in the
 non-strict call and returns the path unresolved, which turned a candidate cycle
 into `input_not_found`; when the OS reports `ELOOP` for a candidate,
 `resolve_within` now walks the links itself, without recursion, and raises the

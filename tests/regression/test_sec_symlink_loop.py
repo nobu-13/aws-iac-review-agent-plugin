@@ -14,8 +14,9 @@ The defect
 
 :func:`iacreview.pathguard.resolve_within` normalizes a candidate with
 :meth:`pathlib.Path.resolve` and caught ``(OSError, ValueError)`` around it. On
-CPython 3.9 through 3.12, ``Path.resolve`` walks the path itself and, on
-detecting a cycle, raises ``RuntimeError("Symlink loop from ...")`` rather than
+CPython 3.9 through 3.12, ``Path.resolve`` detects a cycle itself (3.9.0 through
+3.9.22 by walking the path, 3.9.23 and later and 3.10 through 3.12 through
+``os.path.realpath``) and raises ``RuntimeError("Symlink loop from ...")`` rather than
 letting the kernel report ``ELOOP`` as an ``OSError``. ``RuntimeError`` is
 neither ``OSError`` nor ``ValueError``, so it escaped:
 
@@ -49,10 +50,11 @@ Catching the exception was not enough on CPython 3.13, where the non-strict call
 stopped detecting cycles and returns the path unresolved: a candidate cycle then
 reached the existence check and was reported as ``input_not_found`` (exit 3)
 instead of ``invalid_arguments`` (exit 2). :mod:`iacreview.pathguard` therefore
-detects the cycle itself when the OS reports ``ELOOP`` -- with the walk 3.9
-performs, iteratively, and the same message -- so every version gives the same
-class. (3.10 through 3.12 detect it through ``os.path.realpath`` and name the
-unresolved remainder too; that wording is pinned per version below.) ``ELOOP`` alone does not decide it,
+detects the cycle itself when the OS reports ``ELOOP`` -- with the walk 3.9.0
+through 3.9.22 perform, iteratively, and the same message -- so every version
+gives the same class. (3.9.23 and later, and 3.10 through 3.12, detect it
+through ``os.path.realpath`` and name the unresolved remainder too; that wording
+is pinned per version below.) ``ELOOP`` alone does not decide it,
 because the OS also reports it for a long chain that is not a cycle.
 """
 
@@ -60,6 +62,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 
@@ -189,13 +192,47 @@ def test_a_long_non_cyclic_chain_still_resolves(tmp_path: Path, links: int) -> N
     assert resolved == (root / "app.yaml").resolve()
 
 
-#: Whether this version's ``Path.resolve`` names the *whole* unresolved path in
-#: its cycle message. CPython 3.10 through 3.12 resolve through
-#: ``os.path.realpath`` and report the path it returned, which keeps the
-#: components after the cycle (``dir_a/app.yaml``); 3.9's own walk, and the
-#: plugin's explicit check on 3.13 and later, name the link that closes the
-#: cycle (``dir_a``). The two coincide when the cycle is the last component.
-RESOLVE_NAMES_THE_WHOLE_PATH = (3, 10) <= sys.version_info < (3, 13)
+def _resolve_names_the_whole_path(version: Tuple[int, ...]) -> bool:
+    """Whether ``Path.resolve`` on ``version`` names the whole unresolved path.
+
+    CPython 3.10 through 3.12, and 3.9.23 and later, resolve through
+    ``os.path.realpath`` and report the path whose ``stat`` failed, which keeps
+    the components after the cycle (``dir_a/app.yaml``). 3.9.23 took that
+    implementation in as a backport (bpo-43757 / bpo-25264, shipped with the
+    gh-135034 tarfile fix; see the 3.9.23 changelog and cpython#136755). The
+    walk of 3.9.0 through 3.9.22, and the plugin's explicit check on 3.13 and
+    later, name the link that closes the cycle (``dir_a``). The two coincide
+    when the cycle is the last component.
+    """
+    if (3, 9, 23) <= version[:3] < (3, 10):
+        return True
+    return (3, 10) <= version[:2] < (3, 13)
+
+
+#: The naming of the interpreter running the suite.
+RESOLVE_NAMES_THE_WHOLE_PATH = _resolve_names_the_whole_path(
+    tuple(sys.version_info[:3])
+)
+
+
+@pytest.mark.parametrize(
+    ("version", "whole_path"),
+    [
+        ((3, 9, 6), False),
+        ((3, 9, 22), False),
+        ((3, 9, 23), True),
+        ((3, 9, 25), True),
+        ((3, 10, 0), True),
+        ((3, 12, 9), True),
+        ((3, 13, 0), False),
+        ((3, 14, 0), False),
+    ],
+)
+def test_resolve_naming_follows_the_cpython_release_that_changed_it(
+    version: Tuple[int, int, int], whole_path: bool
+) -> None:
+    """Both sides of every boundary, so neither naming can go unexercised."""
+    assert _resolve_names_the_whole_path(version) is whole_path
 
 
 @pytest.mark.parametrize(
@@ -213,8 +250,8 @@ def test_the_cycle_message_names_where_the_cycle_was_met(
     """The exact message, with each version's naming fixed as a literal.
 
     3.9 and 3.10-3.12 phrase it through CPython, 3.13 through the plugin, which
-    follows 3.9. Every version agrees on the class and on the text for a cycle
-    named directly.
+    follows 3.9.0-3.9.22. Every version agrees on the class and on the text for
+    a cycle named directly.
     """
     root = _workspace(tmp_path)
     (root / "loop_a").symlink_to(root / "loop_b")
