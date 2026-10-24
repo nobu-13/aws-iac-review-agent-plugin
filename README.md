@@ -888,6 +888,12 @@ mislead.
 - **Not available:** Markdown output, a stage-3 (similarity) match, Git ref, URL,
   stdin or directory inputs. Python 3.11 / 3.13 and GitHub CI runs of the v1.1
   tests are not verified yet; local verification used Python 3.9.
+- **Some failure Codes depend on the Python version.** A JSON Template nested
+  deeper than the depth limit always fails, as `template_depth_limit_exceeded`
+  (exit 3) or `template_parse_failure` (exit 4) depending on where the Python
+  version's JSON parser stops. Both are fail-closed; `docs/delta-schema.md` has
+  the measured depths. A symlink-loop input path gives `invalid_arguments`
+  (exit 2) on every Python version.
 
 ## Roadmap
 

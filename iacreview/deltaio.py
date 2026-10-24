@@ -340,7 +340,10 @@ def parse_document(text: str, path: Path, side: Optional[str]) -> Union[ParsedDo
     """Parse ``text`` in one pass, marking mappings that repeat a string key.
 
     The document equals what ``template.parse_template_text`` returns for the
-    same text, and this function fails exactly when that one fails. It does not
+    same text, and this function fails exactly when that one fails, with one
+    exception: JSON nested past ``template.MAX_JSON_NESTING_DEPTH`` can parse here
+    while v1.0 refuses it, and such a document always fails
+    :func:`check_structure` (``MAX_TEMPLATE_DEPTH``). It does not
     check reviewability or structure, and the document it returns may contain a
     cycle: do not compare or walk it before :func:`check_structure`.
     """

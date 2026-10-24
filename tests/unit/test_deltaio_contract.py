@@ -22,13 +22,14 @@ memoized walk that visits each container once.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import pytest
 
-from iacreview import template, yamlcfn
+from iacreview import deltaschema, template, yamlcfn
 from iacreview.errors import (
     InputNotFoundError,
     InputTooLargeError,
@@ -452,19 +453,78 @@ def test_merge_key_self_reference_leaves_no_cycle() -> None:
     assert _shape(doc)[2] is False
 
 
-@pytest.mark.parametrize("fmt,depth,parses", [("yaml", 60, True), ("yaml", 500, False), ("json", 500, True), ("json", 2000, False)])
-def test_parser_depth_limits(fmt: str, depth: int, parses: bool) -> None:
-    """Design F-16: the existing parsers bound nesting through RecursionError."""
+def _deep_text(fmt: str, depth: int) -> str:
     if fmt == "yaml":
-        text = "Resources:\n  R: " + "[" * depth + "]" * depth + "\n"
-    else:
-        text = '{"Resources": {"R": ' + "[" * depth + "]" * depth + "}}"
+        return "Resources:\n  R: " + "[" * depth + "]" * depth + "\n"
+    return '{"Resources": {"R": ' + "[" * depth + "]" * depth + "}}"
+
+
+@pytest.mark.parametrize("fmt,depth,parses", [("yaml", 60, True), ("yaml", 500, False), ("json", 500, True)])
+def test_parser_depth_limits(fmt: str, depth: int, parses: bool) -> None:
+    """Design F-16: the existing parsers bound nesting.
+
+    YAML through PyYAML's RecursionError, JSON through
+    ``template.MAX_JSON_NESTING_DEPTH`` (512), which v1.0 checks before decoding.
+    """
+    text = _deep_text(fmt, depth)
     if parses:
         doc, _ = template.parse_template_text(text, Path("deep." + fmt))
         assert template.is_reviewable(doc)
     else:
         with pytest.raises(TemplateParseError):
             template.parse_template_text(text, Path("deep." + fmt))
+
+
+def test_json_depth_2000_is_a_parse_failure_on_every_python() -> None:
+    """Design F-16: a 2,000-deep JSON document and the v1.0 JSON parser.
+
+    v1.0 refuses JSON nested past ``template.MAX_JSON_NESTING_DEPTH`` before
+    the decoder runs, so the outcome no longer depends on the decoder's
+    recursion limit (before that bound, CPython 3.13 parsed this document while
+    3.9 and 3.11 raised RecursionError; PR #7 CI failure on 3.13). The same
+    TemplateParseError, with the same error type, is expected on every version.
+    v1.1 does not rely on this behaviour: the depth bound is enforced by
+    ``deltaio.check_structure`` on every version (see
+    ``test_deltaio.test_deep_json_template_fails_closed_on_every_python``).
+    """
+    text = _deep_text("json", 2000)
+    with pytest.raises(TemplateParseError) as caught:
+        template.parse_template_text(text, Path("deep.json"))
+    assert caught.value.error_type == "RecursionError"
+    assert caught.value.exit_code == 4
+
+
+def _container_depth(value: Any) -> int:
+    """Nesting depth of a parsed document, root container = 1, iteratively."""
+    deepest = 0
+    stack = [(value, 1)]
+    while stack:
+        node, level = stack.pop()
+        if isinstance(node, dict):
+            children = list(node.values())
+        elif isinstance(node, list):
+            children = list(node)
+        else:
+            continue
+        deepest = max(deepest, level)
+        stack.extend((child, level + 1) for child in children)
+    return deepest
+
+
+def test_the_v1_json_nesting_limit_is_above_the_v11_depth_limit() -> None:
+    """Design F-16: v1.1's own depth check is reached before v1.0's JSON bound.
+
+    ``template.MAX_JSON_NESTING_DEPTH`` must exceed ``MAX_TEMPLATE_DEPTH`` and
+    the deepest JSON Template fixture, so a Template v1.1 accepts is never
+    refused by the v1.0 parser for its depth.
+    """
+    assert template.MAX_JSON_NESTING_DEPTH > deltaschema.MAX_TEMPLATE_DEPTH
+    deepest_fixture = json.loads(
+        (REPO_ROOT / "tests/fixtures/delta/templates/cdk_synth_format/head.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert template.MAX_JSON_NESTING_DEPTH > _container_depth(deepest_fixture)
 
 
 def test_duplicate_keys_are_last_wins_in_both_parsers() -> None:

@@ -499,6 +499,33 @@ def test_exit_code_symlink_outside(workspace: Path, tmp_path_factory: pytest.Tem
     assert json.loads(out)["semantic_diff"]["failure"]["code"] == "path_violation"
 
 
+def test_exit_code_symlink_loop_template(workspace: Path) -> None:
+    """A Template path that is a symlink cycle is ``invalid_arguments`` (exit 2).
+
+    The same Code on every Python version: v1.0's path check detects the cycle
+    explicitly where ``Path.resolve`` no longer does (CPython 3.13).
+    """
+    (workspace / "CanaryLoopA.yaml").symlink_to("CanaryLoopB.yaml")
+    (workspace / "CanaryLoopB.yaml").symlink_to("CanaryLoopA.yaml")
+    code, out, _ = _run(["--base-template", "CanaryLoopA.yaml", "--head-template", "head.yaml"])
+    assert code == 2
+    assert json.loads(out)["semantic_diff"]["failure"]["code"] == "invalid_arguments"
+    assert str(workspace) not in out
+
+
+def test_reviewed_template_path_through_a_symlink_loop_is_rejected(workspace: Path) -> None:
+    """Rejected before reading, like an outward symlink, on every Python version."""
+    (workspace / "CanaryLoopA.yaml").symlink_to("CanaryLoopB.yaml")
+    (workspace / "CanaryLoopB.yaml").symlink_to("CanaryLoopA.yaml")
+    (workspace / "CanaryDirA").symlink_to("CanaryDirB", target_is_directory=True)
+    (workspace / "CanaryDirB").symlink_to("CanaryDirA", target_is_directory=True)
+    for declared in ("CanaryLoopA.yaml", "CanaryDirA/template.yaml"):
+        code, out, err = _run(TEMPLATES + REPORTS + [DECLARED, declared])
+        assert (code, out) == (2, ""), declared
+        assert err.startswith("deltacli: invalid_arguments: ") and "Canary" not in err
+        assert "Traceback" not in err
+
+
 def test_exit_code_directory_input(workspace: Path) -> None:
     (workspace / "dir").mkdir()
     code, out, _ = _run(["--base-template", "dir", "--head-template", "head.yaml"])

@@ -12,6 +12,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -423,6 +424,36 @@ def test_parse_template_returns_a_checked_template() -> None:
     assert isinstance(result, ParsedTemplate)
     assert result.shape == deltaio.Shape(nodes=4, depth=4, containers=3)
     assert result.fmt == "yaml"
+
+
+@pytest.mark.parametrize("depth", [65, 2000, 5000])
+def test_deep_json_template_fails_closed_on_every_python(depth: int) -> None:
+    """Design 2-5 / F-16: a JSON Template deeper than MAX_TEMPLATE_DEPTH always fails.
+
+    The failure Code for 2,000 and 5,000 levels depends on the Python JSON
+    decoder that ``deltaio`` parses with: before CPython 3.12 (3.9 locally,
+    3.11 in CI) it raises RecursionError, and the v1.0 parser, which refuses JSON
+    nested past ``template.MAX_JSON_NESTING_DEPTH`` on every version, then names
+    the failure (``template_parse_failure``); from CPython 3.12 the C decoder is
+    bounded by the C stack instead (measured locally: 3.12 and 3.13 decode 9,000
+    levels), so it parses the document and ``check_structure`` rejects it
+    (``template_depth_limit_exceeded``). Only
+    that Code is version-dependent; failing, the closed Code set and the exit
+    code range are asserted on every version.
+    """
+    text = '{"Resources": {"R": ' + "[" * depth + "]" * depth + "}}"
+    result = deltaio.parse_template(text, Path("deep.json"), "head")
+    assert isinstance(result, Failure)
+    assert result.code in deltaschema.FAILURE_CODES
+    assert result.exit_code in (3, 4)
+    assert result.exit_code == deltaschema.FAILURE_CODE_TABLE[result.code][1]
+    if depth == 65:
+        expected = "template_depth_limit_exceeded"
+    elif sys.version_info < (3, 12):
+        expected = "template_parse_failure"
+    else:
+        expected = "template_depth_limit_exceeded"
+    assert result.code == expected
 
 
 def _write(path: Path, data: bytes) -> Path:

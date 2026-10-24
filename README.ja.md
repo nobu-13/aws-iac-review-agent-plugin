@@ -788,6 +788,11 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
 - **利用できないもの:** Markdown 出力、段階 3 (類似度) の照合、Git ref・URL・stdin・
   directory の入力。v1.1 の test の Python 3.11 / 3.13 と GitHub CI での実行は未確認であり、
   local の検証は Python 3.9 で行った。
+- **一部の失敗 Code は Python の version で変わる。** 深さの上限を超える JSON Template は
+  必ず失敗するが、その Python の JSON parser が止まる深さによって
+  `template_depth_limit_exceeded` (exit 3) または `template_parse_failure` (exit 4) になる。
+  どちらも fail-closed である。計測した深さは `docs/delta-schema.md` にある。symlink loop の
+  入力 path は、どの Python version でも `invalid_arguments` (exit 2) になる。
 
 ## Roadmap
 
