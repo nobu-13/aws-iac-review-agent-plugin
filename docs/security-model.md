@@ -296,10 +296,15 @@ flags the plugin owns plus a contained user-supplied path.
 **Every failure is typed and carries a position.**
 `iacreview.template.parse_template_text` catches broadly and re-raises
 `TemplateParseError` with `error_type`, `line`, and `column` (Requirement 3 AC6,
-Requirement 12 AC8). The broad catch is deliberate: a few kilobytes of `[`
-exhausts the interpreter stack and `json` raises `RecursionError`, which is not a
-`ValueError` and would otherwise escape as a traceback with an undefined exit
-status. `IacReviewError` is never swallowed by that handler, so a missing PyYAML
+Requirement 12 AC8). JSON nested deeper than
+`iacreview.template.MAX_JSON_NESTING_DEPTH` (512 arrays and objects) is refused
+before it is decoded, by a non-recursive scan, as a `RecursionError` at line 1,
+column 1, so the outcome is the same on every Python version rather than
+wherever that interpreter's recursion limit falls (about 990 levels on 3.9,
+about 10,000 on 3.13). The broad catch is still deliberate: a decoder or loader
+can raise exceptions that are not a `ValueError` -- PyYAML raises
+`RecursionError` for a deeply nested flow sequence -- and those would otherwise
+escape as a traceback with an undefined exit status. `IacReviewError` is never swallowed by that handler, so a missing PyYAML
 still reports as `tool_unavailable` rather than being relabelled a parse failure.
 
 Evidence: `tests/integration/test_malformed_input.py` runs fourteen bad inputs

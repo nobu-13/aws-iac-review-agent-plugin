@@ -79,6 +79,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import stat
 from dataclasses import dataclass
 from pathlib import Path
@@ -97,6 +98,8 @@ from iacreview.yamlcfn import import_yaml, load_yaml
 
 __all__ = [
     "MAX_TEMPLATE_BYTES",
+    "MAX_JSON_NESTING_DEPTH",
+    "JSON_NESTING_LIMIT_MESSAGE",
     "TEMPLATE_FORMATS",
     "RESOURCES_KEY",
     "JSON_START_CHARACTERS",
@@ -120,6 +123,34 @@ __all__ = [
 #: aggregate limit for a directory target lives in the orchestration layer as
 #: ``MAX_AGGREGATE_BYTES``. Documented in ``docs/security-model.md`` (R-8).
 MAX_TEMPLATE_BYTES = 5 * 1024 * 1024
+
+#: Deepest nesting of JSON arrays and objects a Template may have.
+#:
+#: Checked before the decoder runs, without recursion, so an over-deep document
+#: fails as a ``parse_failure`` on every Python version instead of depending on
+#: where CPython's own recursion limit happens to fall (about 990 levels minus
+#: the caller's stack on 3.9, about 10,000 on 3.13). 512 is far above any real
+#: Template (the deepest input in this repository nests 12 levels), above the
+#: depth PyYAML can load (329) and v1.1's ``MAX_TEMPLATE_DEPTH`` (64), and below
+#: the lowest depth at which 3.9's decoder was measured to give up.
+MAX_JSON_NESTING_DEPTH = 512
+
+#: Message of the ``RecursionError`` raised for a document past
+#: :data:`MAX_JSON_NESTING_DEPTH`. Fixed text: nothing from the input is in it.
+JSON_NESTING_LIMIT_MESSAGE = (
+    "JSON nesting depth exceeds the limit of {0} levels".format(
+        MAX_JSON_NESTING_DEPTH
+    )
+)
+
+#: The next character that matters to the nesting scan outside a string: a
+#: quote that opens a string, or a bracket. A single character class, so a match
+#: holds no backtracking state however far it skips.
+_JSON_NESTING_STRUCTURE = re.compile(r'["\[\]{}]')
+
+#: The next character that matters inside a string: the closing quote or a
+#: backslash that escapes the character after it.
+_JSON_STRING_SPECIAL = re.compile(r'["\\]')
 
 #: The two formats Requirement 3 AC4 requires, in a fixed order.
 TEMPLATE_FORMATS: Tuple[str, str] = ("yaml", "json")
@@ -539,6 +570,60 @@ def _parse_error(
 # ---------------------------------------------------------------------------
 
 
+def _json_nesting_exceeds(text: str, limit: int) -> bool:
+    """Report whether ``text`` nests arrays and objects deeper than ``limit``.
+
+    A single forward scan with a counter: no recursion, constant extra memory,
+    and it stops at the first bracket past the limit. Brackets inside string
+    literals are skipped: inside a string only a quote or a backslash is looked
+    for, and a backslash skips the character after it. Every search is a single
+    character class, so no match keeps backtracking state proportional to a long
+    string literal or a long run of escapes. An unterminated string runs to the
+    end of the text. The scan is not a validator -- unbalanced or otherwise
+    malformed text is left to the decoder, and a closing bracket never takes the
+    count below zero.
+
+    When the text holds no more opening brackets than ``limit`` in total it
+    cannot nest deeper, which two ``str.count`` calls establish without the scan.
+    """
+    if text.count("[") + text.count("{") <= limit:
+        return False
+    depth = 0
+    position = 0
+    while True:
+        match = _JSON_NESTING_STRUCTURE.search(text, position)
+        if match is None:
+            return False
+        character = match.group()
+        position = match.end()
+        if character == '"':
+            position = _json_string_end(text, position)
+            if position < 0:
+                return False
+        elif character in ("[", "{"):
+            depth += 1
+            if depth > limit:
+                return True
+        else:
+            depth = max(depth - 1, 0)
+
+
+def _json_string_end(text: str, position: int) -> int:
+    """Return the index just past the quote closing the string open at ``position``.
+
+    ``position`` is the index just after the opening quote. Returns ``-1`` when
+    the string is not terminated before the end of the text.
+    """
+    while True:
+        match = _JSON_STRING_SPECIAL.search(text, position)
+        if match is None:
+            return -1
+        if match.group() == '"':
+            return match.end()
+        # A backslash escapes the next character, whatever it is.
+        position = match.end() + 1
+
+
 def _parse_json(text: str, path: Path) -> Any:
     """Parse ``text`` as JSON.
 
@@ -546,14 +631,22 @@ def _parse_json(text: str, path: Path) -> Any:
     ``parse_constant`` is passed: each of those is a callback the document
     content would drive, and the plugin has no reason to let Template content
     select code to run.
+
+    Nesting past :data:`MAX_JSON_NESTING_DEPTH` is refused before the decoder
+    sees the text, as a ``RecursionError`` at the default position -- the type
+    and position the decoder's own recursion failure has always produced -- so
+    the outcome no longer depends on the interpreter's recursion limit.
     """
     try:
+        if _json_nesting_exceeds(text, MAX_JSON_NESTING_DEPTH):
+            raise RecursionError(JSON_NESTING_LIMIT_MESSAGE)
         return json.loads(text)
     except json.JSONDecodeError as exc:
         raise _parse_error(path, "json", exc, _json_position(exc)) from exc
     except Exception as exc:  # noqa: BLE001 - untrusted input must fail cleanly
         # Reached for failures the decoder does not express as a
-        # JSONDecodeError, such as a RecursionError from deeply nested input.
+        # JSONDecodeError, including the RecursionError raised above for input
+        # nested past MAX_JSON_NESTING_DEPTH.
         raise _parse_error(path, "json", exc, (DEFAULT_LINE, DEFAULT_COLUMN)) from exc
 
 

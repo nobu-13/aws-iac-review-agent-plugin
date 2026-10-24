@@ -23,12 +23,16 @@ generator's output rather than at their own source.
 And it is the format whose failure is not an exception the parser declares.
 :func:`test_a_document_nested_past_the_recursion_limit_fails_as_a_parse_error`
 pins the reason :func:`iacreview.template.parse_template_text` catches broadly
-instead of catching only ``JSONDecodeError``: a few kilobytes of ``[`` exhausts
-the interpreter's stack and ``json`` raises ``RecursionError``, which is not a
-subclass of ``ValueError`` and would otherwise leave the process as a traceback
-with an undefined exit status. A later contributor narrowing that ``except`` to
-"the errors the decoder documents" would be making a reasonable-looking change
-that reintroduces exactly that, which is what makes the case worth a name.
+instead of catching only ``JSONDecodeError``: a few kilobytes of ``[`` used to
+exhaust the interpreter's stack, and ``json`` raised ``RecursionError``, which is
+not a subclass of ``ValueError`` and would otherwise leave the process as a
+traceback with an undefined exit status. Because that limit differs by Python
+version, :mod:`iacreview.template` now raises the ``RecursionError`` itself, from
+the explicit bound :data:`iacreview.template.MAX_JSON_NESTING_DEPTH`, before the
+decoder runs; it still travels through the same broad ``except``. A later
+contributor narrowing that ``except`` to "the errors the decoder documents"
+would be making a reasonable-looking change that reintroduces exactly that,
+which is what makes the case worth a name.
 
 Bounded work with a deterministic outcome is also the line this file stops at. A
 YAML alias bomb is *not* here, and ``tests/integration/test_malformed_input.py``
@@ -68,8 +72,8 @@ from iacreview.errors import TemplateParseError
 
 from skillrun import IAM_SKILL, invalid_fixture, make_workspace, run_skill
 
-#: Nesting depth for the recursion case. Past CPython's default limit, so the
-#: decoder gives up, and small enough that the file is a few kilobytes and the
+#: Nesting depth for the recursion case. Past
+#: :data:`iacreview.template.MAX_JSON_NESTING_DEPTH`, and small enough that the file is a few kilobytes and the
 #: attempt is instant.
 NESTING_DEPTH = 2000
 
@@ -200,3 +204,29 @@ def test_a_malformed_json_target_exits_four_with_one_parse_failure_in_the_report
     assert "at line {0}, column {1}".format(
         *decoder_position(invalid_fixture("malformed_syntax.json"))
     ) in message
+
+
+def test_a_megabyte_of_brackets_fails_closed_without_a_traceback(
+    tmp_path: Path,
+) -> None:
+    """Far past the explicit bound: exit 4 on every Python, with a fixed message.
+
+    One million ``[`` is past CPython 3.13's own recursion limit as well as
+    3.9's, but the outcome must not come from either: the bound
+    :data:`iacreview.template.MAX_JSON_NESTING_DEPTH` is checked before the
+    decoder runs, so the message is the module's fixed text on every version.
+    """
+    workspace = make_workspace(tmp_path)
+    (workspace / "deep.json").write_text("[" * 1_000_000, encoding="utf-8")
+
+    run = run_skill(IAM_SKILL, ["--target", "deep.json"], cwd=workspace)
+
+    run.assert_no_traceback()
+    assert run.exit_code == exitcodes.PARSE_FAILURE
+    assert run.error_classes() == ["parse_failure"]
+    assert run.report is not None
+    message = str(run.report["errors"][0]["message"])
+    assert "RecursionError at line 1, column 1" in message
+    assert template.JSON_NESTING_LIMIT_MESSAGE in message
+    assert str(workspace) not in run.stdout
+    assert str(workspace.resolve()) not in run.stdout
