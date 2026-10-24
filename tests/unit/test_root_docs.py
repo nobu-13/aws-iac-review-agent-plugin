@@ -467,7 +467,7 @@ def read_runtime_dependency_names() -> Tuple[str, ...]:
         stripped = item.strip().strip("\"'")
         if not stripped:
             continue
-        names.append(re.split(r"[<>=!~\[;\s]", stripped, 1)[0])
+        names.append(re.split(r"[<>=!~\[;\s]", stripped, maxsplit=1)[0])
     return tuple(names)
 
 
