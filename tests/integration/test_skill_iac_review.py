@@ -153,6 +153,33 @@ def fake_lint_path(fakebin_dir: Path, *, with_cfn_guard: bool = False) -> List[P
     return entries
 
 
+#: External tools whose absence :func:`interpreter_only_path` guarantees.
+TOOLS_ABSENT_FROM_INTERPRETER_PATH = ("cfn-lint", "cfn-guard", "cdk")
+
+
+def interpreter_only_path(tmp_path: Path) -> List[Path]:
+    """``PATH`` entries that reach the interpreter and no external tool.
+
+    ``Path(sys.executable).parent`` is not such a directory: ``pip install
+    cfn-lint`` puts the console script next to the interpreter, which is exactly
+    the layout of a CI runner, so that directory would make cfn-lint available
+    in a test that asserts it is not. A private directory holding only a symlink
+    to the interpreter keeps ``python3`` resolvable for children that need it
+    while every tool stays absent, whatever the host has installed.
+
+    The absence is asserted rather than assumed, so a broken premise fails the
+    test with a reason instead of passing for the wrong one.
+    """
+    bin_dir = tmp_path / "interpreter-only-bin"
+    bin_dir.mkdir()
+    interpreter = Path(sys.executable)
+    for name in sorted({"python3", interpreter.name}):
+        (bin_dir / name).symlink_to(interpreter)
+    for tool in TOOLS_ABSENT_FROM_INTERPRETER_PATH:
+        assert shutil.which(tool, path=str(bin_dir)) is None, tool
+    return [bin_dir]
+
+
 def configure_fake_lint(directory: Path, **config: Any) -> Dict[str, str]:
     """Write the fake cfn-lint configuration and return the env revealing it.
 
@@ -492,7 +519,7 @@ def test_every_source_unavailable_exits_non_zero(
         plugin_root,
         ["--target", "app.yaml", "--sources", "cfn-lint", "--sources", "cfn-guard"],
         cwd=workspace,
-        path_entries=[Path(sys.executable).parent],
+        path_entries=interpreter_only_path(tmp_path),
     )
     report = load_report(completed)
 
@@ -519,7 +546,7 @@ def test_one_available_source_among_unavailable_ones_exits_zero(
         plugin_root,
         ["--target", "app.yaml"],
         cwd=workspace,
-        path_entries=[Path(sys.executable).parent],
+        path_entries=interpreter_only_path(tmp_path),
     )
     report = load_report(completed)
 
@@ -734,7 +761,7 @@ def test_confirming_synth_without_the_cdk_cli_exits_five(
         plugin_root,
         ["--target", ".", "--sources", "iam-review", "--confirm-cdk-synth"],
         cwd=workspace,
-        path_entries=[Path(sys.executable).parent],
+        path_entries=interpreter_only_path(tmp_path),
     )
     report = load_report(completed)
 
