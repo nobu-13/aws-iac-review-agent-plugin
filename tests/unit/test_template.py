@@ -161,15 +161,33 @@ def test_parse_failure_is_a_parse_failure_structured_error(case: _Case) -> None:
     assert str(case.path) not in message
 
 
+#: Where the decoder reports the trailing comma in ``malformed_syntax.json``:
+#: CPython 3.13 points at the comma itself (line 5, column 32) with a dedicated
+#: "Illegal trailing comma" message, earlier versions at the place the next
+#: property name was expected (line 6, column 5). Both are fixed literals.
+TRAILING_COMMA_POSITION: Tuple[int, int] = (
+    (6, 5) if sys.version_info < (3, 13) else (5, 32)
+)
+
+
 def test_malformed_json_position_comes_from_the_decoder() -> None:
-    """The trailing comma sits on line 5 of the fixture."""
+    """The trailing comma sits on line 5 of the fixture.
+
+    The reported position is the version's literal *and* the ``lineno``/``colno``
+    the decoder itself gives for the same bytes, so neither a default position
+    nor one computed elsewhere can pass.
+    """
+    path = FIXTURES / "invalid/malformed_syntax.json"
     with pytest.raises(TemplateParseError) as exc_info:
-        template.load_template(FIXTURES / "invalid/malformed_syntax.json")
+        template.load_template(path)
 
     error = exc_info.value
     assert error.error_type == "json.decoder.JSONDecodeError"
-    assert error.line == 6
-    assert error.column >= 1
+    assert (error.line, error.column) == TRAILING_COMMA_POSITION
+
+    with pytest.raises(json.JSONDecodeError) as decoded:
+        json.loads(path.read_text(encoding="utf-8"))
+    assert (error.line, error.column) == (decoded.value.lineno, decoded.value.colno)
 
 
 def test_binary_input_reports_a_decode_failure_not_a_syntax_error() -> None:

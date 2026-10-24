@@ -56,7 +56,10 @@ Cross-references, not repeated here
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 
@@ -70,6 +73,24 @@ from skillrun import IAM_SKILL, invalid_fixture, make_workspace, run_skill
 #: attempt is instant.
 NESTING_DEPTH = 2000
 
+#: Where the decoder reports the trailing comma in ``malformed_syntax.json``.
+#:
+#: CPython 3.13 gave a trailing comma its own message ("Illegal trailing comma
+#: before end of object") and points at the comma itself, line 5 column 32.
+#: Earlier versions report where they expected the next property name, line 6
+#: column 5. Both directions are fixed literals, so a change on either side of
+#: the boundary fails the test rather than being absorbed by it.
+TRAILING_COMMA_POSITION: Tuple[int, int] = (
+    (6, 5) if sys.version_info < (3, 13) else (5, 32)
+)
+
+
+def decoder_position(data: bytes) -> Tuple[int, int]:
+    """Return the ``(lineno, colno)`` the running ``json`` decoder reports."""
+    with pytest.raises(json.JSONDecodeError) as caught:
+        json.loads(data.decode("utf-8"))
+    return (caught.value.lineno, caught.value.colno)
+
 
 def place(name: str, workspace: Path) -> Path:
     """Copy a committed malformed fixture into ``workspace`` under its own name."""
@@ -81,10 +102,12 @@ def place(name: str, workspace: Path) -> Path:
 def test_a_trailing_comma_reports_its_type_and_position(tmp_path: Path) -> None:
     """``malformed_syntax.json``: the mistake a hand-edited Template makes.
 
-    Line 6 column 5 is where the decoder expected the next property name. The
+    The position is :data:`TRAILING_COMMA_POSITION` for the running version. The
     coordinates are asserted as literals because they are the answer a user acts
     on, and because a broad ``except`` that reported only "invalid JSON" would
-    still satisfy "no unhandled exception" and still exit 4.
+    still satisfy "no unhandled exception" and still exit 4. They are also
+    checked against the decoder's own ``lineno``/``colno`` for the same bytes,
+    so the product cannot report a position the decoder did not give.
     """
     workspace = make_workspace(tmp_path)
     path = place("malformed_syntax.json", workspace)
@@ -96,7 +119,10 @@ def test_a_trailing_comma_reports_its_type_and_position(tmp_path: Path) -> None:
     assert error.error_class == "parse_failure"
     assert error.exit_code == exitcodes.PARSE_FAILURE
     assert error.error_type == "json.decoder.JSONDecodeError"
-    assert (error.line, error.column) == (6, 5)
+    assert (error.line, error.column) == TRAILING_COMMA_POSITION
+    assert (error.line, error.column) == decoder_position(
+        invalid_fixture("malformed_syntax.json")
+    )
 
 
 def test_a_byte_order_mark_before_json_is_reported_as_a_parse_failure(
@@ -170,4 +196,7 @@ def test_a_malformed_json_target_exits_four_with_one_parse_failure_in_the_report
     assert run.report["findings"] == []
     message = str(run.report["errors"][0]["message"])
     assert "malformed_syntax.json" in message
-    assert "at line 6, column 5" in message
+    assert "at line {0}, column {1}".format(*TRAILING_COMMA_POSITION) in message
+    assert "at line {0}, column {1}".format(
+        *decoder_position(invalid_fixture("malformed_syntax.json"))
+    ) in message
