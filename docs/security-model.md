@@ -553,8 +553,14 @@ because it was once worse than that: on CPython 3.9 through 3.12, `Path.resolve`
 detects the cycle itself and raises `RuntimeError` rather than letting the kernel
 report `ELOOP` as an `OSError`, and `RuntimeError` was outside the caught tuple,
 so an entry point died with a traceback and an undefined exit status. Both
-resolution sites now catch it, and
-`tests/regression/test_sec_symlink_loop.py` pins the behaviour. A broken checkout
+resolution sites now catch it. CPython 3.13 stopped detecting the cycle in the
+non-strict call and returns the path unresolved, which turned a candidate cycle
+into `input_not_found`; when the OS reports `ELOOP` for a candidate,
+`resolve_within` now walks the links itself, without recursion, and raises the
+same error when the walk meets a cycle. `ELOOP` alone is not taken as a cycle,
+because the OS also reports it for a long chain of links that ends normally.
+`tests/regression/test_sec_symlink_loop.py` and `tests/unit/test_pathguard.py`
+pin the behaviour. A broken checkout
 produces a cycle as readily as a repository authored to produce one, so this is
 ordinary untrusted content rather than an exotic case.
 
