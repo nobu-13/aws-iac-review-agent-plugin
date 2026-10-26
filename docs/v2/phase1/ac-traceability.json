@@ -361,7 +361,7 @@
    "evidence": [
     "handoff.md#g-ci"
    ],
-   "note": "static part PASS; runtime evidence from demo G10 and the gate run logs (H-ENV B)"
+   "note": "static part PASS; runtime: owner-run gate logs (event, workflow path, run SHA, validator pin, trusted contract) via handoff.md B"
   },
   {
    "id": "AC26",
@@ -374,7 +374,7 @@
    "evidence": [
     "handoff.md#g-ci"
    ],
-   "note": "static part PASS"
+   "note": "static part PASS; runtime: owner-run gate logs via handoff.md B"
   },
   {
    "id": "AC27",
@@ -388,18 +388,18 @@
    "evidence": [
     "handoff.md#demo-scenarios"
    ],
-   "note": "demo G3, G6, G7, G8 (H-ENV B)"
+   "note": "owner run: G3, G6, G7 (handoff.md B); base update G8 and the merge parts need a merge or a second account: NOT VERIFIED"
   },
   {
    "id": "AC28",
-   "status": "WAITING_HUMAN",
+   "status": "NOT_VERIFIED",
    "method": "test actor without bypass; merge state per demo PR",
    "tests": [],
    "cases": [],
    "evidence": [
     "handoff.md#demo-scenarios"
    ],
-   "note": "demo G1, G2, G9 with a write-only test actor; enforcement_status stays not_verified until then"
+   "note": "needs a write-only, non-bypass second account; none exists, so NOT VERIFIED; enforcement_status stays not_verified"
   },
   {
    "id": "AC29",

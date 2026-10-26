@@ -19,8 +19,10 @@ the H-ENV steps in [handoff.md](handoff.md)), `not done`.
 | WP3 | Kiro Skill `iac-remediation-verify` | done (document) / waiting (Kiro run) | `skills/iac-remediation-verify/SKILL.md` |
 | WP3 | Human Summary (`explain`) | done | `report.summary` |
 | WP4 | Reference trusted gate and static checks | done | `docs/v2/phase1/ci/` |
-| WP4 | Existing six-environment CI with the Phase 1 tests | waiting | needs push (H-ENV step 1) |
-| WP4 | Required check, ruleset, CODEOWNERS, spoof / skip / head-update / actor tests | waiting | H-ENV steps 3–6 |
+| WP4 | Existing six-environment CI with the Phase 1 tests | done (run 40416536363 on `5412a73`, all six test jobs green) | implementation-evidence.md |
+| WP4 | Demo repository, ruleset 25921565, CODEOWNERS | done by the maintainer | handoff.md B |
+| WP4 | Owner-run G1–G7, G10 | waiting (owner commands prepared and tested) | handoff.md B |
+| WP4 | AC28 actor separation, G8, G9 | not verifiable without a second account / merge / ruleset change | NOT VERIFIED |
 | WP5 | A/B/C/D comparison over all cases; C per AC45; D0 simple and D1 equivalent baselines | done (decisions) / partial (effort) | evaluation.md |
 | WP5 | Typed-path ambiguity stop, failure-path tests, H-ENV helper audit and tests, Kiro preparation | done | `96177a5`, `b4ee268`, handoff.md |
 | WP5 | Effort measurement (author) | done | evaluation.md |

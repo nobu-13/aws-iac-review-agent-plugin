@@ -173,12 +173,42 @@ scan 0 findings in 625 files; Ground_Truth order 17/17; ruff 5 / 40, mypy 12;
 53/53 cases with payload equal across two runs. The same pytest totals on
 `0963502`. The commit after `b638f88` changes only this file.
 
+## CI run 40416536363 on `5412a73` (six environments)
+
+Run started by the maintainer through H-ENV A; jobs and log saved locally by
+`phase1_henv.py ci-evidence` and read by the agent. Event `pull_request`,
+head `5412a730ade13d6fe939d71cee636e280e92d4db`, conclusion success.
+
+| Job | pytest (summary line) | Coverage | Benchmark |
+| --- | --- | --- | --- |
+| tests (ubuntu-latest, Python 3.9) | 7022 passed, 45 skipped | 95.14% | 34/34 |
+| tests (ubuntu-latest, Python 3.11) | 7022 passed, 45 skipped | 95.16% | 34/34 |
+| tests (ubuntu-latest, Python 3.13) | 7022 passed, 45 skipped | 95.16% | 34/34 |
+| tests (macos-15-intel, Python 3.9) | 7021 passed, 46 skipped | 95.08% | 34/34 |
+| tests (macos-latest, Python 3.11) | 7021 passed, 46 skipped | 95.11% | 34/34 |
+| tests (macos-latest, Python 3.13) | 7021 passed, 46 skipped | 95.11% | 34/34 |
+
+`determinism` and `repository hygiene` success; `lint (advisory)` failure, as
+on `v1.1.0` (findings identical, see above). No job failed a test. The CI
+pytest step has no `-rs`, so which test is skipped on macOS only (46 vs 45)
+is not visible in the log; the APFS-only skip in `test_remediation_security.py`
+is the expected candidate (NOT VERIFIED from the log). Coverage in CI is lower
+than locally (95.1% vs 96.8%) because CI runs without `.kiro/`; the 80% gate
+holds.
+
+## H-ENV B re-planned for a single (owner) account
+
+No second GitHub account exists. The demo repository and ruleset 25921565
+stay as published; the scenarios run as the owner through a separate command
+set (handoff.md B). The items that need a write-only, non-bypass actor, a
+merge or a ruleset change are recorded as NOT VERIFIED there and below.
+
 ## Not verified here
 
 | Item | Why | Where it gets verified |
 | --- | --- | --- |
-| Six-environment CI on the fix commit (run 40325732554 was on `5aee146`) | push needs human credentials | handoff.md A |
-| Trusted gate runs, required check, ruleset, spoof / skip / head and base update / actor tests (G1–G10) | GitHub settings and a second, write-only account | handoff.md B |
+| Gate runs G1–G7 and G10 as the owner | not yet run | handoff.md B (owner run) |
+| AC28 write-only actor merge refusal, G1 positive mergeability, check-vs-review attribution, admin bypass, G8, G9 | no second account; a merge or ruleset change would be needed | NOT VERIFIED (separate approval and account required) |
 | Kiro Power install and SC-01 / SC-02 in Kiro, CLI-vs-Power payload equality | changes global Kiro settings | handoff.md C |
 | Independent review of the two ground-truth corrections | only the author agent reviewed them | Human review (H-P1) |
 | Any Phase 1 advantage over D1 beyond these 53 decisions | not measured | Phase 2 |

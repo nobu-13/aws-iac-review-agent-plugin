@@ -43,9 +43,9 @@ bare remotes):
 | Role | Who | Used for |
 | --- | --- | --- |
 | Owner / admin | `nobu-13` | push the plugin branch, open the draft PR, create the demo repository, add the ruleset, approve as code owner |
-| Test actor | a second GitHub account, collaborator on the demo repository with **write** only (no admin, no maintain, not a bypass actor) | push scenario branches and open their PRs (`demo-scenarios`, `demo-push-update`) |
+| Test actor | a second GitHub account with **write** only (no admin, no maintain, not a bypass actor) — **does not exist**; the owner-run plan in B replaces it, and the items only it could show stay NOT VERIFIED | `demo-scenarios`, `demo-push-update` (kept, unused) |
 
-Without the test actor, AC27 / AC28 / G-P1-4 stay WAITING_HUMAN.
+Without the test actor, AC28 and the merge parts of AC27 / G-P1-4 stay NOT VERIFIED.
 
 <a id="g-ci"></a>
 ## A. Development CI on the plugin repository (AC02–AC04, G-P1-5)
@@ -74,71 +74,69 @@ Rollback: close the draft PR; optionally `git push origin --delete feature/phase
 <a id="demo-scenarios"></a>
 ## B. Trusted gate on the demo consumer repository (AC25–AC28, C14, C24, G-P1-4)
 
-The demo repository holds only synthetic files: the SC-01 base Template, the
-approved contract, `CODEOWNERS` and the gate from
-`docs/v2/phase1/ci/remediation-gate.yml` with the validator pinned to the
-pinned commit. The gate runs on `pull_request_target`, so the gate file,
-contract path and validator pin always come from the base branch; a PR cannot
-change which trusted revision is used (G5, G10 test that).
+State before this step (done by the maintainer): demo repository
+`nobu-13/iac-remediation-gate-demo` published with the gate pinned to the
+validator commit, and ruleset **25921565** active on `main`. Both are kept as
+they are: nothing below changes the ruleset, the required check, CODEOWNERS,
+or any existing branch.
+
+There is no second GitHub account, so the scenarios run as the **owner**
+with a separate command set, `.agents/tasks/phase1/henv/phase1_henv_owner.py`.
+The test-actor command `phase1_henv.py demo-scenarios` keeps refusing the
+owner and anything but write-only permission.
 
 ```sh
-python3 phase1_henv.py demo-prepare                 # local only; needs step A pushed
-python3 phase1_henv.py demo-publish --execute       # owner; typed confirmation
-python3 phase1_henv.py demo-protect                 # shows TARGET / CHANGE / ROLLBACK
-python3 phase1_henv.py demo-protect --execute       # owner; typed confirmation
-# in the GitHub UI: invite the test actor with Write; accept as the test actor
-gh auth switch                                      # to the test actor
-python3 phase1_henv.py demo-scenarios --execute     # refuses the owner and any permission other than write
-# wait until the gate ran on every PR; owner approves g1 as code owner in the UI
-python3 phase1_henv.py demo-push-update --execute   # G7, as the test actor
-gh auth switch                                      # back to the owner
-python3 phase1_henv.py demo-move-base --execute     # G8: opens a PR only
-python3 phase1_henv.py demo-evidence --execute      # check runs, apps, workflow runs, merge state
+cd .agents/tasks/phase1/henv
+python3 phase1_henv_owner.py owner-preflight                    # read-only
+python3 phase1_henv_owner.py owner-scenarios --execute          # 7 branches + "[owner-run]" PRs
+python3 phase1_henv_owner.py owner-evidence --wait-minutes 30 --execute
+python3 phase1_henv_owner.py owner-push-update --execute        # G7, after G1 is green
+python3 phase1_henv_owner.py owner-evidence --wait-minutes 30 --execute
 ```
 
-Ruleset (`out/demo-ruleset.json`, before/after saved): no deletion, no force
-push, PR required with 1 approval, code-owner review, stale approvals
-dismissed, last-push approval, required check `verify` (GitHub Actions) with
-"branches must be up to date", **no bypass actors**. `CODEOWNERS` covers
-`.github/`, `.iac-remediation/` and itself.
+`owner-preflight` runs before every changing step and stops it unless the
+identity is the owner, ruleset 25921565 is active with no bypass actors and
+the published rules, and the remote `main`, `CODEOWNERS`, gate file and
+contract equal the published ones. `owner-scenarios` only creates branches
+that do not exist (never overwrites one at another commit) and opens PRs; it
+never merges or approves. `owner-evidence` waits for the gate runs and writes
+`out/owner-evidence.json` and `out/owner-evidence.md`: per scenario the PR
+head and base, the status rollup, the check runs on the head, each gate run's
+event, workflow path, run SHA, step conclusions and log facts (validator pin,
+trusted contract path, no relaxed contract, PR head SHA), and the merge
+state. Each G is then classified by rules fixed in the code before any run:
 
-| ID | Action | Expected | Covers |
-| --- | --- | --- | --- |
-| G1 | `g1-correct-fix` | gate success; mergeable only after the code owner approves; **do not merge** | AC28 (positive), C01 |
-| G2 | `g2-iam-widened` | gate failure (BLOCKED); not mergeable | AC28, C05 |
-| G3 | `g3-workflow-spoof` (PR adds a `pull_request` workflow whose job `verify` passes) | real gate failure; record both `verify` check runs (app, workflow run, conclusion) and whether the PR is still blocked; code-owner review required | AC27 check-name spoof, C24 |
-| G4 | `g4-fake-report` | gate failure; the forged report has no effect | AC19, C13 |
-| G5 | `g5-contract-relaxed` | gate failure; contract read from base; code-owner review required | AC06, C11 |
-| G6 | `g6-skip-spoof` (PR adds a workflow whose job `verify` is skipped) | real gate failure; record how the skipped check is shown and that the PR stays blocked | AC27 job skip, C24 |
-| G7 | `demo-push-update`: second commit on g1 widening IAM | a new gate run on the new head SHA fails; the earlier success does not apply to it | AC18, AC27 head update, C14 |
-| G8 | `demo-move-base`: unrelated PR against main | only after it is merged (see "Additional approval") does G1 show "out of date"; then an update re-runs the gate | AC27 base update, C15a |
-| G9 | in the ruleset UI, temporarily remove the required check; observe G2's merge state; restore and save `demo-rulesets-after.json` again | shows that a red CI alone does not block a merge | AC28, work package §9 |
-| G10 | `g10-gate-edited` (PR edits the gate's contract path, validator pin and permissions, adds a relaxed contract) | the base gate runs (workflow run path/SHA from base), result failure | AC25, AC26, C12 |
+| ID | PROVEN when | Merge part (owner run) |
+| --- | --- | --- |
+| G1 | gate `verify` step success from the base gate; a successful `verify` appears in the PR status rollup | NOT_PROVEN: the owner is the only code owner and cannot approve their own PR |
+| G2, G4, G5, G10 | gate fails at the verify step only, run from the base gate (event `pull_request_target`, gate path, run SHA ≠ PR head, pinned validator, trusted contract, no relaxed contract) | NOT_PROVEN: review is always missing, so BLOCKED cannot be attributed to the check |
+| G3, G6 | as above; FAILED if the PR's own same-named `verify` makes the rollup look successful / skipped without the gate's failure | NOT_PROVEN while two `verify` results exist |
+| G7 | after `owner-push-update`, the newest gate run (new head SHA in its log) fails and an earlier run succeeded | — |
+| G8 | always NOT_PROVEN: moving `main` needs a merge | — |
+| G9 | always NOT_PROVEN: needs a ruleset change | — |
 
-What to record for AC25 / AC26 from `demo-evidence.json`: for each gate run
-the event `pull_request_target`, the workflow run's head SHA (the base
-branch), and in the run log the `Check out the base revision` ref, the
-validator commit and the "PR head moved" check.
+FAILED means the observation contradicts the expectation (for example the
+gate failed in an install step, or a spoof satisfied the rollup). It is
+reported as a finding, not retried around.
 
-If G3 or G6 shows that a same-named check from a PR workflow satisfies the
-requirement, that is a finding to report, not to work around: alternatives
-(organization "required workflows", a dedicated GitHub App check, a GitHub
-Team/Enterprise plan) need a decision (work package §9.2). Until the rows
-are filled, `enforcement_status` stays `not_verified` and AC27 / AC28 /
-G-P1-4 stay WAITING_HUMAN.
+### Not verifiable with the owner alone (NOT VERIFIED)
 
-### Additional approval (not granted; demo repository only)
+* AC28: a write-only, non-bypass actor cannot merge a violating PR and can
+  satisfy the checks of a correct one — needs a second account.
+* G1 positive mergeability — needs a code-owner approval by someone other than
+  the PR author.
+* Whether a BLOCKED merge state comes from the required check or from the
+  missing review.
+* Admin bypass behaviour — needs a merge attempt.
+* G8 (base move) and G9 (required check removed) — need a merge and a ruleset
+  change, neither approved.
 
-* **Merging G8's PR** into the demo repository's `main`, needed to move the
-  base. It is a merge in an isolated synthetic repository.
-* **A merge attempt on G2 / G3 / G6** as the test actor, to show the refusal
-  itself rather than the merge state. Expected to be refused; if one is not
-  refused, the demo repository is the only one affected.
+These keep AC27 (partly), AC28 and G-P1-4 at WAITING_HUMAN / NOT VERIFIED
+whatever the owner run shows. A merge attempt or a ruleset change on the
+demo repository would each be a separate approval, demo repository only.
 
-Neither is scripted. Plugin repository merges are not part of H-ENV at all.
-
-Rollback: delete the ruleset (`gh api -X DELETE repos/nobu-13/iac-remediation-gate-demo/rulesets/<id>`),
-close the PRs, archive or delete the demo repository in the UI.
+Rollback of this step: close the `[owner-run]` PRs in the UI. Branches are
+left in place (deleting them is not part of this step).
 
 <a id="kiro"></a>
 ## C. Kiro Power run (AC34–AC36, G-P1-3 Kiro part)
@@ -175,7 +173,6 @@ it.
 
 ## What to send back
 
-`out/ci-run-<id>-summary.txt` and the run id; `out/demo-evidence.json`,
-`out/demo-rulesets-after.json` and the G1–G10 observations; the two
-`kiro-compare.json` results and the time files. Nothing from `out/` is
-committed.
+`out/owner-evidence.md` (and the `.json`), the two `kiro-compare.json`
+results (`out/kiro/sc01/`, `out/kiro/sc02/`) and `out/kiro/author-times.txt`.
+Nothing from `out/` is committed.
