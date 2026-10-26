@@ -1,0 +1,123 @@
+# Reference Trusted Gate for Phase 1 bounded remediation (consumer repository).
+#
+# Copy to .github/workflows/remediation-gate.yml in the repository whose
+# Templates are being repaired, replace the two PIN values, and make the job
+# "remediation-gate / verify" a required check (see README.md next to this
+# file and docs/v2/phase1/handoff.md). It is a reference: whether GitHub
+# actually blocks a merge depends on the repository's rulesets, CODEOWNERS and
+# who can bypass them, and has to be shown on GitHub, not assumed from here.
+#
+# Trust boundary
+# * pull_request_target: GitHub runs THIS file from the base branch. A PR that
+#   edits this file does not change what runs for that PR.
+# * The base commit is checked out; the PR head is fetched as git objects only
+#   and is never checked out, installed, built or executed. The verifier reads
+#   it as data through read-only git plumbing with hooks, filters, textconv,
+#   fsmonitor and transports disabled.
+# * The contract is read from the base commit (--config-rev = base), never
+#   from the PR. The validator is a pinned commit of the plugin, checked out
+#   into its own directory; nothing is installed from the PR.
+# * Only SHAs from the event payload reach argv, through env variables; no PR
+#   title, branch name or file content is interpolated into a shell line.
+# * permissions: contents: read. No secrets are used. persist-credentials is
+#   off, so the job's token is not left in .git/config.
+name: remediation-gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      VALIDATOR_REPOSITORY: nobu-13/aws-iac-review-agent-plugin
+      # PIN: a full commit SHA of the plugin that contains iacreview/remediation.
+      VALIDATOR_COMMIT: "0000000000000000000000000000000000000000"
+      # The approved contract, as a path in the base revision.
+      CONTRACT_PATH: .iac-remediation/contracts/billing-mode-orders.yaml
+      CFN_LINT_VERSION: "1.46.0"
+      PYYAML_VERSION: "6.0.3"
+    steps:
+      - name: Check out the base revision (trusted configuration)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: subject
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the PR head as objects only
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -eu
+          git -C subject -c protocol.allow=never -c protocol.https.allow=always \
+            fetch --no-tags --no-recurse-submodules --no-write-fetch-head "$REPO_URL" \
+            "+refs/pull/${PR_NUMBER}/head:refs/remediation/head"
+          fetched="$(git -C subject rev-parse --verify refs/remediation/head^{commit})"
+          if [ "$fetched" != "$HEAD_SHA" ]; then
+            echo "PR head moved after this event; the newer push gets its own run." >&2
+            exit 1
+          fi
+
+      - name: Check out the pinned validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.VALIDATOR_REPOSITORY }}
+          ref: ${{ env.VALIDATOR_COMMIT }}
+          path: validator
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned tools (from the validator, not from the PR)
+        run: |
+          set -eu
+          python3 -m pip install "PyYAML==${PYYAML_VERSION}" "cfn-lint==${CFN_LINT_VERSION}"
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 validator/.github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Verify the candidate against the approved contract
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IACREVIEW_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -u
+          PYTHONPATH="${GITHUB_WORKSPACE}/validator" python3 -m iacreview.remediation verify \
+            --repo subject --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --config-rev "$BASE_SHA" --contract "$CONTRACT_PATH" \
+            --execution-mode trusted_ci --repository-id "$GITHUB_REPOSITORY" \
+            --output "${RUNNER_TEMP}/remediation-report.json"
+          status=$?
+          # The Summary is informational; the job result is verify's exit code.
+          if ! PYTHONPATH="${GITHUB_WORKSPACE}/validator" python3 -m iacreview.remediation explain \
+              "${RUNNER_TEMP}/remediation-report.json" >> "$GITHUB_STEP_SUMMARY"; then
+            echo "explain could not read the report" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$status"
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: remediation-report
+          path: ${{ runner.temp }}/remediation-report.json
+          if-no-files-found: error

@@ -1,0 +1,24 @@
+contract_schema_version: "0.1.0"
+contract_id: "ingest-role-overbroad"
+profile_id: "iam-inline-policy-overbroad-v1"
+profile_version: "1"
+task_id: "remove-overbroad-statement"
+target:
+  template_path: "infra/template.yaml"
+scope:
+  allowed_edits:
+    - resource: "IngestRole"
+      property: "Policies"
+      operations: ["replace"]
+intent:
+  required_outcomes:
+    - "no-overbroad-allow-statement"
+  preserve_invariants:
+    - "outside-allowed-edits-unchanged"
+    - "required-statement-preserved"
+  parameters:
+    required_statement_sid: "ReadInput"
+verification:
+  required_checks:
+    - "cfn-lint"
+    - "profile-guard"

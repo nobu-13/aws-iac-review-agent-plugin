@@ -1,0 +1,28 @@
+{
+  "profile_id": "iam-inline-policy-overbroad-v1",
+  "profile_version": "1",
+  "title": "IAM Role: remove over-broad inline Allow statements, keep a declared statement",
+  "resource_type": "AWS::IAM::Role",
+  "allowed_properties": {
+    "Policies": ["replace"]
+  },
+  "outcomes": {
+    "no-overbroad-allow-statement": {"guard_rule": "no_overbroad_allow_statement"}
+  },
+  "invariants": {
+    "outside-allowed-edits-unchanged": {"kind": "boundary", "mandatory": true},
+    "required-statement-preserved": {"kind": "statement", "guard_rule": "required_statement_present", "mandatory": true}
+  },
+  "parameters": {
+    "required_statement_sid": {"pattern": "^[A-Za-z0-9]{1,128}$"}
+  },
+  "mandatory_checks": ["cfn-lint", "profile-guard"],
+  "tools": {"cfn-lint": "1.46.0", "cfn-guard": "3.2.1"},
+  "init": {
+    "contract_id": "overbroad-{resource_slug}",
+    "task_id": "remove-overbroad-{resource_slug}",
+    "allowed_edits": [
+      {"property": "Policies", "operations": ["replace"]}
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+# Profile iam-inline-policy-overbroad-v1 (Phase 1). Evaluated by the
+# remediation verifier on a projection {"Target": <contract Resource>,
+# "Params": {"required_statement_sid": ...}}. No rule-level `when`: an absent
+# Target is a FAIL, never a SKIP. This is the profile's explicit definition of
+# over-broad, not an IAM policy evaluator.
+
+let required_sid = Params.required_statement_sid
+
+# no_overbroad_allow_statement: no Allow statement in the Role's inline
+# Policies grants every action ("*") or every action of a service ("svc:*"),
+# and no Allow statement uses NotAction.
+rule no_overbroad_allow_statement {
+    Target.Type == "AWS::IAM::Role"
+    let allows = Target.Properties.Policies[*].PolicyDocument.Statement[ Effect == "Allow" ]
+    when %allows !empty {
+        %allows {
+            NotAction not exists
+            Action[*] != "*"
+            Action[*] != /^[A-Za-z0-9-]+:\*$/
+        }
+    }
+}
+
+# required_statement_present: a statement with the contract's Sid exists and
+# allows. Its exact content is compared Base to Head by the verifier itself.
+rule required_statement_present {
+    Target.Type == "AWS::IAM::Role"
+    some Target.Properties.Policies[*].PolicyDocument.Statement[*] {
+        Sid == %required_sid
+        Effect == "Allow"
+    }
+}

@@ -1,0 +1,12 @@
+# Configuration D (comparison baseline): the SC-01 contract written by hand as
+# Guard rules against the Logical ID, as a team might without Phase 1.
+rule orders_table_billing_mode_consistent {
+    Resources.OrdersTable.Type == "AWS::DynamoDB::Table"
+    when Resources.OrdersTable.Properties.BillingMode == "PAY_PER_REQUEST" {
+        Resources.OrdersTable.Properties.ProvisionedThroughput not exists
+    }
+    when Resources.OrdersTable.Properties.BillingMode not exists or
+         Resources.OrdersTable.Properties.BillingMode == "PROVISIONED" {
+        Resources.OrdersTable.Properties.ProvisionedThroughput exists
+    }
+}

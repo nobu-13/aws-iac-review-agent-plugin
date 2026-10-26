@@ -1,0 +1,876 @@
+{
+ "schema": "phase1-remediation-cases/1",
+ "note": "Ground truth fixed before the Phase 1 verifier was implemented. Expected values are not derived from verifier output. Synthetic fixtures; not data from a real account or a published experiment.",
+ "decision_exit_codes": {
+  "VERIFIED": 0,
+  "BLOCKED": 20,
+  "UNVERIFIED": 21,
+  "ERROR": 22
+ },
+ "classes": {
+  "correct": "a change the contract allows; every configuration should accept it",
+  "dangerous": "a change that breaks the contract scope, an invariant or the purpose; accepting it is a dangerous false accept",
+  "evidence_insufficient": "the evidence needed to accept is missing, stale, unapproved or incomplete; accepting it is an evidence false accept",
+  "invalid_input": "the request itself is malformed; it must fail closed with a diagnostic"
+ },
+ "cases": [
+  {
+   "id": "C01",
+   "family": "C01",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "class": "correct",
+   "summary": "SC-01 minimal fix: ProvisionedThroughput removed",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": []
+   }
+  },
+  {
+   "id": "C01b",
+   "family": "C01",
+   "scenario": "sc01",
+   "mutation": "sc01_switch_to_provisioned",
+   "class": "correct",
+   "summary": "SC-01 alternative fix: BillingMode replaced with PROVISIONED, throughput kept",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": []
+   }
+  },
+  {
+   "id": "C02",
+   "family": "C02",
+   "scenario": "sc02",
+   "mutation": "sc02_fixed",
+   "class": "correct",
+   "summary": "SC-02 fix: over-broad statement removed, ReadInput kept",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": []
+   }
+  },
+  {
+   "id": "C03a",
+   "family": "C03",
+   "scenario": "sc01",
+   "mutation": "sc01_noop_already_fixed",
+   "class": "correct",
+   "summary": "Base already satisfies the purpose; Head is identical",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "already_satisfied",
+    "codes": []
+   }
+  },
+  {
+   "id": "C03b",
+   "family": "C03",
+   "scenario": "sc01",
+   "mutation": "sc01_noop_unresolved",
+   "class": "dangerous",
+   "summary": "No-op on a Base that does not satisfy the purpose",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "not_resolved",
+    "codes": [
+     "outcome_not_achieved"
+    ]
+   }
+  },
+  {
+   "id": "C04a",
+   "family": "C04",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_reordered_commented",
+   "class": "correct",
+   "summary": "Fix plus key reordering and comment edits",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": []
+   }
+  },
+  {
+   "id": "C04b",
+   "family": "C04",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_as_json",
+   "class": "correct",
+   "summary": "Fix plus the same structure rewritten as JSON at the same path",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": []
+   }
+  },
+  {
+   "id": "C05",
+   "family": "C05",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_iam",
+   "class": "dangerous",
+   "summary": "Fix plus an IAM action widened in the function role",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C06a",
+   "family": "C06",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_env",
+   "class": "dangerous",
+   "summary": "Fix plus a Lambda environment variable changed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C06b",
+   "family": "C06",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_output",
+   "class": "dangerous",
+   "summary": "Fix plus an Output added",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C07a",
+   "family": "C07",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_deletion_policy",
+   "class": "dangerous",
+   "summary": "Fix plus DeletionPolicy Retain changed to Delete",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C07b",
+   "family": "C07",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_minus_update_replace_policy",
+   "class": "dangerous",
+   "summary": "Fix plus UpdateReplacePolicy removed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C08a",
+   "family": "C08",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_minus_function",
+   "class": "dangerous",
+   "summary": "Fix plus another Resource deleted",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "resource_removed"
+    ]
+   }
+  },
+  {
+   "id": "C08b",
+   "family": "C08",
+   "scenario": "sc01",
+   "mutation": "sc01_type_changed",
+   "class": "dangerous",
+   "summary": "Target Resource Type changed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "not_resolved",
+    "codes": [
+     "resource_type_changed"
+    ]
+   }
+  },
+  {
+   "id": "C08c",
+   "family": "C08",
+   "scenario": "sc01",
+   "mutation": "sc01_logical_id_renamed",
+   "class": "dangerous",
+   "summary": "Target Logical ID renamed while the renamed copy is consistent",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "not_resolved",
+    "codes": [
+     "resource_removed",
+     "resource_added"
+    ]
+   }
+  },
+  {
+   "id": "C08d",
+   "family": "C08",
+   "scenario": "sc01",
+   "mutation": "sc01_template_deleted",
+   "class": "dangerous",
+   "summary": "Target Template file deleted",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "target_template_removed"
+    ]
+   }
+  },
+  {
+   "id": "C09a",
+   "family": "C09",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_new_file",
+   "class": "dangerous",
+   "summary": "Fix plus a script file added",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_added_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C09b",
+   "family": "C09",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_minus_file",
+   "class": "dangerous",
+   "summary": "Fix plus a file deleted",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_removed_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C09c",
+   "family": "C09",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_rename",
+   "class": "dangerous",
+   "summary": "Fix plus a file renamed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_removed_outside_scope",
+     "file_added_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C09d",
+   "family": "C09",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_chmod",
+   "class": "dangerous",
+   "summary": "Fix plus the executable bit set on another file",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_mode_changed"
+    ]
+   }
+  },
+  {
+   "id": "C09e",
+   "family": "C09",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_target_executable",
+   "class": "dangerous",
+   "summary": "Fix plus the executable bit set on the target Template",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_mode_changed"
+    ]
+   }
+  },
+  {
+   "id": "C10a",
+   "family": "C10",
+   "scenario": "sc01",
+   "mutation": "sc01_properties_replaced",
+   "class": "dangerous",
+   "summary": "Properties block rewritten: fix plus KeySchema changed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C10b",
+   "family": "C10",
+   "scenario": "sc01",
+   "mutation": "sc01_properties_replaced_by_intrinsic",
+   "class": "dangerous",
+   "summary": "Properties block replaced by an Fn::If expression",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": null,
+    "codes": [
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C11",
+   "family": "C11",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_relaxed_in_head",
+   "class": "dangerous",
+   "summary": "Head relaxes the contract file and widens IAM",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_modified_outside_scope",
+     "template_change_outside_scope"
+    ],
+    "contract_from": "trusted_config"
+   }
+  },
+  {
+   "id": "C12a",
+   "family": "C12",
+   "scenario": "sc01",
+   "mutation": "sc01_workflow_modified",
+   "class": "dangerous",
+   "summary": "Head edits the gate workflow (permissions widened) together with the fix",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_modified_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C12b",
+   "family": "C12",
+   "scenario": "sc01",
+   "mutation": "sc01_rule_copy_modified",
+   "class": "dangerous",
+   "summary": "Head adds a weakened copy of a profile rule and a validator stub",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_added_outside_scope"
+    ],
+    "validator_from": "installed"
+   }
+  },
+  {
+   "id": "C13",
+   "family": "C13",
+   "scenario": "sc01",
+   "mutation": "sc01_fake_pass_report",
+   "class": "dangerous",
+   "summary": "Head widens IAM and adds a forged VERIFIED report",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_added_outside_scope",
+     "template_change_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C14",
+   "family": "C14",
+   "scenario": "sc01",
+   "mutation": "sc01_head_updated_after_pass",
+   "class": "dangerous",
+   "summary": "A VERIFIED report exists for Head 1; Head 2 adds an IAM change",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope"
+    ],
+    "old_evidence": "stale"
+   },
+   "requires_github": "the required-check behaviour for a new Head SHA is shown on GitHub only"
+  },
+  {
+   "id": "C15a",
+   "family": "C15",
+   "scenario": "sc01",
+   "mutation": "sc01_base_moved",
+   "class": "evidence_insufficient",
+   "summary": "The Base branch moved; Base is not an ancestor of Head",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "base_not_ancestor_of_head"
+    ]
+   }
+  },
+  {
+   "id": "C15b",
+   "family": "C15",
+   "scenario": "sc01",
+   "mutation": "sc01_config_newer_than_base",
+   "class": "evidence_insufficient",
+   "summary": "The trusted config revision is not an ancestor of Base",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "config_not_ancestor_of_base"
+    ]
+   }
+  },
+  {
+   "id": "C15c",
+   "family": "C15",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_revised_after_pass",
+   "class": "dangerous",
+   "summary": "A VERIFIED report exists; the approved contract is then revised to forbid removing ProvisionedThroughput",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "operation_not_allowed"
+    ],
+    "old_evidence": "stale"
+   }
+  },
+  {
+   "id": "C16a",
+   "family": "C16",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "guard_missing",
+   "class": "evidence_insufficient",
+   "summary": "cfn-guard is not installed",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "tool_unavailable"
+    ]
+   }
+  },
+  {
+   "id": "C16b",
+   "family": "C16",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "lint_wrong_version",
+   "class": "evidence_insufficient",
+   "summary": "cfn-lint reports a version other than the pinned one",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": null,
+    "codes": [
+     "tool_version_mismatch"
+    ]
+   }
+  },
+  {
+   "id": "C17a",
+   "family": "C17",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "guard_timeout",
+   "class": "evidence_insufficient",
+   "summary": "cfn-guard exceeds the timeout",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "tool_timeout"
+    ]
+   }
+  },
+  {
+   "id": "C17b",
+   "family": "C17",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "lint_crash",
+   "class": "evidence_insufficient",
+   "summary": "cfn-lint crashes",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": null,
+    "codes": [
+     "tool_failed"
+    ]
+   }
+  },
+  {
+   "id": "C17c",
+   "family": "C17",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "guard_corrupt_output",
+   "class": "evidence_insufficient",
+   "summary": "cfn-guard writes output that is not its JSON record format",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "tool_output_invalid"
+    ]
+   }
+  },
+  {
+   "id": "C17d",
+   "family": "C17",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "lint_huge_output",
+   "class": "evidence_insufficient",
+   "summary": "cfn-lint output exceeds the output limit",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": null,
+    "codes": [
+     "tool_output_too_large"
+    ]
+   }
+  },
+  {
+   "id": "C18a",
+   "family": "C18",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "guard_not_applicable",
+   "class": "evidence_insufficient",
+   "summary": "cfn-guard reports every required rule as not applicable (SKIP) with exit 0",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "check_not_passed"
+    ]
+   }
+  },
+  {
+   "id": "C18b",
+   "family": "C18",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "tools": "guard_empty_evaluation",
+   "class": "evidence_insufficient",
+   "summary": "cfn-guard exits 0 with a record that names no rule",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "check_not_passed"
+    ]
+   }
+  },
+  {
+   "id": "C19",
+   "family": "C19",
+   "scenario": "sc02",
+   "mutation": "sc02_policies_emptied",
+   "class": "dangerous",
+   "summary": "SC-02 Policies emptied so the over-broad statement disappears",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": null,
+    "codes": [
+     "invariant_violated"
+    ]
+   }
+  },
+  {
+   "id": "C19b",
+   "family": "C19",
+   "scenario": "sc02",
+   "mutation": "sc02_required_statement_narrowed",
+   "class": "dangerous",
+   "summary": "SC-02 fix plus the required statement's Action changed",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "invariant_violated"
+    ]
+   }
+  },
+  {
+   "id": "C20",
+   "family": "C20",
+   "scenario": "sc02",
+   "mutation": "sc02_base_invariant_failing",
+   "class": "evidence_insufficient",
+   "summary": "SC-02 Base already lacks the required statement",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": null,
+    "codes": [
+     "invariant_failed_on_base"
+    ]
+   }
+  },
+  {
+   "id": "C21a",
+   "family": "C21",
+   "scenario": "sc01",
+   "mutation": "sc01_target_replaced_by_symlink",
+   "class": "dangerous",
+   "summary": "Target Template replaced by a symlink to a fixed copy",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "target_not_regular_file"
+    ]
+   }
+  },
+  {
+   "id": "C21b",
+   "family": "C21",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_plus_symlink_escape",
+   "class": "dangerous",
+   "summary": "Fix plus a symlink pointing outside the repository",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "file_added_outside_scope"
+    ]
+   }
+  },
+  {
+   "id": "C21c",
+   "family": "C21",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_path_traversal",
+   "class": "invalid_input",
+   "summary": "Trusted contract names ../ in template_path",
+   "expected": {
+    "decision": "ERROR",
+    "exit_code": 22,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "contract_invalid"
+    ]
+   }
+  },
+  {
+   "id": "C21d",
+   "family": "C21",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_with_git_markers",
+   "class": "correct",
+   "summary": "Fix in a repository whose config sets hooks, fsmonitor, filter, textconv and external diff to marker scripts",
+   "expected": {
+    "decision": "VERIFIED",
+    "exit_code": 0,
+    "task_outcome": "resolved",
+    "codes": [],
+    "markers": "absent"
+   }
+  },
+  {
+   "id": "C22a",
+   "family": "C22",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed_with_duplicate_key",
+   "class": "evidence_insufficient",
+   "summary": "Head Template holds a duplicate mapping key",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": null,
+    "codes": [
+     "comparison_incomplete",
+     "check_failed"
+    ]
+   }
+  },
+  {
+   "id": "C22b",
+   "family": "C22",
+   "scenario": "sc01",
+   "mutation": "sc01_alias_fan_out",
+   "class": "evidence_insufficient",
+   "summary": "Head Template expands to more nodes than the structure limit through aliases",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "template_not_comparable"
+    ]
+   }
+  },
+  {
+   "id": "C22c",
+   "family": "C22",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_duplicate_key",
+   "class": "invalid_input",
+   "summary": "Trusted contract holds a duplicate key",
+   "expected": {
+    "decision": "ERROR",
+    "exit_code": 22,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "contract_invalid"
+    ]
+   }
+  },
+  {
+   "id": "C23a",
+   "family": "C23",
+   "scenario": "sc01",
+   "mutation": "sc01_canary_change",
+   "class": "dangerous",
+   "summary": "Canary values in keys, values, a file name, a numeric key and a bidi control; Head changes the canary Resource",
+   "expected": {
+    "decision": "BLOCKED",
+    "exit_code": 20,
+    "task_outcome": "resolved",
+    "codes": [
+     "template_change_outside_scope",
+     "file_added_outside_scope"
+    ],
+    "canary": "absent"
+   }
+  },
+  {
+   "id": "C23b",
+   "family": "C23",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_unknown_field_canary",
+   "class": "invalid_input",
+   "summary": "Trusted contract holds an unknown field whose name and value are canaries",
+   "expected": {
+    "decision": "ERROR",
+    "exit_code": 22,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "contract_invalid"
+    ],
+    "canary": "absent"
+   }
+  },
+  {
+   "id": "C24a",
+   "family": "C24",
+   "scenario": "sc01",
+   "mutation": "sc01_fixed",
+   "contract_source": "draft_file",
+   "class": "evidence_insufficient",
+   "summary": "A correct fix verified against a contract file that is not in a trusted revision",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "resolved",
+    "codes": [
+     "contract_not_approved"
+    ]
+   },
+   "requires_github": "check-name spoofing, skipped jobs, missing protection and widened agent CI permissions are shown on GitHub only"
+  },
+  {
+   "id": "C24b",
+   "family": "C24",
+   "scenario": "sc01",
+   "mutation": "sc01_contract_in_head_only",
+   "class": "evidence_insufficient",
+   "summary": "The contract is read from the candidate Head itself",
+   "expected": {
+    "decision": "UNVERIFIED",
+    "exit_code": 21,
+    "task_outcome": "not_evaluated",
+    "codes": [
+     "config_not_ancestor_of_base"
+    ]
+   }
+  }
+ ]
+}

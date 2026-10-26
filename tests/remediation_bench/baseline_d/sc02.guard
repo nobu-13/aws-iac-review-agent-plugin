@@ -1,0 +1,21 @@
+# Configuration D (comparison baseline): the SC-02 contract written by hand as
+# Guard rules against the Logical ID and the Sid.
+rule ingest_role_no_overbroad_allow {
+    Resources.IngestRole.Type == "AWS::IAM::Role"
+    let allows = Resources.IngestRole.Properties.Policies[*].PolicyDocument.Statement[ Effect == "Allow" ]
+    when %allows !empty {
+        %allows {
+            NotAction not exists
+            Action[*] != "*"
+            Action[*] != /^[A-Za-z0-9-]+:\*$/
+        }
+    }
+}
+
+rule ingest_role_keeps_read_input {
+    some Resources.IngestRole.Properties.Policies[*].PolicyDocument.Statement[*] {
+        Sid == "ReadInput"
+        Effect == "Allow"
+        Action[*] == "s3:GetObject"
+    }
+}
