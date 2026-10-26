@@ -168,3 +168,69 @@ G = gitsnap.Entry("100644", "b" * 40)
 def test_repository_boundary(head: Dict[str, gitsnap.Entry], expected: set) -> None:
     base = snap({"infra/template.yaml": F, "x": F})
     assert {f.code for f in boundary.repository(CONTRACT, base, snap(head))} == expected
+
+
+# ---------------------------------------------------------------------------
+# Typed path recovery (numeric keys, leading zeros, indexes, kind changes)
+# ---------------------------------------------------------------------------
+
+
+def findings_of(head_doc: Any, base_doc: Any = BASE) -> List[boundary.Finding]:
+    b, h = parsed(base_doc), parsed(head_doc, "head")
+    result = semdiff.diff(b, h)
+    assert isinstance(result, semdiff.SemanticDiffResult)
+    return boundary.template(CONTRACT, TYPE, b, h, result)
+
+
+def test_resolve_path_keeps_a_leading_zero_key() -> None:
+    doc = {"Resources": {"Other": {"Properties": {"007": "x"}}}}
+    path, ambiguous = boundary.resolve_path(("Resources", "Other", "Properties", 7), doc, doc)
+    assert path == ("Resources", "Other", "Properties", "007") and not ambiguous
+
+
+def test_resolve_path_tells_a_list_index_from_a_digit_key() -> None:
+    doc = {"Resources": {"T": {"Properties": {"Tags": [{"0": "a"}]}}}}
+    path, ambiguous = boundary.resolve_path(("Resources", "T", "Properties", "Tags", 0, 0), doc, doc)
+    assert path == ("Resources", "T", "Properties", "Tags", 0, "0") and not ambiguous
+    assert isinstance(path[4], int) and isinstance(path[5], str)
+
+
+@pytest.mark.parametrize(
+    "base_map,head_map",
+    [({"7": 1, "07": 2}, {"7": 1, "07": 3}), ({"07": 1}, {"7": 1}), ({}, {})],
+    ids=["two-spellings-one-side", "spelling-changes-between-sides", "no-such-key"],
+)
+def test_an_unrecoverable_digit_key_is_ambiguous(base_map: dict, head_map: dict) -> None:
+    base = {"Resources": {"Other": {"Metadata": base_map}}}
+    head = {"Resources": {"Other": {"Metadata": head_map}}}
+    _, ambiguous = boundary.resolve_path(("Resources", "Other", "Metadata", 7), base, head)
+    assert ambiguous
+
+
+def test_a_mapping_on_one_side_and_a_list_on_the_other_is_ambiguous() -> None:
+    base = {"Resources": {"T": {"Properties": {"BillingMode": {"0": "x"}}}}}
+    head = {"Resources": {"T": {"Properties": {"BillingMode": ["x"]}}}}
+    _, ambiguous = boundary.resolve_path(("Resources", "T", "Properties", "BillingMode", 0), base, head)
+    assert ambiguous
+
+
+def test_colliding_digit_keys_inside_an_allowed_property_never_verify() -> None:
+    base = edit(lambda d: props(d).__setitem__("BillingMode", {"7": "a", "07": "b"}))
+    head = edit(lambda d: props(d).__setitem__("BillingMode", {"7": "a", "07": "c"}))
+    codes_ = {f.code for f in findings_of(head, base)}
+    assert "comparison_incomplete" in codes_
+    assert any(f.detail == "path_type_ambiguous" for f in findings_of(head, base))
+
+
+def test_a_leading_zero_resource_id_is_not_the_contract_resource() -> None:
+    # Index 1 stays a string in semdiff, so "0OrdersTable"-style collisions
+    # cannot occur; a digit-only Logical ID is compared exactly.
+    base = edit(lambda d: d["Resources"].__setitem__("007", {"Type": TYPE, "Properties": {"BillingMode": "PROVISIONED"}}))
+    head = edit(lambda d: d["Resources"].__setitem__("007", {"Type": TYPE, "Properties": {"BillingMode": "PAY_PER_REQUEST"}}))
+    found = findings_of(head, base)
+    assert any(f.code == "template_change_outside_scope" and f.path[1] == "007" for f in found)
+
+
+def test_a_change_of_value_kind_inside_an_allowed_property_is_a_replace() -> None:
+    head = edit(lambda d: props(d).__setitem__("ProvisionedThroughput", [5, 5]))
+    assert "operation_not_allowed" in codes(head)  # replace is not allowed for ProvisionedThroughput

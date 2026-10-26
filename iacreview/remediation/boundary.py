@@ -71,28 +71,55 @@ def repository(contract: Contract, base: gitsnap.Snapshot, head: gitsnap.Snapsho
 _MISSING = object()
 
 
-def typed_path(path: Tuple[object, ...], base_doc: object, head_doc: object) -> Tuple[object, ...]:
+def resolve_path(path: Tuple[object, ...], base_doc: object, head_doc: object) -> Tuple[Tuple[object, ...], bool]:
     """Recover the key/index typing ``semdiff`` paths lose for digit keys.
 
     ``semdiff`` normalizes paths with ``finding.canonical_template_path``,
-    which turns a mapping key such as ``"0"`` into the int ``0``. Walking the
-    two documents tells which positions are mapping keys (always ``str``: a
-    non-string key is never compared) and which are list indexes (``int``).
+    which turns a mapping key such as ``"0"`` or ``"007"`` into an int (``0``,
+    ``7``). Walking the two documents tells which positions are mapping keys
+    (always ``str``: a non-string key is never compared) and which are list
+    indexes (``int``). For an int at a mapping position the original key is the
+    one digit-only key of that mapping whose ``int()`` equals it, looked up on
+    both sides.
+
+    Returns:
+        ``(path, ambiguous)``. ``ambiguous`` is True when the typing cannot be
+        recovered uniquely: no such key, more than one (``"7"`` and ``"07"``),
+        or the position is a mapping on one side and a list on the other.
+        An ambiguous path must not be used to allow a change.
     """
     out: List[object] = []
     nodes = [base_doc, head_doc]
+    ambiguous = False
     for item in path:
-        if any(isinstance(n, dict) for n in nodes):
-            key: object = str(item)
+        is_map = [isinstance(n, dict) for n in nodes]
+        is_seq = [isinstance(n, (list, tuple)) for n in nodes]
+        present = [n is not _MISSING for n in nodes]
+        if any(is_map) and any(is_seq):
+            ambiguous = True  # a mapping on one side, a list on the other
+        key: object = item
+        if any(is_map):
+            if isinstance(item, int) and not isinstance(item, bool):
+                spellings = {
+                    k for n in nodes if isinstance(n, dict) for k in n
+                    if isinstance(k, str) and k.isdecimal() and int(k) == item
+                }
+                if len(spellings) == 1:
+                    key = spellings.pop()
+                else:
+                    ambiguous = True
+                    key = str(item)
+            else:
+                key = str(item)
             nodes = [n.get(key, _MISSING) if isinstance(n, dict) else _MISSING for n in nodes]
-        elif any(isinstance(n, (list, tuple)) for n in nodes) and isinstance(item, int):
-            key = item
+        elif any(is_seq) and isinstance(item, int) and not isinstance(item, bool):
             nodes = [n[item] if isinstance(n, (list, tuple)) and 0 <= item < len(n) else _MISSING for n in nodes]
         else:
-            key = item
+            if any(present):
+                ambiguous = True  # the path goes below a scalar: cannot be typed
             nodes = [_MISSING, _MISSING]
         out.append(key)
-    return tuple(out)
+    return tuple(out), ambiguous
 
 
 def _has_condition(value: object) -> bool:
@@ -146,7 +173,7 @@ def template(
     resource = contract.resource
     for uncompared in result.uncompared_paths:
         findings.append(
-            Finding("comparison_incomplete", "template", typed_path(uncompared.path, base.doc, head.doc), uncompared.reason)
+            Finding("comparison_incomplete", "template", resolve_path(uncompared.path, base.doc, head.doc)[0], uncompared.reason)
         )
     for limitation in result.semantic_limitations:
         if limitation in UNSUPPORTED_LIMITATIONS:
@@ -159,7 +186,12 @@ def template(
     if not (isinstance(target, dict) and target.get("Type") == resource_type):
         findings.append(Finding("target_resource_missing", "template", ("Resources", resource), "base"))
     for change in result.changes:
-        path = typed_path(change.path, base.doc, head.doc)
+        path, ambiguous = resolve_path(change.path, base.doc, head.doc)
+        if ambiguous:
+            # The original key/index of some position is not unique: never
+            # allow on a guess (Design 5). Reported as an incomplete comparison.
+            findings.append(Finding("comparison_incomplete", "template", path, "path_type_ambiguous"))
+            continue
         in_target = change.section == "Resources" and len(path) >= 2 and path[1] == resource and isinstance(path[1], str)
         if change.section == "Resources" and len(path) == 2:
             if change.type_changed:
