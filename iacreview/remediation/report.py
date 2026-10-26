@@ -261,11 +261,25 @@ def _path_text(path: Sequence[object]) -> str:
     return ".".join("[{0}]".format(p) if isinstance(p, int) else str(p) for p in path) or "-"
 
 
+def _outcome_note(p: Mapping[str, Any]) -> str:
+    """Keep "the purpose rule passed" apart from "the candidate is verified".
+
+    ``task_outcome`` comes from the required outcome rules alone. With any
+    decision other than VERIFIED it says nothing about the candidate as a
+    whole, and the Summary says so on the same line.
+    """
+    if p["task_outcome"] in ("resolved", "already_satisfied") and p["decision"] != rschema.VERIFIED:
+        return " (outcome rules only; the candidate as a whole is {0}, not verified)".format(p["decision"])
+    if p["task_outcome"] == "already_satisfied":
+        return " (no fix was needed; not counted as a repair)"
+    return ""
+
+
 def summary(report: Mapping[str, Any]) -> str:
     p = report["payload"]
     lines = [
         "Remediation verification: {0}".format(p["decision"]),
-        "  task outcome:      {0}".format(p["task_outcome"]),
+        "  task outcome:      {0}{1}".format(p["task_outcome"], _outcome_note(p)),
         "  execution mode:    {0} (merge enforcement: {1})".format(p["execution_mode"], p["enforcement_status"]),
         "  contract:          {0} ({1}), profile {2}".format(
             p["trust"]["contract_id"], "approved revision" if p["trust"]["approved"] else "NOT approved", p["trust"]["profile_id"]

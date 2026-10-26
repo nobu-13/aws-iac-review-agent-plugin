@@ -146,13 +146,18 @@ def _execute(run: CheckRun, argv: List[str], input_path: Path) -> Optional[proc.
     except IacReviewError:
         run.state = "FAILED"
         return None
-    run.output_sha256 = _output_digest(result, input_path)
+    # A run stopped by the timeout or the output limit left an arbitrary prefix
+    # of its output behind: how much was read before the stop depends on pipe
+    # buffering and scheduling (it differed between runs on Linux CI). That
+    # prefix is not evidence of anything and is never parsed, so it gets no
+    # digest; the state (TIMEOUT / OUTPUT_TOO_LARGE) is the whole result.
     if result.timed_out:
         run.state = "TIMEOUT"
         return None
     if result.output_exceeded:
         run.state = "OUTPUT_TOO_LARGE"
         return None
+    run.output_sha256 = _output_digest(result, input_path)
     run.exit_code = result.exit_code
     return result
 

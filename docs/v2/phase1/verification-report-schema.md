@@ -25,7 +25,7 @@ evidence.
 | --- | --- | --- |
 | `decision` | `VERIFIED` \| `BLOCKED` \| `UNVERIFIED` \| `ERROR` | representative value, `ERROR > BLOCKED > UNVERIFIED > VERIFIED` |
 | `exit_code` | 0 \| 20 \| 21 \| 22 | the `verify` exit code for `decision` |
-| `task_outcome` | `resolved` \| `already_satisfied` \| `not_resolved` \| `not_evaluated` | from the required outcomes on Base and Head; `already_satisfied` is not a fix |
+| `task_outcome` | `resolved` \| `already_satisfied` \| `not_resolved` \| `not_evaluated` | from the required outcome rules on Base and Head only; it is not the verdict on the candidate (`decision` is). `resolved` with BLOCKED / UNVERIFIED means the purpose rule passed while the candidate failed or was not verified, and the Summary says so on the same line; `already_satisfied` is not a fix |
 | `next_action` | `human_review` \| `revise_candidate` \| `supply_missing_evidence` \| `fix_invocation_or_contract` | per decision |
 | `execution_mode` | `local_preview` \| `trusted_ci` | how it was run, as given; proves nothing alone |
 | `enforcement_status` | `not_verified` | always: merge enforcement is shown on GitHub, not by the verifier |

@@ -224,3 +224,58 @@ def test_real_guard_on_the_sc01_rule_gives_fail_then_pass() -> None:
     for doc, state in ((bad, "FAIL"), (good, "PASS"), ({"Resources": {}}, "FAIL")):
         run = checks.run_guard(real, RULES, checks.projection(doc, "T", {}), ["billing_mode_consistent"], "head")
         assert checks.rule_state(run, "billing_mode_consistent") == state
+
+
+# ---------------------------------------------------------------------------
+# Regression (CI run 40325732554, Ubuntu): a stopped run's partial output
+# ---------------------------------------------------------------------------
+
+RANDOM_FLOOD = r"""
+import os, random, sys, time
+if "--version" in sys.argv:
+    print("cfn-lint 1.46.0"); sys.exit(0)
+rnd = random.Random()
+written = 0
+while written < {limit}:
+    n = rnd.choice([1000, 4096, 30000, 65536, 70000])
+    os.write(1, b"a" * n)
+    written += n
+    if rnd.random() < 0.3:
+        time.sleep(0.001)
+{tail}
+"""
+
+
+def _random_tool(tmp_path: Path, limit: int, tail: str) -> Path:
+    path = tmp_path / "cfn-lint"
+    path.write_text("#!" + sys.executable + "\n" + RANDOM_FLOOD.format(limit=limit, tail=tail), encoding="utf-8")
+    path.chmod(path.stat().st_mode | stat.S_IXUSR)
+    return path
+
+
+def test_an_output_limit_stop_records_no_digest_of_the_partial_output(tmp_path: Path) -> None:
+    """How much a stopped tool wrote before the stop depends on scheduling.
+
+    On Linux CI two runs of C17d read different prefixes, so a digest of the
+    prefix made the decision payload differ. The prefix is never parsed and is
+    not evidence; the run records OUTPUT_TOO_LARGE and nothing else.
+    """
+    path = _random_tool(tmp_path, 9 * 1024 * 1024, "")
+    runs = [checks.run_cfn_lint(tool(path, "cfn-lint", "1.46.0"), b"Resources: {}\n", "yaml", "head").as_dict() for _ in range(5)]
+    assert all(r["state"] == "OUTPUT_TOO_LARGE" for r in runs)
+    assert all(r["output_sha256"] is None and r["exit_code"] is None for r in runs)
+    assert all(r == runs[0] for r in runs)
+
+
+def test_a_timeout_stop_records_no_digest_of_the_partial_output(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(checks.TIMEOUT_OVERRIDE_ENV, "1")
+    path = _random_tool(tmp_path, 200_000, "time.sleep(30)")
+    runs = [checks.run_cfn_lint(tool(path, "cfn-lint", "1.46.0"), b"Resources: {}\n", "yaml", "head").as_dict() for _ in range(3)]
+    assert all(r["state"] == "TIMEOUT" and r["output_sha256"] is None for r in runs)
+    assert all(r == runs[0] for r in runs)
+
+
+def test_a_completed_run_still_records_its_output_digest(tmp_path: Path) -> None:
+    path = script(tmp_path, "cfn-lint", "echo '[]'\nexit 0\n")
+    run = checks.run_cfn_lint(tool(path, "cfn-lint", "1.46.0"), b"Resources: {}\n", "yaml", "head")
+    assert run.state == "PASS" and run.output_sha256 is not None and len(run.output_sha256) == 64

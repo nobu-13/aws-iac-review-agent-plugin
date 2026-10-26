@@ -94,3 +94,20 @@ def test_validator_identity_is_stable_and_covers_profiles() -> None:
     first = report.validator_identity()
     assert first == report.validator_identity()
     assert len(first["source_sha256"]) == 64
+
+
+@pytest.mark.parametrize("decision", ["BLOCKED", "UNVERIFIED", "ERROR"])
+def test_a_resolved_outcome_is_not_shown_as_a_verified_candidate(decision: str) -> None:
+    code = {"BLOCKED": "resource_removed", "UNVERIFIED": "tool_output_too_large", "ERROR": "internal_error"}[decision]
+    res = result([Finding(code, "check", ())], decision)
+    res.task_outcome = "resolved"
+    line = next(text for text in report.summary(report.build_report(res, 0.0)).splitlines() if "task outcome" in text)
+    assert "resolved" in line and "outcome rules only" in line and decision in line and "not verified" in line
+
+
+def test_a_verified_resolved_outcome_has_no_caveat_and_already_satisfied_is_not_a_repair() -> None:
+    res = result([], rschema.VERIFIED)
+    res.task_outcome = "resolved"
+    assert "outcome rules only" not in report.summary(report.build_report(res, 0.0))
+    res.task_outcome = "already_satisfied"
+    assert "not counted as a repair" in report.summary(report.build_report(res, 0.0))
