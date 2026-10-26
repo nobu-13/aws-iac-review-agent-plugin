@@ -2,25 +2,34 @@
 
     python3 tests/remediation_bench/compare.py [--only C01,C05] [--output compare.json]
 
-The same candidate (Base, Head, tools) goes through four configurations:
+Every configuration gets the same candidate: the same git repository (Base,
+Head, trusted config revision), the same PATH with the same tools (real or the
+case's fake ones), the same profile Guard rules where it uses rules, and the
+same expected values (``benchmark/remediation/cases.json``, fixed before the
+verifier). For each configuration two things are recorded separately:
 
-A  official tools only: cfn-lint on Head has no Error, and cfn-guard with the
-   profile's outcome rule passes on Head.
-B  A + v1.1: ``iac-review`` (cfn-lint, cfn-guard, iam-review) on Base and Head,
-   then the v1.1 Delta_Tool with every declaration made; accepted when A
-   accepts, the Delta_Tool exits 0, at least one finding is Resolved and none
-   is New.
-C  B + Phase 1: accepted when B accepts and ``iacreview.remediation verify``
-   returns VERIFIED.
-D  the same contract built by hand from Guard and a small script
-   (``baseline_d.py``): file scope with ``git diff --name-only``, the rest of
-   the Template compared after deleting the allowed properties, Guard rules
-   written against the Logical ID, cfn-lint on Head.
+* ``tool_results``: what the tools reported (exit codes, rule states, Delta
+  classification counts, verifier decision), with no judgement;
+* ``accept``: the runner's acceptance rule applied to those results.
 
-C is reported on its own as well (``C_only``) because B's acceptance rule
-rejects a no-op (nothing Resolved) that Phase 1 accepts as already_satisfied.
-Nothing here decides the ground truth: each case's class comes from
-``cases.json``.
+Configurations (work package AC45):
+
+A   official tools: cfn-lint on Head and cfn-guard with the profile outcome
+    rule on the Head projection. Accept: no cfn-lint Error and the rule PASS.
+B   A + v1.1: ``iac-review`` on Base and Head, then the Delta_Tool. The v1.1
+    Delta is not a gate (docs/delta-schema.md); the acceptance rule used here
+    (A, at least one Resolved, no New) is the runner's model of how a user
+    might read it, recorded as such.
+C   B + Phase 1, as AC45 defines it: A's and B's results are produced and kept
+    as reference; acceptance is decided by Phase 1 alone (``verify`` returns
+    VERIFIED). Delta Resolved or Delta exit 0 never counts towards acceptance.
+C&B the stricter rule reported in the first evaluation (B accepts AND Phase 1
+    VERIFIED). Kept to show why that number differed from C.
+D0  simple hand-built equivalent (``baseline_d0.py``, hard-coded scope,
+    hand-written rules, no evidence handling).
+D1  hand-built equivalent of the same contract and evidence conditions
+    (``baseline_d1.py``): reads the same contract from the same trusted
+    revision and uses the same profile rules and tools, no line limit.
 """
 
 from __future__ import annotations
@@ -56,12 +65,13 @@ DECLARATIONS = (
     "same_agent_findings_input",
     "reports_match_templates",
 )
+CONFIGS = ("A", "B", "C", "C&B", "D0", "D1")
 
 
 def _run(argv: List[str], env: Dict[str, str], cwd: Path, timeout: int = 300) -> subprocess.CompletedProcess:
     try:
         return subprocess.run(argv, env=env, cwd=str(cwd), stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
-    except FileNotFoundError:  # a tool that is not installed rejects
+    except FileNotFoundError:  # a tool that is not installed
         return subprocess.CompletedProcess(argv, 127, b"", b"")
     except subprocess.TimeoutExpired:
         return subprocess.CompletedProcess(argv, 124, b"", b"")
@@ -77,11 +87,18 @@ def _show(setup: casegen.Setup, rev: str, env: Dict[str, str]) -> Optional[bytes
     return out.stdout
 
 
-def _a(setup: casegen.Setup, scenario: str, head: bytes, work: Path, env: Dict[str, str]) -> Dict[str, Any]:
+def _tools_a(scenario: str, head: Optional[bytes], work: Path, env: Dict[str, str]) -> Dict[str, Any]:
+    """Run the official tools on Head. Results only; no acceptance here."""
+    if head is None:
+        return {"head_template": "absent_or_not_regular"}
     path = work / "head.yaml"
     path.write_bytes(head)
     lint = _run(["cfn-lint", "-f", "json", "--", str(path)], env, work)
-    lint_ok = lint.returncode in (0, 4, 8, 12)
+    result: Dict[str, Any] = {"cfn_lint_exit": lint.returncode}
+    try:
+        result["cfn_lint_errors"] = sum(1 for r in json.loads(lint.stdout) if r.get("Level") == "Error")
+    except (ValueError, TypeError, AttributeError):
+        result["cfn_lint_errors"] = None
     from iacreview import template
 
     try:
@@ -89,33 +106,44 @@ def _a(setup: casegen.Setup, scenario: str, head: bytes, work: Path, env: Dict[s
         resource = doc.get("Resources", {}).get(TARGET_ID[scenario], {})
         data = {"Target": resource, "Params": {"required_statement_sid": "ReadInput"}}
         (work / "proj.json").write_text(json.dumps(data, default=str), encoding="utf-8")
-    except Exception:  # noqa: BLE001 - an unparsable Head is a reject
-        return {"accept": False, "lint_ok": lint_ok, "guard_ok": False}
+    except Exception:  # noqa: BLE001 - recorded as a result
+        result["guard_rule"] = "head_not_parsed"
+        return result
     guard = _run(
         ["cfn-guard", "validate", "--data", str(work / "proj.json"), "--rules", str(OUTCOME_RULES[scenario]), "--output-format", "json", "--show-summary", "none"],
         env,
         work,
     )
-    guard_ok = guard.returncode == 0
-    if guard_ok:
-        try:
-            record = json.loads(guard.stdout)
-            guard_ok = OUTCOME_RULE_NAME[scenario] in record.get("compliant", []) or record.get("status") == "PASS"
-        except ValueError:
-            guard_ok = False
-    return {"accept": lint_ok and guard_ok, "lint_ok": lint_ok, "guard_ok": guard_ok}
+    result["cfn_guard_exit"] = guard.returncode
+    try:
+        record = json.loads(guard.stdout)
+        name = OUTCOME_RULE_NAME[scenario]
+        result["guard_rule"] = "PASS" if name in record.get("compliant", []) else "FAIL" if any(
+            e.get("Rule", {}).get("name") == name for e in record.get("not_compliant", [])
+        ) else "SKIP"
+    except (ValueError, TypeError, AttributeError):
+        result["guard_rule"] = "unparsed"
+    return result
 
 
-def _b(base: bytes, head: bytes, work: Path, env: Dict[str, str]) -> Dict[str, Any]:
-    """Review both sides at the same relative path, then run the Delta_Tool."""
+def _accept_a(t: Dict[str, Any]) -> bool:
+    return t.get("cfn_lint_exit") in (0, 4, 8, 12) and t.get("cfn_lint_errors") == 0 and t.get("guard_rule") == "PASS"
+
+
+def _tools_b(base: Optional[bytes], head: Optional[bytes], work: Path, env: Dict[str, str]) -> Dict[str, Any]:
+    """v1.1: review both sides at the same relative path, then the Delta_Tool."""
+    if base is None or head is None:
+        return {"delta": "not_run_template_missing"}
     ws = work / "b"
     review = str(ROOT / "skills/iac-review/scripts/run_iac_review.py")
+    result: Dict[str, Any] = {}
     for side, data in (("base", base), ("head", head)):
         (ws / side / "infra").mkdir(parents=True)
         (ws / side / casegen.TARGET).write_bytes(data)
         out = _run([PYTHON, review, "--target", casegen.TARGET, "--sources", "cfn-lint", "--sources", "cfn-guard", "--sources", "iam-review"], env, ws / side)
+        result["review_exit_" + side] = out.returncode
         if out.returncode != 0:
-            return {"accept": False, "review_exit": out.returncode}
+            return result
         (ws / (side + ".json")).write_bytes(out.stdout)
     argv = [
         PYTHON, "-m", "iacreview.deltacli",
@@ -126,82 +154,92 @@ def _b(base: bytes, head: bytes, work: Path, env: Dict[str, str]) -> Dict[str, A
     for code in DECLARATIONS:
         argv.extend(["--declare", code])
     delta = _run(argv, env, ws)
-    if delta.returncode != 0:
-        return {"accept": False, "delta_exit": delta.returncode}
-    summary = json.loads(delta.stdout)["summary"]["finding_delta"]
-    counts = summary["by_classification"]
-    return {"accept": counts.get("Resolved", 0) >= 1 and counts.get("New", 0) == 0, "delta": counts, "reasons": {k: v for k, v in summary["by_reason"].items() if v}}
+    result["delta_exit"] = delta.returncode
+    if delta.returncode == 0:
+        summary = json.loads(delta.stdout)["summary"]["finding_delta"]
+        result["delta_classification"] = summary["by_classification"]
+    return result
 
 
-def _c(setup: casegen.Setup, tools: Optional[str]) -> Dict[str, Any]:
+def _accept_b(a_ok: bool, t: Dict[str, Any]) -> bool:
+    counts = t.get("delta_classification") or {}
+    return a_ok and t.get("delta_exit") == 0 and counts.get("Resolved", 0) >= 1 and counts.get("New", 0) == 0
+
+
+def _phase1(setup: casegen.Setup, tools: Optional[str]) -> Dict[str, Any]:
     out = _run([PYTHON, "-m", "iacreview.remediation", *casegen.verify_argv(setup)], casegen.tool_env(setup, tools), setup.repo)
     try:
-        decision = json.loads(out.stdout)["payload"]["decision"]
+        payload = json.loads(out.stdout)["payload"]
+        return {"exit": out.returncode, "decision": payload["decision"], "task_outcome": payload["task_outcome"]}
     except (ValueError, KeyError):
-        decision = None
-    return {"accept": decision == "VERIFIED", "decision": decision}
+        return {"exit": out.returncode, "decision": None}
 
 
-def _d(setup: casegen.Setup, scenario: str, env: Dict[str, str]) -> Dict[str, Any]:
-    out = _run([PYTHON, str(HERE / "baseline_d.py"), "--repo", str(setup.repo), "--base", setup.base, "--head", setup.head or "HEAD", "--scenario", scenario], env, setup.repo)
-    return {"accept": out.returncode == 0, "exit": out.returncode}
+def _d0(setup: casegen.Setup, scenario: str, env: Dict[str, str]) -> Dict[str, Any]:
+    out = _run([PYTHON, str(HERE / "baseline_d0.py"), "--repo", str(setup.repo), "--base", setup.base, "--head", setup.head or "HEAD", "--scenario", scenario], env, setup.repo)
+    return {"exit": out.returncode}
+
+
+def _d1(setup: casegen.Setup, env: Dict[str, str]) -> Dict[str, Any]:
+    if setup.contract_file is not None:
+        return {"exit": 21, "note": "no trusted revision given (draft file); D1 refuses like Phase 1"}
+    argv = [PYTHON, str(HERE / "baseline_d1.py"), "--repo", str(setup.repo), "--base", setup.base, "--head", setup.head or "HEAD",
+            "--config-rev", setup.config_rev or "", "--contract", setup.contract_path or ""]
+    return {"exit": _run(argv, env, setup.repo).returncode}
 
 
 def compare_case(case: Dict[str, Any], root: Path) -> Dict[str, Any]:
     tools = case.get("tools")
     setup = casegen.build(case, root)
     env = casegen.tool_env(setup, tools)
-    env_git = dict(env)
     scenario = case["scenario"]
     work = root / "work"
     work.mkdir()
-    timings: Dict[str, float] = {}
-    base = _show(setup, setup.base, env_git)
-    head = _show(setup, setup.head or "HEAD", env_git)
-    results: Dict[str, Dict[str, Any]] = {}
-    t = time.monotonic()
-    results["A"] = _a(setup, scenario, head, work, env) if head is not None else {"accept": False}
-    timings["A"] = time.monotonic() - t
-    t = time.monotonic()
-    if results["A"]["accept"] and base is not None and head is not None:
-        results["B"] = _b(base, head, work, env)
-    else:
-        results["B"] = {"accept": False, "skipped_because": "A rejected"}
-    timings["B"] = time.monotonic() - t
-    t = time.monotonic()
-    c_only = _c(setup, tools)
-    timings["C"] = time.monotonic() - t
-    results["C_only"] = c_only
-    results["C"] = {"accept": results["B"]["accept"] and c_only["accept"]}
-    t = time.monotonic()
-    results["D"] = _d(setup, scenario, env)
-    timings["D"] = time.monotonic() - t
+    seconds: Dict[str, float] = {}
+    base = _show(setup, setup.base, env)
+    head = _show(setup, setup.head or "HEAD", env)
+
+    t0 = time.monotonic()
+    tools_a = _tools_a(scenario, head, work, env)
+    seconds["A"] = time.monotonic() - t0
+    t0 = time.monotonic()
+    tools_b = _tools_b(base, head, work, env)  # always run: C keeps it as reference
+    seconds["B_extra"] = time.monotonic() - t0
+    t0 = time.monotonic()
+    phase1 = _phase1(setup, tools)
+    seconds["Phase1"] = time.monotonic() - t0
+    t0 = time.monotonic()
+    d0 = _d0(setup, scenario, env)
+    seconds["D0"] = time.monotonic() - t0
+    t0 = time.monotonic()
+    d1 = _d1(setup, env)
+    seconds["D1"] = time.monotonic() - t0
+
+    a_ok = _accept_a(tools_a)
+    b_ok = _accept_b(a_ok, tools_b)
+    p1_ok = phase1.get("decision") == "VERIFIED"
+    accept = {"A": a_ok, "B": b_ok, "C": p1_ok, "C&B": b_ok and p1_ok, "D0": d0["exit"] == 0, "D1": d1["exit"] == 0}
     return {
         "id": case["id"],
         "family": case["family"],
         "class": case["class"],
+        "expected_decision": case["expected"]["decision"],
         "expected_accept": case["expected"]["decision"] == "VERIFIED",
-        "accept": {k: v["accept"] for k, v in results.items()},
-        "detail": results,
-        "seconds": {k: round(v, 2) for k, v in timings.items()},
+        "tool_results": {"A": tools_a, "B": tools_b, "Phase1": phase1, "D0": d0, "D1": d1},
+        "accept": accept,
+        "seconds": {k: round(v, 2) for k, v in seconds.items()},
     }
 
 
 def score(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
     out: Dict[str, Any] = {}
-    for config in ("A", "B", "C", "C_only", "D"):
-        dangerous = [r["id"] for r in rows if r["class"] == "dangerous" and r["accept"][config]]
-        evidence = [r["id"] for r in rows if r["class"] == "evidence_insufficient" and r["accept"][config]]
-        invalid = [r["id"] for r in rows if r["class"] == "invalid_input" and r["accept"][config]]
-        correct = [r for r in rows if r["class"] == "correct"]
-        rejected_correct = [r["id"] for r in correct if not r["accept"][config]]
+    for config in CONFIGS:
         out[config] = {
-            "dangerous_false_accepts": dangerous,
-            "evidence_false_accepts": evidence,
-            "invalid_input_accepts": invalid,
-            "correct_cases": len(correct),
-            "correct_rejected": rejected_correct,
-            "mean_seconds": None,
+            "dangerous_false_accepts": [r["id"] for r in rows if r["class"] == "dangerous" and r["accept"][config]],
+            "evidence_false_accepts": [r["id"] for r in rows if r["class"] == "evidence_insufficient" and r["accept"][config]],
+            "invalid_input_accepts": [r["id"] for r in rows if r["class"] == "invalid_input" and r["accept"][config]],
+            "correct_cases": sum(r["class"] == "correct" for r in rows),
+            "correct_rejected": [r["id"] for r in rows if r["class"] == "correct" and not r["accept"][config]],
         }
     return out
 
@@ -220,15 +258,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             row = compare_case(case, Path(tmp) / case["id"])
             rows.append(row)
             sys.stderr.write("{0:6} {1:22} {2}\n".format(row["id"], row["class"], " ".join("{0}={1}".format(k, "acc" if v else "rej") for k, v in row["accept"].items())))
-    scores = score(rows)
-    for config in scores:
-        secs = [r["seconds"][config[0]] for r in rows]
-        scores[config]["mean_seconds"] = round(sum(secs) / len(secs), 2) if secs else None
-    result = {"cases": len(rows), "scores": scores, "rows": rows, "python": sys.version.split()[0]}
+    result = {"cases": len(rows), "scores": score(rows), "rows": rows, "python": sys.version.split()[0]}
     text = json.dumps(result, indent=2, sort_keys=True) + "\n"
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")
-    sys.stderr.write(json.dumps(scores, indent=1) + "\n")
+    for config, s in result["scores"].items():
+        sys.stderr.write("{0:4} dangerous={1} evidence={2} invalid={3} correct_rejected={4}\n".format(
+            config, len(s["dangerous_false_accepts"]), len(s["evidence_false_accepts"]), len(s["invalid_input_accepts"]), len(s["correct_rejected"])))
     return 0
 
 

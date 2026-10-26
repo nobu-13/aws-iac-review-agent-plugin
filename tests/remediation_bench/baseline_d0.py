@@ -1,4 +1,4 @@
-"""Configuration D: the Phase 1 contracts rebuilt from Guard and a small script.
+"""Configuration D0 (simple): the Phase 1 contracts rebuilt from Guard and a small script.
 
 A fair "do it yourself" baseline for the comparison (AC45): what a team could
 write in an afternoon with the official tools, git and PyYAML, without the
@@ -8,7 +8,7 @@ Phase 1 verifier. Exit 0 accepts the candidate, anything else rejects it.
 2. Both Templates are loaded with PyYAML (CloudFormation tags kept as data);
    after deleting the allowed properties of the target Resource, everything
    else must be equal.
-3. cfn-guard with the hand-written rules (``baseline_d/<scenario>.guard``) and
+3. cfn-guard with the hand-written rules (``baseline_d0/<scenario>.guard``) and
    cfn-lint on the Head Template must pass.
 """
 
@@ -74,7 +74,7 @@ def main() -> int:
     with tempfile.TemporaryDirectory() as tmp:
         path = Path(tmp) / "head.yaml"
         path.write_text(head_text, encoding="utf-8")
-        guard = subprocess.run(["cfn-guard", "validate", "--data", str(path), "--rules", str(HERE / "baseline_d" / (a.scenario + ".guard")), "--show-summary", "none"])
+        guard = subprocess.run(["cfn-guard", "validate", "--data", str(path), "--rules", str(HERE / "baseline_d0" / (a.scenario + ".guard")), "--show-summary", "none"])
         if guard.returncode != 0:
             return 3
         lint = subprocess.run(["cfn-lint", "--", str(path)], stdout=subprocess.DEVNULL)

@@ -1,4 +1,4 @@
-# Configuration D (comparison baseline): the SC-02 contract written by hand as
+# Configuration D0 (comparison baseline): the SC-02 contract written by hand as
 # Guard rules against the Logical ID and the Sid.
 rule ingest_role_no_overbroad_allow {
     Resources.IngestRole.Type == "AWS::IAM::Role"

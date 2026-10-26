@@ -7,7 +7,7 @@ the H-ENV steps in [handoff.md](handoff.md)), `not done`.
 | --- | --- | --- | --- |
 | WP0 | Record v1.1.0 baseline (tag commit, tools, gates) | done | implementation-evidence.md |
 | WP0 | Branch `feature/phase1-bounded-remediation` from `v1.1.0`; keep `.agents/` untouched | done | — |
-| WP0 | OBS-1: skip symlink cycles in directory discovery on every Python version | done | `iacreview/cdk.py`, `tests/regression/test_discovery_symlink_loop.py`, commit `c96896c` |
+| WP0 | OBS-1: symlink cycles in directory discovery reported in `errors[]` on every Python version, no traceback | done | `iacreview/cdk.py`, `tests/regression/test_discovery_symlink_loop.py`, commits `c96896c` (first fix, dropped the entry silently) and `feed1b4` (correction) |
 | WP0 | Threat model and change list | done | threat-model.md, design.md section 1 |
 | WP1 | Scenarios, contracts and 53 cases with expected values before code | done | `benchmark/remediation/` |
 | WP1 | Contract / Snapshot / Report design | done | design.md, verification-report-schema.md |
@@ -21,7 +21,8 @@ the H-ENV steps in [handoff.md](handoff.md)), `not done`.
 | WP4 | Reference trusted gate and static checks | done | `docs/v2/phase1/ci/` |
 | WP4 | Existing six-environment CI with the Phase 1 tests | waiting | needs push (H-ENV step 1) |
 | WP4 | Required check, ruleset, CODEOWNERS, spoof / skip / head-update / actor tests | waiting | H-ENV steps 3–6 |
-| WP5 | A/B/C/D comparison over all cases | done | evaluation.md |
+| WP5 | A/B/C/D comparison over all cases; C per AC45; D0 simple and D1 equivalent baselines | done (decisions) / partial (effort) | evaluation.md |
+| WP5 | Typed-path ambiguity stop, failure-path tests, H-ENV helper audit and tests, Kiro preparation | done | `96177a5`, `b4ee268`, handoff.md |
 | WP5 | Effort measurement (author) | done | evaluation.md |
 | WP5 | Effort measurement (third party) | not done | Phase 2 Community Pilot |
 | WP5 | Clean-checkout reproduction | done | implementation-evidence.md |

@@ -60,5 +60,9 @@ this; the gate evidence must name the actors used.
 * Same-named checks from another workflow and admin bypass are prevented only
   by GitHub settings that this repository cannot set for a consumer.
 * `semdiff` paths turn digit keys into ints; the verifier recovers the type by
-  walking both documents. A key that exists on neither side cannot occur in a
-  Change_Entry.
+  walking both documents and stops (`comparison_incomplete`,
+  `path_type_ambiguous`) when the original key is not unique, so a guessed
+  type never allows a change.
+* A directory review that cannot read one candidate (a symlink cycle, a
+  symlinked file) still exits 0 and lists it in `errors[]` (v1.0 behaviour);
+  `summary.passed_all_checks` does not look at `errors[]`.

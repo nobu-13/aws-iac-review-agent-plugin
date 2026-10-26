@@ -1,4 +1,4 @@
-# Configuration D (comparison baseline): the SC-01 contract written by hand as
+# Configuration D0 (comparison baseline): the SC-01 contract written by hand as
 # Guard rules against the Logical ID, as a team might without Phase 1.
 rule orders_table_billing_mode_consistent {
     Resources.OrdersTable.Type == "AWS::DynamoDB::Table"

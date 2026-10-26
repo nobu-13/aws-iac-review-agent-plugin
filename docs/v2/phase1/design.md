@@ -158,10 +158,13 @@ has another Type is `UNVERIFIED target_resource_missing` (a nested-stack target
 lands here).
 
 `semdiff` normalizes paths with `finding.canonical_template_path`, which turns
-a digit mapping key (`"0"`) into an int. The boundary recovers the typing by
-walking both documents (`boundary.typed_path`): mapping positions become
-`str`, list positions `int`. Only exact `str` equality with the contract's
-names allows a change, so an int can never widen the scope.
+a digit mapping key (`"0"`, `"007"`) into an int. The boundary recovers the
+typing by walking both documents (`boundary.resolve_path`): list positions stay
+`int`; at a mapping position the original key is the one digit-only key whose
+`int()` equals the item. No such key, two spellings (`"7"` and `"07"`), or a
+mapping on one side and a list on the other make the path ambiguous: the
+change is `comparison_incomplete` (`path_type_ambiguous`) and never allowed.
+Only exact `str` equality with the contract's names allows a change.
 
 ## 6. Checks (`checks.py`)
 

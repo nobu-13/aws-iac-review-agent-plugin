@@ -174,7 +174,7 @@
   {
    "id": "AC12",
    "status": "PASS",
-   "method": "typed paths, exact names, parent replacement, list order; equal structure in another notation is not a change",
+   "method": "typed paths recovered from both documents; a path whose key/index typing is not unique (digit-key spellings, mapping vs list) is comparison_incomplete and never allowed; exact names, parent replacement, list order; equal structure in another notation is not a change",
    "tests": [
     "tests/unit/test_remediation_boundary.py",
     "tests/integration/test_remediation_cases.py"
@@ -361,7 +361,7 @@
    "evidence": [
     "handoff.md#g-ci"
    ],
-   "note": "static part PASS; Actions run evidence needs H-ENV"
+   "note": "static part PASS; runtime evidence from demo G10 and the gate run logs (H-ENV B)"
   },
   {
    "id": "AC26",
@@ -387,7 +387,8 @@
    ],
    "evidence": [
     "handoff.md#demo-scenarios"
-   ]
+   ],
+   "note": "demo G3, G6, G7, G8 (H-ENV B)"
   },
   {
    "id": "AC28",
@@ -398,7 +399,7 @@
    "evidence": [
     "handoff.md#demo-scenarios"
    ],
-   "note": "enforcement_status stays not_verified until then"
+   "note": "demo G1, G2, G9 with a write-only test actor; enforcement_status stays not_verified until then"
   },
   {
    "id": "AC29",
@@ -591,7 +592,7 @@
   {
    "id": "AC45",
    "status": "PASS",
-   "method": "A/B/C/D over all 53 cases with the same Base, Head and tools",
+   "method": "same Base/Head/tools/rules/expected values through A, B, C (= B + Phase 1, acceptance by Phase 1 only), C&B (first report), D0 (simple script) and D1 (same contract and evidence conditions); tool results recorded apart from acceptance",
    "tests": [],
    "cases": [],
    "evidence": [
@@ -601,7 +602,7 @@
   {
    "id": "AC46",
    "status": "PASS",
-   "method": "53 pre-fixed cases in 24 families; C: 0 dangerous and 0 evidence false accepts, all 7 correct accepted",
+   "method": "53 pre-fixed cases in 24 families; C: 0 dangerous, 0 evidence and 0 invalid-input accepts, all 7 correct accepted; D1 equal to C on these cases",
    "tests": [
     "tests/integration/test_remediation_cases.py"
    ],
@@ -613,7 +614,7 @@
   {
    "id": "AC47",
    "status": "PARTIAL",
-   "method": "configuration size, operations and machine time measured; human reading time not measured",
+   "method": "implementation / configuration size and machine time measured per configuration; human time not measured (author or third party)",
    "tests": [],
    "cases": [],
    "evidence": [
@@ -623,7 +624,7 @@
   {
    "id": "AC48",
    "status": "PASS",
-   "method": "recommendation given; 30% / 95% recall / third-party use stated as not measured",
+   "method": "continue narrowly; value claim moved from decisions (D1 matches) to shipped evidence, binding and tests; unmeasured targets stated as not measured",
    "tests": [],
    "cases": [],
    "evidence": [
