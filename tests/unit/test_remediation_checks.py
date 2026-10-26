@@ -176,7 +176,9 @@ def test_projection_refuses_values_json_cannot_hold() -> None:
     ],
 )
 def test_cfn_lint_states(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, body: str, state: str) -> None:
-    monkeypatch.setenv(checks.TIMEOUT_OVERRIDE_ENV, "2")
+    # A short timeout only for the case that is meant to time out: under a
+    # loaded full run a fake tool can take more than a couple of seconds to start.
+    monkeypatch.setenv(checks.TIMEOUT_OVERRIDE_ENV, "2" if state == "TIMEOUT" else "45")
     path = script(tmp_path, "cfn-lint", body)
     run = checks.run_cfn_lint(tool(path, "cfn-lint", "1.46.0"), b"Resources: {}\n", "yaml", "head")
     assert run.state == state

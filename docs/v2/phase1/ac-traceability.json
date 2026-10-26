@@ -1,0 +1,634 @@
+{
+ "schema": "phase1-ac-traceability/1",
+ "statuses": [
+  "PASS",
+  "PARTIAL",
+  "WAITING_HUMAN",
+  "NOT_VERIFIED",
+  "FAIL"
+ ],
+ "status_meaning": {
+  "PASS": "verified locally with the listed tests or evidence",
+  "PARTIAL": "the local part is verified; the rest is listed in the note",
+  "WAITING_HUMAN": "needs the H-ENV steps (GitHub or Kiro) before it can be verified",
+  "NOT_VERIFIED": "not checked",
+  "FAIL": "checked and not met"
+ },
+ "acceptance_criteria": [
+  {
+   "id": "AC01",
+   "status": "PASS",
+   "method": "baseline gates run on the v1.1.0 tag tree before any change",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md#baseline"
+   ]
+  },
+  {
+   "id": "AC02",
+   "status": "PASS",
+   "method": "existing Skill, Review_Report, Delta_Report and CLI tests run unchanged; the Skill list only gains an entry",
+   "tests": [
+    "tests/unit/test_skills.py",
+    "tests/unit/test_delta_compat.py",
+    "tests/integration/test_skill_iac_review.py"
+   ],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md#gates"
+   ]
+  },
+  {
+   "id": "AC03",
+   "status": "PASS",
+   "method": "full pytest (frozen v1.1 reports) and Benchmark rerun on the Phase 1 head",
+   "tests": [
+    "tests/unit/test_delta_compat.py"
+   ],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md#gates"
+   ]
+  },
+  {
+   "id": "AC04",
+   "status": "PASS",
+   "method": "ruff / mypy counts compared with the baseline; parser limits reused, not changed",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md#gates"
+   ]
+  },
+  {
+   "id": "AC05",
+   "status": "PASS",
+   "method": "init for both profiles; strict loader rejects unknown fields, duplicates, ambiguous scope",
+   "tests": [
+    "tests/integration/test_remediation_cli.py",
+    "tests/unit/test_remediation_contract.py"
+   ],
+   "cases": [
+    "C22c",
+    "C23b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC06",
+   "status": "PASS",
+   "method": "PR edits to contract, rules, validator copies and workflows are out-of-scope changes; the contract comes from the config revision",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C11",
+    "C12a",
+    "C12b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC07",
+   "status": "PASS",
+   "method": "approved_by is an unknown key; a draft or a contract only in Head is never VERIFIED",
+   "tests": [
+    "tests/unit/test_remediation_contract.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C24a",
+    "C24b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC08",
+   "status": "PASS",
+   "method": "config must be an ancestor of Base and Base of Head; non-zero otherwise",
+   "tests": [
+    "tests/integration/test_remediation_cases.py",
+    "tests/regression/test_remediation_security.py"
+   ],
+   "cases": [
+    "C15a",
+    "C15b",
+    "C24b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC09",
+   "status": "PASS",
+   "method": "allowed operations pass, other properties / attributes / sections are BLOCKED",
+   "tests": [
+    "tests/unit/test_remediation_boundary.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C01",
+    "C01b",
+    "C05",
+    "C06a",
+    "C06b",
+    "C07a",
+    "C07b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC10",
+   "status": "PASS",
+   "method": "whole-tree (mode, oid) comparison",
+   "tests": [
+    "tests/unit/test_remediation_boundary.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C09a",
+    "C09b",
+    "C09c",
+    "C09d",
+    "C09e",
+    "C21a",
+    "C21b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC11",
+   "status": "PASS",
+   "method": "Resource removal, addition, Type change and Template loss are violations",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C08a",
+    "C08b",
+    "C08c",
+    "C08d"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC12",
+   "status": "PASS",
+   "method": "typed paths, exact names, parent replacement, list order; equal structure in another notation is not a change",
+   "tests": [
+    "tests/unit/test_remediation_boundary.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C04a",
+    "C04b",
+    "C10a",
+    "C10b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC13",
+   "status": "PASS",
+   "method": "fixed argv adapters, rule and input digests in the report",
+   "tests": [
+    "tests/unit/test_remediation_checks.py",
+    "tests/unit/test_remediation_report.py"
+   ],
+   "cases": [
+    "C01"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC14",
+   "status": "PASS",
+   "method": "outcome on Head (Base recorded); invariants on Base and Head",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C19",
+    "C19b",
+    "C20"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC15",
+   "status": "PASS",
+   "method": "rule-level SKIP and empty evaluation are NOT_PASSED; deleted Resource fails the outcome",
+   "tests": [
+    "tests/unit/test_remediation_checks.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C18a",
+    "C18b",
+    "C08c",
+    "C19"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC16",
+   "status": "PASS",
+   "method": "every non-PASS tool state is UNVERIFIED; no reuse",
+   "tests": [
+    "tests/unit/test_remediation_checks.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C16a",
+    "C16b",
+    "C17a",
+    "C17b",
+    "C17c",
+    "C17d"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC17",
+   "status": "PASS",
+   "method": "subject / trust / validator / tools / checks digests",
+   "tests": [
+    "tests/unit/test_remediation_report.py"
+   ],
+   "cases": [
+    "C01"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC18",
+   "status": "PASS",
+   "method": "explain --check-binding marks old reports stale; the gate re-runs per head",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C14",
+    "C15c"
+   ],
+   "evidence": [],
+   "note": "GitHub behaviour for a new Head SHA is H-ENV G1/G2 re-push"
+  },
+  {
+   "id": "AC19",
+   "status": "PASS",
+   "method": "verify reads no report; a forged report is an out-of-scope file and fails explain validation",
+   "tests": [
+    "tests/integration/test_remediation_cases.py",
+    "tests/integration/test_remediation_cli.py"
+   ],
+   "cases": [
+    "C13"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC20",
+   "status": "PASS",
+   "method": "payload digest equal across two runs for every case; metadata differs",
+   "tests": [
+    "tests/integration/test_remediation_cases.py",
+    "tests/integration/test_remediation_cli.py"
+   ],
+   "cases": [
+    "C01",
+    "C02",
+    "C05",
+    "C19",
+    "C16a",
+    "C23a"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC21",
+   "status": "PASS",
+   "method": "Summary and JSON agree for all four decisions",
+   "tests": [
+    "tests/unit/test_remediation_report.py",
+    "tests/property/test_prop_remediation_decide.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC22",
+   "status": "PASS",
+   "method": "execution_mode and enforcement_status are separate fields; enforcement is never claimed by the CLI",
+   "tests": [
+    "tests/unit/test_remediation_report.py"
+   ],
+   "cases": [],
+   "evidence": [],
+   "note": "merge enforcement itself: AC28"
+  },
+  {
+   "id": "AC23",
+   "status": "PASS",
+   "method": "conditions, dynamic references, external values and Transforms in scope are UNVERIFIED",
+   "tests": [
+    "tests/unit/test_remediation_boundary.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC24",
+   "status": "PASS",
+   "method": "no-op: BLOCKED when unmet, already_satisfied when met; runtime_validated false",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C03a",
+    "C03b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC25",
+   "status": "WAITING_HUMAN",
+   "method": "static: the gate checks out base and pinned validator only; runtime: GitHub run logs",
+   "tests": [
+    "tests/unit/test_remediation_gate_workflow.py"
+   ],
+   "cases": [],
+   "evidence": [
+    "handoff.md#g-ci"
+   ],
+   "note": "static part PASS; Actions run evidence needs H-ENV"
+  },
+  {
+   "id": "AC26",
+   "status": "WAITING_HUMAN",
+   "method": "static: no PR code, no ${{ }} in run, read-only token; runtime: GitHub run",
+   "tests": [
+    "tests/unit/test_remediation_gate_workflow.py"
+   ],
+   "cases": [],
+   "evidence": [
+    "handoff.md#g-ci"
+   ],
+   "note": "static part PASS"
+  },
+  {
+   "id": "AC27",
+   "status": "WAITING_HUMAN",
+   "method": "demo PRs with spoofed and skipped same-named checks, head update, missing protection",
+   "tests": [],
+   "cases": [
+    "C14",
+    "C24a"
+   ],
+   "evidence": [
+    "handoff.md#demo-scenarios"
+   ]
+  },
+  {
+   "id": "AC28",
+   "status": "WAITING_HUMAN",
+   "method": "test actor without bypass; merge state per demo PR",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "handoff.md#demo-scenarios"
+   ],
+   "note": "enforcement_status stays not_verified until then"
+  },
+  {
+   "id": "AC29",
+   "status": "PASS",
+   "method": "CLI runs with AWS variables removed and proxies pointing nowhere; no LLM involved",
+   "tests": [
+    "tests/integration/test_remediation_cli.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC30",
+   "status": "PASS",
+   "method": "init takes profile, Template, Resource (and Sid); no report input",
+   "tests": [
+    "tests/integration/test_remediation_cli.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC31",
+   "status": "PASS",
+   "method": "violations / diagnostics / next action separated; tools never installed",
+   "tests": [
+    "tests/unit/test_remediation_report.py"
+   ],
+   "cases": [
+    "C16a"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC32",
+   "status": "PARTIAL",
+   "method": "author walkthrough timed (init to explain); third-party run not done",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "evaluation.md#effort"
+   ],
+   "note": "third party: NOT VERIFIED"
+  },
+  {
+   "id": "AC33",
+   "status": "PASS",
+   "method": "one Skill added, five unchanged, no script added",
+   "tests": [
+    "tests/unit/test_skill_remediation_verify.py",
+    "tests/unit/test_skills.py",
+    "tests/unit/test_delta_compat.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC34",
+   "status": "WAITING_HUMAN",
+   "method": "fresh Kiro workspace with the Power installed; SC-01 and SC-02 runs",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "handoff.md#kiro"
+   ]
+  },
+  {
+   "id": "AC35",
+   "status": "PARTIAL",
+   "method": "Core refuses unapproved / Head contracts; the Skill stops after one candidate",
+   "tests": [
+    "tests/unit/test_skill_remediation_verify.py",
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [
+    "C11",
+    "C24a",
+    "C24b"
+   ],
+   "evidence": [],
+   "note": "behaviour inside Kiro: H-ENV"
+  },
+  {
+   "id": "AC36",
+   "status": "WAITING_HUMAN",
+   "method": "compare payload_sha256 of a CLI run and a Power run on the same snapshot",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "handoff.md#kiro"
+   ],
+   "note": "CLI determinism shown by AC20"
+  },
+  {
+   "id": "AC37",
+   "status": "PASS",
+   "method": "canaries in keys, values, numeric keys, bidi, file names, contract fields, tool output, exceptions",
+   "tests": [
+    "tests/integration/test_remediation_cases.py",
+    "tests/unit/test_remediation_report.py",
+    "tests/regression/test_remediation_security.py",
+    "tests/unit/test_remediation_checks.py"
+   ],
+   "cases": [
+    "C23a",
+    "C23b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC38",
+   "status": "PASS",
+   "method": "one redacted mode; no tool text or tracebacks",
+   "tests": [
+    "tests/regression/test_remediation_security.py",
+    "tests/unit/test_remediation_report.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC39",
+   "status": "PASS",
+   "method": "deltaio.parse_template / semdiff reused; contract loader bans aliases",
+   "tests": [
+    "tests/integration/test_remediation_cases.py",
+    "tests/unit/test_remediation_contract.py"
+   ],
+   "cases": [
+    "C22a",
+    "C22b"
+   ],
+   "evidence": []
+  },
+  {
+   "id": "AC40",
+   "status": "PASS",
+   "method": "run_bounded: 60 s, 8 MiB, process group killed; CPU/RSS stated as residual risk",
+   "tests": [
+    "tests/unit/test_remediation_checks.py"
+   ],
+   "cases": [
+    "C17a",
+    "C17d"
+   ],
+   "evidence": [
+    "threat-model.md"
+   ]
+  },
+  {
+   "id": "AC41",
+   "status": "PASS",
+   "method": "git archive of the branch head (no .kiro/, no .agents/) runs the Phase 1 tests and cases",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md#clean-checkout"
+   ]
+  },
+  {
+   "id": "AC42",
+   "status": "PASS",
+   "method": "requirements, design, tasks, AC map public",
+   "tests": [
+    "tests/unit/test_phase1_traceability.py"
+   ],
+   "cases": [],
+   "evidence": []
+  },
+  {
+   "id": "AC43",
+   "status": "PASS",
+   "method": "commands, exit codes, JUnit counts, versions, commits recorded",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md"
+   ]
+  },
+  {
+   "id": "AC44",
+   "status": "PASS",
+   "method": "raw logs and outputs kept in .agents/ (not committed); public evidence keeps counts and digests",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "implementation-evidence.md"
+   ]
+  },
+  {
+   "id": "AC45",
+   "status": "PASS",
+   "method": "A/B/C/D over all 53 cases with the same Base, Head and tools",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "evaluation.md"
+   ]
+  },
+  {
+   "id": "AC46",
+   "status": "PASS",
+   "method": "53 pre-fixed cases in 24 families; C: 0 dangerous and 0 evidence false accepts, all 7 correct accepted",
+   "tests": [
+    "tests/integration/test_remediation_cases.py"
+   ],
+   "cases": [],
+   "evidence": [
+    "evaluation.md"
+   ]
+  },
+  {
+   "id": "AC47",
+   "status": "PARTIAL",
+   "method": "configuration size, operations and machine time measured; human reading time not measured",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "evaluation.md#effort"
+   ]
+  },
+  {
+   "id": "AC48",
+   "status": "PASS",
+   "method": "recommendation given; 30% / 95% recall / third-party use stated as not measured",
+   "tests": [],
+   "cases": [],
+   "evidence": [
+    "evaluation.md#recommendation"
+   ]
+  }
+ ]
+}
