@@ -1,0 +1,142 @@
+{
+  "case": "classify_error_unattributed",
+  "covers": [
+    "R15.6 errors[] entry without a Source",
+    "R7.1"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ],
+    "none": [],
+    "one_missing": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "role policy",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "none": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "role policy",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "one_missing": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "role policy",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "source_not_comparable"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": false,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

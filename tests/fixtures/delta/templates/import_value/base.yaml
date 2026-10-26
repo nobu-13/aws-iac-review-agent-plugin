@@ -1,0 +1,6 @@
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: plain-queue
+      DelaySeconds: 1

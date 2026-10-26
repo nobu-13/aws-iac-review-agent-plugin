@@ -1,0 +1,8 @@
+Resources:
+  Database:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      Engine: postgres
+      DBInstanceClass: db.t3.micro
+      MasterUsername: app
+      MasterUserPassword: "{{resolve:secretsmanager:example-db-secret:SecretString:password}}"

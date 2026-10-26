@@ -1,0 +1,18 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "Bucket": {"Type": "AWS::S3::Bucket"},
+    "Policy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": "example-bucket",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {"Effect": "Deny", "Principal": "*", "Action": "s3:*", "Resource": "*"}
+          ]
+        }
+      }
+    }
+  }
+}

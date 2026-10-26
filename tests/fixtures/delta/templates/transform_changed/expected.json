@@ -1,0 +1,43 @@
+{
+  "case": "transform_changed",
+  "covers": [
+    "R15.4 Transform with change",
+    "R4.7 pre_transform"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Function",
+          "Properties",
+          "MemorySize"
+        ],
+        "qualifiers": [
+          "pre_transform"
+        ],
+        "resource_type": {
+          "base": "AWS::Serverless::Function",
+          "head": "AWS::Serverless::Function"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "transform_not_expanded"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

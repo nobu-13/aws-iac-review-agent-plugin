@@ -1,0 +1,6 @@
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !ImportValue shared-queue-name
+      DelaySeconds: 2

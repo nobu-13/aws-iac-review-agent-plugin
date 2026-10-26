@@ -99,6 +99,24 @@ and each control lives in one module.
 | B-7 | Agent to Plugin | Findings JSON | Full schema validation, `Source` checked rather than overwritten, `Confirmed` demoted to `Likely` (Requirement 7 AC10) | `iacreview.agentin` |
 | B-8 | Plugin to AWS | **Nothing** | v0.1 calls no AWS API (Requirement 9 AC3) | not applicable |
 
+### The Delta_Tool (v1.1)
+
+`python3 -m iacreview.deltacli` compares two Templates and/or two Review_Reports.
+It is read-only: it reads only the files named on its command line, resolved
+inside the workspace by the same containment check as the review, and it starts
+no process, opens no network connection, reads no environment variable or
+configuration file, and writes no file. Templates and Reports are both untrusted
+input. A Report is not authenticated: `report_authenticity` is always
+`unverified`, the internal-consistency checks are not tamper detection, and every
+`--declare` assumption and the `--reviewed-template-path` value are recorded as
+`declared_not_verified` and never checked. A doubtful input gives `Unconfirmed` or
+`Ambiguous`, never `New` or `Resolved`. The input limits (5 MiB per file, 10000
+Findings, depth 64, 3000000 logical nodes, 200000 Change_Entries, 128 MiB of
+output) fail closed with no partial result. Template values, Finding text and
+input error text are never written, and identifiers are Tokens by default. The
+limits of that anonymization, the display-safety rules and the cost of an input
+that ends at the output limit are listed in `docs/delta-schema.md`.
+
 ## External Command Execution
 
 `iacreview.proc.run` is the only place this plugin starts a process. cfn-lint,
@@ -296,10 +314,15 @@ flags the plugin owns plus a contained user-supplied path.
 **Every failure is typed and carries a position.**
 `iacreview.template.parse_template_text` catches broadly and re-raises
 `TemplateParseError` with `error_type`, `line`, and `column` (Requirement 3 AC6,
-Requirement 12 AC8). The broad catch is deliberate: a few kilobytes of `[`
-exhausts the interpreter stack and `json` raises `RecursionError`, which is not a
-`ValueError` and would otherwise escape as a traceback with an undefined exit
-status. `IacReviewError` is never swallowed by that handler, so a missing PyYAML
+Requirement 12 AC8). JSON nested deeper than
+`iacreview.template.MAX_JSON_NESTING_DEPTH` (512 arrays and objects) is refused
+before it is decoded, by a non-recursive scan, as a `RecursionError` at line 1,
+column 1, so the outcome is the same on every Python version rather than
+wherever that interpreter's recursion limit falls (about 990 levels on 3.9,
+about 10,000 on 3.13). The broad catch is still deliberate: a decoder or loader
+can raise exceptions that are not a `ValueError` -- PyYAML raises
+`RecursionError` for a deeply nested flow sequence -- and those would otherwise
+escape as a traceback with an undefined exit status. `IacReviewError` is never swallowed by that handler, so a missing PyYAML
 still reports as `tool_unavailable` rather than being relabelled a parse failure.
 
 Evidence: `tests/integration/test_malformed_input.py` runs fourteen bad inputs
@@ -547,9 +570,16 @@ cannot be reviewed until the cycle is removed. The failure mode is worth naming
 because it was once worse than that: on CPython 3.9 through 3.12, `Path.resolve`
 detects the cycle itself and raises `RuntimeError` rather than letting the kernel
 report `ELOOP` as an `OSError`, and `RuntimeError` was outside the caught tuple,
-so an entry point died with a traceback and an undefined exit status. Both
-resolution sites now catch it, and
-`tests/regression/test_sec_symlink_loop.py` pins the behaviour. A broken checkout
+so an entry point died with a traceback and an undefined exit status. (From
+3.9.23, 3.9 detects it through `os.path.realpath` as 3.10 through 3.12 do; only
+the path the message names differs.) Both resolution sites now catch it. CPython 3.13 stopped detecting the cycle in the
+non-strict call and returns the path unresolved, which turned a candidate cycle
+into `input_not_found`; when the OS reports `ELOOP` for a candidate,
+`resolve_within` now walks the links itself, without recursion, and raises the
+same error when the walk meets a cycle. `ELOOP` alone is not taken as a cycle,
+because the OS also reports it for a long chain of links that ends normally.
+`tests/regression/test_sec_symlink_loop.py` and `tests/unit/test_pathguard.py`
+pin the behaviour. A broken checkout
 produces a cycle as readily as a repository authored to produce one, so this is
 ordinary untrusted content rather than an exotic case.
 
@@ -731,6 +761,9 @@ are listed here so the posture is in one place, not because a fix is pending:
 | A missing or unusable external tool fails loudly rather than reporting a clean zero | `tests/regression/test_sec_tool_unavailable.py` |
 | An invalid invocation is refused before any work starts | `tests/regression/test_sec_invalid_arguments.py` |
 | No `errors[]` message the plugin composes carries an absolute host path | `tests/regression/test_sec_no_host_path_in_errors.py` |
+| The Delta_Tool writes no Template value, Finding text or input error text, and no identifier by default | `tests/regression/test_sec_delta_canary.py` |
+| Hostile Delta_Tool inputs fail closed with the documented exit code, no traceback and no host path | `tests/regression/test_sec_delta_inputs.py` |
+| A Template / Report correspondence that does not hold never yields `New` or `Resolved` | `tests/regression/test_sec_delta_correspondence.py` |
 | Every entry point fails safely on fourteen malformed inputs, as a process | `tests/integration/test_malformed_input.py` |
 
 The six cases Requirement 12 AC11 names by minimum -- path traversal, malformed
@@ -738,4 +771,5 @@ YAML, malformed JSON, shell-metacharacter filenames, a missing external tool, an
 invalid command arguments -- are the six `tests/regression/test_sec_*.py` files
 whose names match them. The remaining two, `test_sec_symlink_loop.py` and
 `test_sec_no_host_path_in_errors.py`, pin defects that were found and fixed
-(Requirement 12 AC10, AC12).
+(Requirement 12 AC10, AC12). The three `test_sec_delta_*.py` files cover the
+v1.1 Delta_Tool.

@@ -1,0 +1,25 @@
+{
+  "case": "no_resources",
+  "covers": [
+    "R15.4 no Resources",
+    "R2.4"
+  ],
+  "expected": {
+    "analysis_state": "unanalyzable",
+    "changes": [],
+    "failure": {
+      "code": "template_not_reviewable",
+      "input": "template",
+      "side": "head"
+    },
+    "observation": null,
+    "semantic_limitations": [],
+    "structural_completeness": null,
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

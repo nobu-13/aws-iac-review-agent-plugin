@@ -1,0 +1,10 @@
+# Base template with comments.
+Description: Delta fixture   # trailing comment
+Resources:
+  Bucket:   # the bucket
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: example-bucket
+      Tags:
+        - Key: team
+          Value: platform

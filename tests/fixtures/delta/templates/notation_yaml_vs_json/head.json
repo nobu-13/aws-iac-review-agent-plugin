@@ -1,0 +1,19 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Delta fixture",
+  "Parameters": {"Env": {"Type": "String", "Default": "dev"}},
+  "Resources": {
+    "Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "BucketName": "example-bucket",
+        "Tags": [{"Key": "team", "Value": "platform"}]
+      }
+    },
+    "Queue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {"DelaySeconds": 5, "FifoQueue": false}
+    }
+  },
+  "Outputs": {"BucketName": {"Value": {"Ref": "Bucket"}}}
+}

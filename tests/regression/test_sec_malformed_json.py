@@ -23,12 +23,16 @@ generator's output rather than at their own source.
 And it is the format whose failure is not an exception the parser declares.
 :func:`test_a_document_nested_past_the_recursion_limit_fails_as_a_parse_error`
 pins the reason :func:`iacreview.template.parse_template_text` catches broadly
-instead of catching only ``JSONDecodeError``: a few kilobytes of ``[`` exhausts
-the interpreter's stack and ``json`` raises ``RecursionError``, which is not a
-subclass of ``ValueError`` and would otherwise leave the process as a traceback
-with an undefined exit status. A later contributor narrowing that ``except`` to
-"the errors the decoder documents" would be making a reasonable-looking change
-that reintroduces exactly that, which is what makes the case worth a name.
+instead of catching only ``JSONDecodeError``: a few kilobytes of ``[`` used to
+exhaust the interpreter's stack, and ``json`` raised ``RecursionError``, which is
+not a subclass of ``ValueError`` and would otherwise leave the process as a
+traceback with an undefined exit status. Because that limit differs by Python
+version, :mod:`iacreview.template` now raises the ``RecursionError`` itself, from
+the explicit bound :data:`iacreview.template.MAX_JSON_NESTING_DEPTH`, before the
+decoder runs; it still travels through the same broad ``except``. A later
+contributor narrowing that ``except`` to "the errors the decoder documents"
+would be making a reasonable-looking change that reintroduces exactly that,
+which is what makes the case worth a name.
 
 Bounded work with a deterministic outcome is also the line this file stops at. A
 YAML alias bomb is *not* here, and ``tests/integration/test_malformed_input.py``
@@ -56,7 +60,10 @@ Cross-references, not repeated here
 
 from __future__ import annotations
 
+import json
+import sys
 from pathlib import Path
+from typing import Tuple
 
 import pytest
 
@@ -65,10 +72,28 @@ from iacreview.errors import TemplateParseError
 
 from skillrun import IAM_SKILL, invalid_fixture, make_workspace, run_skill
 
-#: Nesting depth for the recursion case. Past CPython's default limit, so the
-#: decoder gives up, and small enough that the file is a few kilobytes and the
+#: Nesting depth for the recursion case. Past
+#: :data:`iacreview.template.MAX_JSON_NESTING_DEPTH`, and small enough that the file is a few kilobytes and the
 #: attempt is instant.
 NESTING_DEPTH = 2000
+
+#: Where the decoder reports the trailing comma in ``malformed_syntax.json``.
+#:
+#: CPython 3.13 gave a trailing comma its own message ("Illegal trailing comma
+#: before end of object") and points at the comma itself, line 5 column 32.
+#: Earlier versions report where they expected the next property name, line 6
+#: column 5. Both directions are fixed literals, so a change on either side of
+#: the boundary fails the test rather than being absorbed by it.
+TRAILING_COMMA_POSITION: Tuple[int, int] = (
+    (6, 5) if sys.version_info < (3, 13) else (5, 32)
+)
+
+
+def decoder_position(data: bytes) -> Tuple[int, int]:
+    """Return the ``(lineno, colno)`` the running ``json`` decoder reports."""
+    with pytest.raises(json.JSONDecodeError) as caught:
+        json.loads(data.decode("utf-8"))
+    return (caught.value.lineno, caught.value.colno)
 
 
 def place(name: str, workspace: Path) -> Path:
@@ -81,10 +106,12 @@ def place(name: str, workspace: Path) -> Path:
 def test_a_trailing_comma_reports_its_type_and_position(tmp_path: Path) -> None:
     """``malformed_syntax.json``: the mistake a hand-edited Template makes.
 
-    Line 6 column 5 is where the decoder expected the next property name. The
+    The position is :data:`TRAILING_COMMA_POSITION` for the running version. The
     coordinates are asserted as literals because they are the answer a user acts
     on, and because a broad ``except`` that reported only "invalid JSON" would
-    still satisfy "no unhandled exception" and still exit 4.
+    still satisfy "no unhandled exception" and still exit 4. They are also
+    checked against the decoder's own ``lineno``/``colno`` for the same bytes,
+    so the product cannot report a position the decoder did not give.
     """
     workspace = make_workspace(tmp_path)
     path = place("malformed_syntax.json", workspace)
@@ -96,7 +123,10 @@ def test_a_trailing_comma_reports_its_type_and_position(tmp_path: Path) -> None:
     assert error.error_class == "parse_failure"
     assert error.exit_code == exitcodes.PARSE_FAILURE
     assert error.error_type == "json.decoder.JSONDecodeError"
-    assert (error.line, error.column) == (6, 5)
+    assert (error.line, error.column) == TRAILING_COMMA_POSITION
+    assert (error.line, error.column) == decoder_position(
+        invalid_fixture("malformed_syntax.json")
+    )
 
 
 def test_a_byte_order_mark_before_json_is_reported_as_a_parse_failure(
@@ -170,4 +200,33 @@ def test_a_malformed_json_target_exits_four_with_one_parse_failure_in_the_report
     assert run.report["findings"] == []
     message = str(run.report["errors"][0]["message"])
     assert "malformed_syntax.json" in message
-    assert "at line 6, column 5" in message
+    assert "at line {0}, column {1}".format(*TRAILING_COMMA_POSITION) in message
+    assert "at line {0}, column {1}".format(
+        *decoder_position(invalid_fixture("malformed_syntax.json"))
+    ) in message
+
+
+def test_a_megabyte_of_brackets_fails_closed_without_a_traceback(
+    tmp_path: Path,
+) -> None:
+    """Far past the explicit bound: exit 4 on every Python, with a fixed message.
+
+    One million ``[`` is past CPython 3.13's own recursion limit as well as
+    3.9's, but the outcome must not come from either: the bound
+    :data:`iacreview.template.MAX_JSON_NESTING_DEPTH` is checked before the
+    decoder runs, so the message is the module's fixed text on every version.
+    """
+    workspace = make_workspace(tmp_path)
+    (workspace / "deep.json").write_text("[" * 1_000_000, encoding="utf-8")
+
+    run = run_skill(IAM_SKILL, ["--target", "deep.json"], cwd=workspace)
+
+    run.assert_no_traceback()
+    assert run.exit_code == exitcodes.PARSE_FAILURE
+    assert run.error_classes() == ["parse_failure"]
+    assert run.report is not None
+    message = str(run.report["errors"][0]["message"])
+    assert "RecursionError at line 1, column 1" in message
+    assert template.JSON_NESTING_LIMIT_MESSAGE in message
+    assert str(workspace) not in run.stdout
+    assert str(workspace.resolve()) not in run.stdout

@@ -1,0 +1,5 @@
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: !Ref AWS::Region

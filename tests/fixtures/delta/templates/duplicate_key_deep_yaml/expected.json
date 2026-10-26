@@ -1,0 +1,32 @@
+{
+  "case": "duplicate_key_deep_yaml",
+  "covers": [
+    "R15.4 duplicate key: deep level",
+    "R2.5"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources",
+          "Function",
+          "Properties",
+          "Environment",
+          "Variables"
+        ],
+        "reason": "duplicate_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

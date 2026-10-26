@@ -1,0 +1,76 @@
+{
+  "case": "condition_changed",
+  "covers": [
+    "R15.4 Condition change",
+    "R4.4 conditional present / absent"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Conditions",
+          "IsProd",
+          "Fn::Equals",
+          1
+        ],
+        "qualifiers": [
+          "expression_unevaluated"
+        ],
+        "resource_type": null,
+        "section": "Conditions",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "BucketName"
+        ],
+        "qualifiers": [
+          "conditional"
+        ],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "QueueName"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "indirect_effects_not_evaluated"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

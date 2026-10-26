@@ -258,6 +258,125 @@ python3 skills/iac-review/scripts/run_iac_review.py \
 `--agent-findings`、`--confirm-cdk-synth`、`--verbose` である。各 `SKILL.md` が自身の
 option と出力を網羅的に記述している。
 
+**2 つの revision の比較 (Delta_Tool、v1.1.0 で追加)。** `iacreview/deltacli.py` は
+Base と Head の CloudFormation Template (Semantic Diff) と、Base と Head の Review_Report
+(Finding Delta) の一方または両方を比較し、Delta_Report の JSON 文書 1 つを stdout へ書く。
+比較 Tool であって品質 Gate ではなく、改善した・修正された・安全である・合格したと主張する
+field は無い。読み取り専用であり、command line で指定した file だけを読み、process を起動
+せず、network に接続せず、file を書かない。Skill ではなく Python module の entry point で
+あり、既存の Skill、Finding、Review_Report、上の exit code 表は何も変えない。workspace root
+から実行し、workspace が別の directory なら Plugin root を `PYTHONPATH` に置く。すべての
+path は workspace の内側に解決されなければならない。
+
+以下の例は、1 つの stack の 2 つの checkout を置いた作業用 workspace で実行した。Head は
+`*` に `*` を許す `AWS::IAM::ManagedPolicy` を追加し、同じ権限を持つ `AWS::IAM::Role` を
+削除し、任意の role を pass できる role は残している。
+
+2 つの Template の Semantic Diff (exit 0)。
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-template checkout-base/stack/template.yaml \
+  --head-template checkout-head/stack/template.yaml
+```
+
+```text
+semantic_diff: analysis_state=analyzed observation=changes_observed structural_completeness=complete
+  added    ["Resources", "id-000001"]  resource_type {base: null, head: AWS::IAM::ManagedPolicy}
+  removed  ["Resources", "id-000002"]  resource_type {base: AWS::IAM::Role, head: null}
+```
+
+Report は、`Location.File` と `target` が両側で一致するよう、各 checkout を同じ相対 path で
+Review して作る。
+
+```sh
+(cd checkout-base && python3 <plugin_root>/skills/iac-review/scripts/run_iac_review.py \
+  --target stack/template.yaml --sources iam-review > ../base.json)
+(cd checkout-head && python3 <plugin_root>/skills/iac-review/scripts/run_iac_review.py \
+  --target stack/template.yaml --sources iam-review > ../head.json)
+```
+
+Report の 5 つの宣言を付けた、2 つの Report の Finding Delta (exit 0)。
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-report base.json --head-report head.json \
+  --declare reports_unmodified --declare same_plugin_version --declare same_rule_set \
+  --declare same_tool_configuration --declare same_agent_findings_input
+```
+
+```text
+finding_delta: analysis_state=analyzed classification_completeness=complete comparable=true
+  New        head_only  Resource id-000002  (the added managed policy)
+  Resolved   base_only  Resource id-000004  (the removed role)
+  Unchanged  matched    Resource id-000005  match_stage 1
+```
+
+同じ command から `--declare` を除くと、片側の 2 つの Finding は `input_declaration_absent`
+付きの `Unconfirmed` になり、欠けている 5 つの Code が `missing_declarations` に並ぶ。
+
+6 つ目の宣言と、両 Report が Template を Review した path を付けて、両 pair を 1 回の実行で
+比較する (exit 0)。
+
+```sh
+PYTHONPATH=<plugin_root> python3 -m iacreview.deltacli \
+  --base-template checkout-base/stack/template.yaml \
+  --head-template checkout-head/stack/template.yaml \
+  --base-report base.json --head-report head.json \
+  --declare reports_unmodified --declare same_plugin_version --declare same_rule_set \
+  --declare same_tool_configuration --declare same_agent_findings_input \
+  --declare reports_match_templates \
+  --reviewed-template-path stack/template.yaml
+```
+
+```text
+semantic_diff: added id-000001 (AWS::IAM::ManagedPolicy), removed id-000003 (AWS::IAM::Role)
+finding_delta: classification_completeness=complete template_report_correspondence=consistent_by_name_only
+  reviewed_template_path {"path": "stack/template.yaml", "status": "declared_not_verified"}
+  New        head_only  Resource id-000001
+  Resolved   base_only  Resource id-000003
+  Unchanged  matched    Resource id-000004  match_stage 1
+```
+
+`--reviewed-template-path` は宣言であって検証ではない。Tool はその path の file を読まず
+(存在しなくてよい)、与えられた Template が Report の Review した Template であることも検査
+しない。Template / Report の対応検査で各 Report の `target` と比較する path を置き換える
+だけであり、正規化 (`/` 区切り、`.` と空の要素の除去) の後の文字列として比較し、
+`reviewed_template_path` に状態 `declared_not_verified` で記録する。大文字小文字、Unicode
+正規化、symlink 名が異なれば `inconsistent` になる。Report の内部整合、Comparable、必要な
+宣言、rename hint、上限はそのまま適用されるため、疑わしい入力は `Unconfirmed` か
+`Ambiguous` のままで、`New` / `Resolved` にはならない。この option が無ければ、両 pair を
+1 回で比較すると `inconsistent` になり、この 2 つの Finding は `Ambiguous`
+(`template_report_mismatch`) になる。絶対 path、`..` を含む path、symlink を通って
+workspace 外を指す path、両 pair が揃っていない場合は exit 2 である。上の抜粋は JSON を
+要約したものである。2 つの Template は `docs/delta-schema.md` ("Running the tool") にあり、
+記載の command と抜粋をそのまま再現できる。
+
+Delta_Entry の分類の意味。
+
+- `New` / `Resolved`: 照合手順が反対側に対応する Finding を見つけず、記録された条件 (その
+  file について Source が両 Report で比較可能、Report が内部整合の検査に合格、Template /
+  Report の対応が `inconsistent` でも `unknown` でもない、rename hint が無い) がすべて成り
+  立ち、必要な宣言がすべて与えられた。問題が修正された、または持ち込まれたことの証拠では
+  ない。
+- `Unchanged`: 照合手順が Base と Head の Finding を対応付けた (段階 1 または 2)。同じ原因
+  であることは意味しない。
+- `Unconfirmed`: 必要な `--declare` の Code が欠けている片側の Finding。欠けている Code が
+  列挙される。
+- `Ambiguous`: 一意に対応付けられなかった、または記録された条件が成り立たない。理由が列挙
+  される。宣言によって `Ambiguous` が `New` や `Resolved` になることはない。
+
+宣言は `declared_not_verified` として記録され、Tool は検査しない。出力は既定で匿名化される。
+Logical ID、entry 名、property と mapping の key、未知の Resource Type、RuleId は 1 つの
+Delta_Report の中でだけ安定な Identifier_Token (`id-000001`、...) に置き換えられ、Template の
+値、Finding の文章、入力の error 文は書かれない。section 名、`AWS::` の Resource Type、
+Category、閉集合の値、workspace 相対の file path は平文のままである。`--plain-identifiers`
+は識別子をそのまま書くが、値と自由文はやはり書かない。exit 0 は、何が観測されたかに関わらず
+要求されたすべての比較が解析できたことを意味する。比較できない入力は最初の失敗の code
+(3、4、7、8、parser divergence なら 1) で終了し、その比較を `unanalyzable` とし、もう一方の
+比較は完全に書く。不正な引数は exit 2、想定外の例外は exit 1 で、どちらも Delta_Report を
+書かない。すべての key、閉集合、失敗 Code、上限は `docs/delta-schema.md` が正典である。
+
 ### レポートの外形
 
 stdout はどの source が動いた場合でも常に 7 キーである。`schema_version`、`target`、
@@ -488,6 +607,11 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   ではレビューできない。`$` は利用者が与える path で拒否される 7 つの shell metacharacter
   の 1 つである。拒否は明示的で名前の付いたエラーになる。値を sanitize せず拒否するのは、
   その文字を除去すると読み込み先が黙って別のファイルへ変わってしまうからである。
+- **512 段より深い JSON Template は parse failure になる。** `MAX_JSON_NESTING_DEPTH`
+  (512) を超えて入れ子になった array と object は、decode の前に `parse_failure` (exit 4)
+  として拒否され、これはどの Python version でも同じである。実在の CloudFormation Template
+  がこの深さに近づくことはないが、Python 3.9 が以前 review していた 513〜約 990 段の文書は
+  拒否されるようになった。
 - **`errors[].stderr_head` は外部ツールの出力を持つが、絶対 host path は伏せられる
   (v0.8.0)。** crash したツールからコピーした最大 5 行であり、各行を走査して絶対 host path
   を固定の `<path>` プレースホルダへ置換してから report へ渡すため、同一入力に対して抜粋は
@@ -608,6 +732,74 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   truth を記述するという規則は、現時点では人間のレビューで担保している。case の
   `ground_truth.json` が `template.yaml` と同一の commit か、それより前の commit に現れる
   ことを確認する CI チェックは未了である。
+
+**Delta_Tool (v1.1.0)**
+
+完全な一覧は `docs/delta-schema.md` にある。ここには誤解を招きやすいものを挙げる。
+
+- **比較するのは宣言された Template だけである。** Intrinsic Function、Condition、
+  Transform、Macro、動的参照、Parameter の値、Nested Stack は評価しない。`complete` かつ
+  `no_changes_observed` でも、Deploy 後の Stack が同等であることは意味しない。
+- **照合は段階 1・2 のみである。** 類似度や文面による照合は無い。誤った対応付けは `New` や
+  `Resolved` を `Unchanged` の陰に隠しうるが、新たに作り出すことはない。
+- **Report の真正性と Report / Template の対応は検証しない。** `report_authenticity` は常に
+  `unverified` であり、宣言は記録されるだけで検査されない。`consistent_by_name_only` は
+  名前の照合であって、Report がその Template から生成されたことの証明ではない。
+- **両 pair を 1 回で比較するには `--reviewed-template-path` が必要で、その宣言は検証され
+  ない。** この option が無いと、各 Template の path が自側 Report の `target` にあること、
+  Finding は同じ `Location.File` の上でだけ照合されることが必要で、1 つの workspace で読む
+  2 つの revision は別の path にあるため、片側の entry は `Ambiguous`
+  (`template_report_mismatch`、または `source_not_comparable` と `template_not_reviewed`)
+  になり、`New` / `Resolved` は出ない。option を付けると、宣言 path がその検査の Template
+  path を置き換えるだけである。与えられた Template が Report の Review した Template かどうか
+  は Logical ID の検査以上には判別できないため、Logical ID がたまたま一致する誤った宣言は
+  検出されない。Report_Pair 単独では rename hint と対応検査が無いため、Logical ID の rename
+  は `Resolved` と `New` の組に見えうる。
+- **path の不一致は fail-closed である。** Template の path は `./`、`..`、symlink を解決した
+  後の workspace 相対の文字列として Report の `target` と比較する。symlink 名、大文字小文字の
+  違い、Unicode 正規化 (NFC / NFD) の違いで記録された Report は `inconsistent` (file system
+  が file を見つけられなければ `unknown`) になり、workspace 外の path は exit 7 で `unknown`
+  になる。いずれの場合も `New` / `Resolved` は出ない。
+- **Finding の `TemplatePath` の list index は、Template をたどれる場合にだけ表示される。**
+  v1.0 の Report は list index と数字だけの mapping key をどちらも整数で記録する。
+  Report_Pair 単独のとき、Template が解析不能な側、Finding の `Location.File` が比較する
+  Template path (`--reviewed-template-path` の値、無ければその Template 自身の path) でない
+  とき、および list の範囲外の index は、両者を区別できない。そのような整数はすべて Token
+  (`--plain-identifiers` では 10 進の文字列) として書き、account ID のような数字だけの key を
+  既定で平文に書くことはない。
+- **中立なのは Report の内部整合を保つ並べ替えだけである。** v1.1 Requirement 11 AC5 は、
+  `report.build_report` の順序を保ち内部整合の検査に合格する並べ替えを対象とし、その場合は
+  Report の digest と側ごとの `ID` 以外を変えない。構築済み Report の raw の `findings[]` の
+  並べ替えは `rebuild_mismatch` の検査に失敗し、片側の entry は `report_integrity_failed` で
+  `Ambiguous` になる。
+- **JSON 出力はデータであって表示用の文字列ではない。** C1 制御文字と双方向制御文字
+  (U+202A〜U+202E、U+2066〜U+2069、U+200E、U+200F、U+061C) は `\uXXXX` の escape で書く
+  ため、JSON をそのまま端末に出しても表示順は並べ替えられない。decode 後の値は変わらない
+  ため、JSON を decode して path を表示する program はこれらの文字を表示しうる。その他の
+  不可視文字や紛らわしい Unicode 文字はそのまま書かれる。decode した値を人に見せる前に
+  escape すること。stderr は入力由来の文字列を含まず、制御文字と双方向制御文字を
+  `\u{XXXX}` に置き換える。Markdown 出力は無い。
+- **識別子に lone surrogate を含むと plain mode では失敗する。** `--plain-identifiers` を
+  付けると、lone surrogate を含む識別子 (たとえば JSON Template で `\ud800` と書いた
+  Logical ID) は UTF-8 に encode できず、Tool は stderr に例外の型名を出して exit 1 で終わり、
+  Delta_Report を書かない。既定の匿名化 mode では Token として書く。どちらの場合も途中結果は
+  書かない。
+- **`output_size_limit_exceeded` で終わる入力もメモリと時間を使う。** Tool は render の前に
+  出力 size の下限を 128 MiB の上限と比べ、直列化中も上限を超えた時点で中止するため、上限を
+  超える出力の全文は作らない。下限が上限より小さい場合は、直列化の前にすべての
+  Change_Entry を render する。1 台の machine での local の計測 (macOS、Python 3.9。保証ではない) では、
+  以前は約 2.3 GiB と 2.9 GiB を使った入力の peak が約 250 MiB と 520 MiB になり、下限が
+  上限の直下になる入力は約 0.7〜0.75 GiB・14〜16 秒を使った。結果は fail-closed であり、最小の
+  Delta_Report だけを書く。
+- **利用できないもの:** Markdown 出力、段階 3 (類似度) の照合、Git ref・URL・stdin・
+  directory の入力。
+- **test する Python version。** GitHub CI は v1.1 の test を含む test suite を Ubuntu と
+  macOS の Python 3.9、3.11、3.13 で実行する。その他の Python version は test していない。
+- **一部の失敗 Code は Python の version で変わる。** 深さの上限を超える JSON Template は
+  必ず失敗するが、その Python の JSON parser が止まる深さによって
+  `template_depth_limit_exceeded` (exit 3) または `template_parse_failure` (exit 4) になる。
+  どちらも fail-closed である。計測した深さは `docs/delta-schema.md` にある。symlink loop の
+  入力 path は、どの Python version でも `invalid_arguments` (exit 2) になる。
 
 ## Roadmap
 

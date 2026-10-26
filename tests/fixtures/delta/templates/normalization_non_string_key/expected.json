@@ -1,0 +1,30 @@
+{
+  "case": "normalization_non_string_key",
+  "covers": [
+    "R15.4 non-string mapping key (Design N-5)"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources",
+          "Bucket",
+          "Metadata",
+          "Labels"
+        ],
+        "reason": "non_string_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

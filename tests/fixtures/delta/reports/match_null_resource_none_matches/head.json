@@ -1,0 +1,130 @@
+{
+  "errors": [],
+  "findings": [
+    {
+      "Confidence": "Confirmed",
+      "Evidence": [
+        {
+          "Detail": "Fixture evidence detail.",
+          "Excerpt": null,
+          "RuleId": "unused_condition",
+          "Source": "Quality Review"
+        }
+      ],
+      "Finding": "unused condition",
+      "FindingType": "BestPractice",
+      "ID": 1,
+      "Location": {
+        "Column": null,
+        "File": "templates/app.yaml",
+        "Line": null,
+        "TemplatePath": [
+          "Conditions",
+          "IsProd"
+        ]
+      },
+      "Normalized_Category": "TemplateQuality",
+      "Recommendation": "Fixture recommendation.",
+      "Resource": null,
+      "Severity": "LOW",
+      "Source": [
+        "Quality Review"
+      ],
+      "SuggestedRemediation": null,
+      "WhyItMatters": "Fixture finding for the v1.1 Finding Delta tests."
+    },
+    {
+      "Confidence": "Confirmed",
+      "Evidence": [
+        {
+          "Detail": "Fixture evidence detail.",
+          "Excerpt": null,
+          "RuleId": "unused_parameter",
+          "Source": "Quality Review"
+        }
+      ],
+      "Finding": "unused parameter Stage",
+      "FindingType": "BestPractice",
+      "ID": 2,
+      "Location": {
+        "Column": null,
+        "File": "templates/app.yaml",
+        "Line": null,
+        "TemplatePath": [
+          "Parameters",
+          "Stage"
+        ]
+      },
+      "Normalized_Category": "TemplateQuality",
+      "Recommendation": "Fixture recommendation.",
+      "Resource": null,
+      "Severity": "LOW",
+      "Source": [
+        "Quality Review"
+      ],
+      "SuggestedRemediation": null,
+      "WhyItMatters": "Fixture finding for the v1.1 Finding Delta tests."
+    }
+  ],
+  "schema_version": "1.0.0",
+  "sources_enabled": [
+    "cfn-lint",
+    "cfn-guard",
+    "IAM Review",
+    "Network Review",
+    "Secret Review",
+    "Quality Review"
+  ],
+  "summary": {
+    "by_finding_type": {
+      "BestPractice": 2,
+      "Informational": 0,
+      "Security": 0,
+      "Validity": 0
+    },
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 0,
+      "INFO": 0,
+      "LOW": 2,
+      "MEDIUM": 0
+    },
+    "by_source": {
+      "Agent Review": 0,
+      "IAM Review": 0,
+      "Network Review": 0,
+      "Quality Review": 2,
+      "Secret Review": 0,
+      "cfn-guard": 0,
+      "cfn-lint": 0
+    },
+    "by_template_group": {
+      "standalone": 2,
+      "synthesized": 0
+    },
+    "passed_all_checks": false,
+    "total": 2
+  },
+  "target": {
+    "cdk": {
+      "detected": false,
+      "synthesis": "not_applicable",
+      "synthesized_templates": []
+    },
+    "files": [
+      "templates/app.yaml"
+    ]
+  },
+  "tools": [
+    {
+      "available": true,
+      "name": "cfn-guard",
+      "version": "3.2.1"
+    },
+    {
+      "available": true,
+      "name": "cfn-lint",
+      "version": "1.46.0"
+    }
+  ]
+}

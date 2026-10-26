@@ -46,6 +46,90 @@ than kept as an empty heading, which is why the first release below carries
 
 Nothing yet.
 
+## [1.1.0] - 2026-10-26
+
+Adds the Delta_Tool, a read-only, deterministic comparison of two
+CloudFormation Templates and/or two Review_Reports, as a module entry point
+rather than a Skill, and makes two v1.0 failure modes the same on every Python
+version. The existing Skills, the 13-field Finding, the Review_Report and its
+`schema_version` `1.0.0`, the exit code table and the run-time dependencies are
+unchanged; the one observable change to a v1.0 review is that a JSON Template
+nested deeper than 512 levels is now a parse failure on every version.
+
+### Added
+
+- **The Delta_Tool (v1.1): `python3 -m iacreview.deltacli`.** A read-only
+  comparison of a Base and a Head CloudFormation Template (the Semantic Diff:
+  added, removed and modified positions with qualifiers, limitations and
+  uncompared paths) and/or a Base and a Head Review_Report (the Finding Delta:
+  each Finding matched in two deterministic stages and classified `New`,
+  `Resolved`, `Unchanged`, `Unconfirmed` or `Ambiguous`). Assumptions the tool
+  cannot check are given with `--declare` and recorded as
+  `declared_not_verified`; without them a one-sided Finding is `Unconfirmed`,
+  and a failed comparability, integrity or correspondence condition makes it
+  `Ambiguous` whatever was declared. Output is one Delta_Report JSON document
+  with its own `delta_schema_version` `1.0.0`, anonymized by default
+  (`--plain-identifiers` writes identifiers; Template values and Finding text are
+  never written), byte-identical for identical inputs, and fail-closed at the
+  input limits (5 MiB per Template or Report, 10000 Findings, depth 64, 3000000
+  logical nodes, 200000 Change_Entries, 128 MiB of output). The schema, closed
+  sets, failure Codes and known limitations are documented in
+  `docs/delta-schema.md`. It is a module entry point, not a Skill: the existing
+  Skills, the 13-field Finding, the Review_Report and its `schema_version`
+  `1.0.0`, the exit code table and the run-time dependencies are unchanged.
+  Markdown output and Git ref inputs are not part of it.
+- **Delta_Tool: `--reviewed-template-path PATH` for both pairs in one run.**
+  With a Template_Pair and a Report_Pair, it declares the workspace-relative
+  path at which both Reports reviewed the Template, so that the Template /
+  Report correspondence check can pass and `New` / `Resolved` can appear. The
+  declaration is recorded as `finding_delta.reviewed_template_path` with the
+  status `declared_not_verified` (`null` without it); the file is not read and
+  nothing about it is verified. Report integrity, Comparable, the required
+  declarations, rename hints and the limits are unchanged. A refused value
+  exits 2 before any input is read.
+- **Delta_Tool output safety.** C1 control characters and the bidirectional
+  controls are written as `\uXXXX` escapes in the JSON (the decoded values are
+  unchanged). An integer of a Finding `TemplatePath` is written as a list index
+  only when the Finding is in the compared Template path and the index lies
+  inside a list; otherwise it is a Token, so a digit-only key is not written in
+  plain form by default.
+- **Delta_Tool memory at the output limit.** The 128 MiB output limit is
+  checked against a lower bound of the output size before rendering and while
+  serializing, so the full text of an oversized output is never built. Output
+  bytes, the schema and the failure Codes are unchanged.
+- **Privacy Policy and Support documentation.** `docs/privacy-policy.md` states
+  how the plugin handles data: no telemetry, no network call of its own,
+  nothing stored in the workspace, AWS credentials withheld from every child
+  process, and the host-agent and optional-MCP boundaries where data may leave
+  the plugin's control. `README.md` and `README.ja.md` gain Support and Privacy
+  Policy sections. Documentation only; no behaviour changed.
+
+### Fixed
+
+- **JSON nesting depth is bounded explicitly, the same on every Python
+  version.** A JSON Template nested deeper than 512 arrays and objects
+  (`iacreview.template.MAX_JSON_NESTING_DEPTH`) is refused before it is decoded,
+  as a `parse_failure` (exit 4) with `error_type` `RecursionError` at line 1,
+  column 1 and a fixed message. Before, the outcome depended on the
+  interpreter's recursion limit: Python 3.9 failed near 990 levels (fewer with
+  a deeper call stack), while Python 3.13 decoded about 10,000 levels and
+  reviewed the document. Observable change: a valid JSON document nested 513 to
+  about 990 levels, which Python 3.9 used to review, is now a parse failure on
+  every version. The deepest Template in this repository nests 12 levels, and
+  no YAML Template can exceed PyYAML's own limit (about 330). A document past
+  the limit that also has a syntax error is reported as the depth failure.
+  Pinned by `tests/unit/test_template.py` and
+  `tests/regression/test_sec_malformed_json.py`.
+- **A symlink cycle is `invalid_arguments` (exit 2) on Python 3.13 too.**
+  CPython 3.13's `Path.resolve` no longer detects cycles, so a candidate path
+  that is a cycle, or that traverses one, was reported as `input_not_found`
+  (exit 3). The path check now detects the cycle itself when the OS reports
+  `ELOOP`, without recursion, and reports it with the class and message Python
+  3.9.0-3.9.22 gives (3.9.23 and later, like 3.10-3.12, name the whole
+  unresolved path in the message; the class and exit code are the same). A long chain of links that is not a cycle still resolves as
+  before, and every other symlink shape keeps its outcome. Pinned by
+  `tests/regression/test_sec_symlink_loop.py` and `tests/unit/test_pathguard.py`.
+
 ## [1.0.0] - 2026-09-01
 
 A maturation release. No new Source, no new deterministic check, and no new
@@ -443,7 +527,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v1.1.0
 [1.0.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v1.0.0
 [0.9.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.9.0
 [0.8.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.8.0

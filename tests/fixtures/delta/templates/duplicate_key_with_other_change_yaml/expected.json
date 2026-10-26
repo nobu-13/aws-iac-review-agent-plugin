@@ -1,0 +1,51 @@
+{
+  "case": "duplicate_key_with_other_change_yaml",
+  "covers": [
+    "R15.4 duplicate key together with another change",
+    "R5.4",
+    "Requirements R5 state table"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "BucketName"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources",
+          "Function",
+          "Properties",
+          "Environment",
+          "Variables"
+        ],
+        "reason": "duplicate_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

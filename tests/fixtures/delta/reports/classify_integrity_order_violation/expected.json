@@ -1,0 +1,183 @@
+{
+  "case": "classify_integrity_order_violation",
+  "covers": [
+    "R15.6 internal consistency failure: order",
+    "R2.10",
+    "R2.11"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ],
+    "none": [],
+    "one_missing": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [
+    "head: the first two findings[] swapped, IDs renumbered 1..n in the new order"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "none": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      },
+      "one_missing": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "queue encryption",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "base_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": [
+        "rebuild_mismatch"
+      ]
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

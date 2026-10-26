@@ -1,0 +1,11 @@
+Resources:
+  Queue:
+    Type: AWS::SQS::Queue
+  Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+    DependsOn: Queue
+    Metadata:
+      Owner: team-a
+    Properties:
+      BucketName: example-bucket

@@ -1,0 +1,23 @@
+{
+  "case": "transform_unchanged",
+  "covers": [
+    "R15.4 Transform without change",
+    "R4.8 transform_not_expanded"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [
+      "transform_not_expanded"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

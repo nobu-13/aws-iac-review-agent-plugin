@@ -1,0 +1,74 @@
+{
+  "case": "scalar_type_difference",
+  "covers": [
+    "R15.4 scalar type difference",
+    "R3.11",
+    "Design N-6"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Ingress",
+          "Properties",
+          "FromPort"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::EC2::SecurityGroupIngress",
+          "head": "AWS::EC2::SecurityGroupIngress"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "FifoQueue"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "DelaySeconds"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

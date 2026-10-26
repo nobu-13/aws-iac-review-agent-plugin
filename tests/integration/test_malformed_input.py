@@ -156,9 +156,9 @@ INVALID_FIXTURES = Path("tests") / "fixtures" / "invalid"
 #: :func:`test_a_bom_before_a_yaml_template_is_accepted`.
 BOM_YAML_FIXTURE = Path("tests") / "fixtures" / "valid" / "bom_prefixed.yaml"
 
-#: Nesting depth of the generated deep-nesting case. Past CPython's default
-#: recursion limit, so the decoder gives up, and small enough that the file is a
-#: few kilobytes and the parse attempt is instant.
+#: Nesting depth of the generated deep-nesting case. Past
+#: :data:`iacreview.template.MAX_JSON_NESTING_DEPTH`, so the parse is refused,
+#: and small enough that the file is a few kilobytes and the attempt is instant.
 NESTING_DEPTH = 2000
 
 #: A file name carrying a shell metacharacter (Requirement 12 AC11). The file is
@@ -226,7 +226,7 @@ def copied(relative: Path) -> Callable[[Path, Path], str]:
 
 
 def deeply_nested(workspace: Path, plugin_root: Path) -> str:
-    """Write a JSON document nested past the interpreter's recursion limit."""
+    """Write a JSON document nested past ``MAX_JSON_NESTING_DEPTH``."""
     name = "deeply_nested.json"
     (workspace / name).write_text(
         "[" * NESTING_DEPTH + "]" * NESTING_DEPTH, encoding="utf-8"

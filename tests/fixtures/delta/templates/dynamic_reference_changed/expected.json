@@ -1,0 +1,43 @@
+{
+  "case": "dynamic_reference_changed",
+  "covers": [
+    "R15.4 dynamic reference string change",
+    "R4.5"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Database",
+          "Properties",
+          "MasterUserPassword"
+        ],
+        "qualifiers": [
+          "dynamic_reference_unresolved"
+        ],
+        "resource_type": {
+          "base": "AWS::RDS::DBInstance",
+          "head": "AWS::RDS::DBInstance"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "dynamic_reference_unresolved"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

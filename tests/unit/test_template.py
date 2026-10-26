@@ -25,6 +25,8 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tracemalloc
+import types
 from pathlib import Path
 from typing import Any, Optional, Tuple, Type
 
@@ -161,15 +163,33 @@ def test_parse_failure_is_a_parse_failure_structured_error(case: _Case) -> None:
     assert str(case.path) not in message
 
 
+#: Where the decoder reports the trailing comma in ``malformed_syntax.json``:
+#: CPython 3.13 points at the comma itself (line 5, column 32) with a dedicated
+#: "Illegal trailing comma" message, earlier versions at the place the next
+#: property name was expected (line 6, column 5). Both are fixed literals.
+TRAILING_COMMA_POSITION: Tuple[int, int] = (
+    (6, 5) if sys.version_info < (3, 13) else (5, 32)
+)
+
+
 def test_malformed_json_position_comes_from_the_decoder() -> None:
-    """The trailing comma sits on line 5 of the fixture."""
+    """The trailing comma sits on line 5 of the fixture.
+
+    The reported position is the version's literal *and* the ``lineno``/``colno``
+    the decoder itself gives for the same bytes, so neither a default position
+    nor one computed elsewhere can pass.
+    """
+    path = FIXTURES / "invalid/malformed_syntax.json"
     with pytest.raises(TemplateParseError) as exc_info:
-        template.load_template(FIXTURES / "invalid/malformed_syntax.json")
+        template.load_template(path)
 
     error = exc_info.value
     assert error.error_type == "json.decoder.JSONDecodeError"
-    assert error.line == 6
-    assert error.column >= 1
+    assert (error.line, error.column) == TRAILING_COMMA_POSITION
+
+    with pytest.raises(json.JSONDecodeError) as decoded:
+        json.loads(path.read_text(encoding="utf-8"))
+    assert (error.line, error.column) == (decoded.value.lineno, decoded.value.colno)
 
 
 def test_binary_input_reports_a_decode_failure_not_a_syntax_error() -> None:
@@ -620,3 +640,252 @@ def test_public_api_is_exported() -> None:
     for name in ("LoadedTemplate", "load_template", "is_reviewable", "detect_format"):
         assert name in template.__all__
         assert hasattr(template, name)
+
+
+# ---------------------------------------------------------------------------
+# (7) JSON nesting depth is bounded explicitly, not by the interpreter
+# ---------------------------------------------------------------------------
+#
+# The expected outcomes are the same on every Python version. Before the bound,
+# CPython 3.9's decoder raised RecursionError somewhere near 990 levels (fewer
+# with a deeper caller stack) while 3.13 decoded about 10,000, so one document
+# was a parse failure on one version and a review on the other.
+
+
+def _nested_arrays(depth: int) -> str:
+    return "[" * depth + "]" * depth
+
+
+def _nested_objects_and_arrays(depth: int) -> str:
+    """``depth`` containers alternating object and array, outermost an object."""
+    inner = "0"
+    for level in reversed(range(depth)):
+        inner = '{"a":' + inner + "}" if level % 2 == 0 else "[" + inner + "]"
+    return inner
+
+
+def _assert_nesting_failure(error: TemplateParseError, path: Path) -> None:
+    assert error.error_class == "parse_failure"
+    assert error.exit_code == 4
+    assert error.error_type == "RecursionError"
+    assert (error.line, error.column) == (
+        template.DEFAULT_LINE,
+        template.DEFAULT_COLUMN,
+    )
+    assert "RecursionError at line 1, column 1" in error.message
+    assert template.JSON_NESTING_LIMIT_MESSAGE in error.message
+    assert "exceeds the limit of 512 levels" in error.message
+    assert str(path) not in error.message
+    assert str(path.parent) not in error.message
+
+
+@pytest.mark.parametrize("depth", [1, 511, 512])
+def test_json_nesting_at_or_below_the_limit_parses(depth: int) -> None:
+    doc, fmt = template.parse_template_text(
+        _nested_arrays(depth), Path("deep.json")
+    )
+
+    assert fmt == "json"
+    level = 0
+    while isinstance(doc, list) and doc:
+        doc = doc[0]
+        level += 1
+    assert level == depth - 1
+
+
+@pytest.mark.parametrize("depth", [513, 2000, 100000])
+def test_json_nesting_past_the_limit_is_a_parse_failure(
+    depth: int, tmp_path: Path
+) -> None:
+    path = tmp_path / "deep.json"
+    path.write_text(_nested_arrays(depth), encoding="utf-8")
+
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.load_template(path)
+
+    _assert_nesting_failure(exc_info.value, path)
+
+
+def test_the_nesting_failure_message_does_not_depend_on_the_depth(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "deep.json"
+    messages = []
+    for depth in (513, 100000):
+        path.write_text(_nested_arrays(depth), encoding="utf-8")
+        with pytest.raises(TemplateParseError) as exc_info:
+            template.load_template(path)
+        messages.append(exc_info.value.message)
+
+    assert messages[0] == messages[1]
+
+
+def test_json_nesting_counts_objects_and_arrays_together(tmp_path: Path) -> None:
+    template.parse_template_text(_nested_objects_and_arrays(512), Path("ok.json"))
+
+    path = tmp_path / "mixed.json"
+    path.write_text(_nested_objects_and_arrays(513), encoding="utf-8")
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.load_template(path)
+
+    _assert_nesting_failure(exc_info.value, path)
+
+
+def test_brackets_inside_json_strings_do_not_count() -> None:
+    value = "[" * 600 + '\\"' + "{" * 600 + "\\\\"
+    text = '{"Resources": {"R": {"Type": "' + value + '"}}}'
+
+    doc, fmt = template.parse_template_text(text, Path("strings.json"))
+
+    assert fmt == "json"
+    assert template.is_reviewable(doc)
+    assert doc["Resources"]["R"]["Type"] == "[" * 600 + '"' + "{" * 600 + "\\"
+
+
+def test_brackets_after_an_escaped_backslash_count_again(tmp_path: Path) -> None:
+    """``"\\\\"`` closes the string, so the brackets after it are structure."""
+    path = tmp_path / "escaped.json"
+    path.write_text('["\\\\", ' + _nested_arrays(512) + "]", encoding="utf-8")
+
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.load_template(path)
+
+    _assert_nesting_failure(exc_info.value, path)
+
+
+def test_an_unterminated_string_is_a_decoder_error_not_a_depth_error() -> None:
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.parse_template_text('{"a": "' + "[" * 600, Path("open.json"))
+
+    assert exc_info.value.error_type == "json.decoder.JSONDecodeError"
+
+
+#: Length of the long string literal in the scan-memory tests: one MiB of
+#: characters, a fifth of ``MAX_TEMPLATE_BYTES``.
+LONG_STRING_CHARS = 1 << 20
+
+#: Ceiling on the extra memory the nesting scan may allocate for one long
+#: string. The scan keeps a counter and an index; a scanner that kept state per
+#: character of a string literal would need about a hundred times the string
+#: length (measured: 80-190 MB for one MiB with the earlier regular expression).
+SCAN_MEMORY_CEILING_BYTES = 64 * 1024
+
+#: The shapes of a long string literal that a scan could handle per character:
+#: plain text, a run of escaped backslashes, and a run of escaped quotes.
+LONG_STRING_BODIES = {
+    "plain": "a" * LONG_STRING_CHARS,
+    "escaped_backslashes": "\\\\" * (LONG_STRING_CHARS // 2),
+    "escaped_quotes": '\\"' * (LONG_STRING_CHARS // 2),
+}
+
+#: Decoded value of each body in :data:`LONG_STRING_BODIES`.
+LONG_STRING_VALUES = {
+    "plain": "a" * LONG_STRING_CHARS,
+    "escaped_backslashes": "\\" * (LONG_STRING_CHARS // 2),
+    "escaped_quotes": '"' * (LONG_STRING_CHARS // 2),
+}
+
+
+def _long_string_text(body: str) -> str:
+    """A reviewable Template whose one string holds 600 ``[`` and then ``body``.
+
+    The 600 brackets put the total past the limit, so the scan cannot take the
+    ``str.count`` shortcut and has to walk the string.
+    """
+    return '{"Resources": {"R": {"Type": "' + "[" * 600 + body + '"}}}'
+
+
+@pytest.mark.parametrize("shape", sorted(LONG_STRING_BODIES))
+def test_the_nesting_scan_memory_does_not_grow_with_a_long_string(
+    shape: str,
+) -> None:
+    text = _long_string_text(LONG_STRING_BODIES[shape])
+
+    tracemalloc.start()
+    try:
+        exceeds = template._json_nesting_exceeds(
+            text, template.MAX_JSON_NESTING_DEPTH
+        )
+        _, peak = tracemalloc.get_traced_memory()
+    finally:
+        tracemalloc.stop()
+
+    assert exceeds is False
+    assert peak < SCAN_MEMORY_CEILING_BYTES
+
+
+@pytest.mark.parametrize("shape", sorted(LONG_STRING_BODIES))
+def test_a_long_string_with_brackets_parses(shape: str) -> None:
+    doc, fmt = template.parse_template_text(
+        _long_string_text(LONG_STRING_BODIES[shape]), Path("long.json")
+    )
+
+    assert fmt == "json"
+    assert doc["Resources"]["R"]["Type"] == "[" * 600 + LONG_STRING_VALUES[shape]
+
+
+@pytest.mark.parametrize("shape", sorted(LONG_STRING_BODIES))
+def test_nesting_after_a_long_string_still_counts(
+    shape: str, tmp_path: Path
+) -> None:
+    """The scan leaves a long string at its closing quote, not earlier or later."""
+    path = tmp_path / "after.json"
+    path.write_text(
+        '["' + LONG_STRING_BODIES[shape] + '", ' + _nested_arrays(512) + "]",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.load_template(path)
+
+    _assert_nesting_failure(exc_info.value, path)
+
+
+def test_a_backslash_ending_the_text_is_an_unterminated_string() -> None:
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.parse_template_text('["' + "[" * 600 + "\\", Path("open.json"))
+
+    assert exc_info.value.error_type == "json.decoder.JSONDecodeError"
+
+
+def test_deep_json_never_reaches_the_decoder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The bound is checked first, so the decoder's recursion is never relied on.
+
+    The stand-in records the call instead of raising, because anything it raised
+    would be caught by the broad ``except`` and look like the expected failure.
+    """
+    calls = []
+
+    def recording_loads(text: str) -> Any:
+        calls.append(len(text))
+        return {}
+
+    monkeypatch.setattr(
+        template,
+        "json",
+        types.SimpleNamespace(
+            loads=recording_loads, JSONDecodeError=json.JSONDecodeError
+        ),
+    )
+
+    with pytest.raises(TemplateParseError) as exc_info:
+        template.parse_template_text("[" * 1_000_000, Path("deep.json"))
+
+    assert exc_info.value.error_type == "RecursionError"
+    assert calls == []
+
+    template.parse_template_text(_nested_arrays(512), Path("ok.json"))
+    assert calls == [1024]
+
+
+def test_the_nesting_limit_value() -> None:
+    """The bound is a public constant.
+
+    Its relation to the v1.1 limits and fixtures is pinned in
+    ``tests/unit/test_deltaio_contract.py``, so this v1.0 test does not depend
+    on v1.1 modules.
+    """
+    assert template.MAX_JSON_NESTING_DEPTH == 512
+    assert "MAX_JSON_NESTING_DEPTH" in template.__all__

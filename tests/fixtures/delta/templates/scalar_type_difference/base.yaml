@@ -1,0 +1,12 @@
+Resources:
+  Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 443
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      DelaySeconds: 1

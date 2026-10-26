@@ -1,0 +1,77 @@
+{
+  "case": "match_identical_reports",
+  "covers": [
+    "R15.5 identical Reports",
+    "R6.4",
+    "R6.5",
+    "R6.9"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "complete",
+        "entries": [
+          {
+            "base": "bucket encryption",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "bucket logging",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket logging",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": "unused parameter",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "unused parameter",
+            "match_stage": 2,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          }
+        ],
+        "observation": "no_changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

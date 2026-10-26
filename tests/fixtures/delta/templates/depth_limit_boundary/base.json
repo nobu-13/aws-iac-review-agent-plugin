@@ -1,0 +1,1 @@
+{"Resources": {"R": {"Type": "AWS::S3::Bucket", "Properties": {"A": [1]}}}}

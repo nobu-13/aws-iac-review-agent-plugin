@@ -1,0 +1,68 @@
+{
+  "case": "match_null_resource_templatepath_changed",
+  "covers": [
+    "R15.5 Resource null, one to one, only TemplatePath changed",
+    "R6.6",
+    "R6.7"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "unused parameter Env",
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": null,
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "unmatched",
+            "reasons": [
+              "identity_undetermined"
+            ]
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "unused parameter Stage",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "unmatched",
+            "reasons": [
+              "identity_undetermined"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

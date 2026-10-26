@@ -1,0 +1,15 @@
+Parameters:
+  Env:
+    Type: String
+Conditions:
+  IsProd: !Equals [!Ref Env, prod]
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !If [IsProd, prod-bucket, test-bucket]
+Outputs:
+  BucketOut:
+    Condition: IsProd
+    Description: after
+    Value: !Ref Bucket

@@ -1,0 +1,9 @@
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags:
+        - Key: env
+          Value: dev
+        - Key: team
+          Value: platform

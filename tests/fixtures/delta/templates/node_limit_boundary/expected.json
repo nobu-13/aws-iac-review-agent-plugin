@@ -1,0 +1,39 @@
+{
+  "case": "node_limit_boundary",
+  "covers": [
+    "R15.4 logical node count at the limit and limit + 1",
+    "R14.6"
+  ],
+  "expected": {
+    "analysis_state": "unanalyzable",
+    "changes": [],
+    "failure": {
+      "code": "template_node_limit_exceeded",
+      "input": "template",
+      "side": "head"
+    },
+    "observation": null,
+    "semantic_limitations": [],
+    "shapes": {
+      "base": {
+        "containers": 5,
+        "depth": 6,
+        "nodes": 17
+      },
+      "head": {
+        "containers": 5,
+        "depth": 6,
+        "nodes": 18
+      }
+    },
+    "structural_completeness": null,
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {
+    "MAX_TEMPLATE_NODES": 17
+  }
+}

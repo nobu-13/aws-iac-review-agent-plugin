@@ -1,0 +1,42 @@
+{
+  "case": "nested_stack",
+  "covers": [
+    "R15.4 Nested Stack",
+    "R4.8 nested_stack_not_compared",
+    "R4.12"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Child",
+          "Properties",
+          "TemplateURL"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::CloudFormation::Stack",
+          "head": "AWS::CloudFormation::Stack"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [
+      "nested_stack_not_compared"
+    ],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

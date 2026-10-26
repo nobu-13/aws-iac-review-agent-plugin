@@ -1,0 +1,69 @@
+{
+  "case": "match_dedup_identity_duplicated",
+  "covers": [
+    "R15.5 duplicated dedup-eligible Identity_Key",
+    "Design E-7",
+    "R2.10",
+    "R2.11"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "partial",
+        "entries": [
+          {
+            "base": "bucket encryption, base",
+            "changes": [],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption, head",
+            "match_stage": 2,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          },
+          {
+            "base": null,
+            "changes": [],
+            "classification": "Ambiguous",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [],
+            "head": "bucket encryption, second",
+            "match_stage": null,
+            "missing_declarations": [],
+            "observation": "head_only",
+            "reasons": [
+              "report_integrity_failed"
+            ]
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": [
+        "dedup_invariant_violated"
+      ]
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

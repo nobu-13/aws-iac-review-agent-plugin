@@ -1,0 +1,16 @@
+Resources:
+  Bucket:
+    Type: AWS::S3::Bucket
+  Topic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName:
+        Fn::Sub: "${AWS::StackName}-topic"
+      KmsMasterKeyId:
+        Fn::GetAtt: [Bucket, Arn]
+      TopicName:
+        Fn::Join: ["-", [{Ref: Bucket}, topic]]
+Outputs:
+  TopicRef:
+    Value:
+      Ref: Topic

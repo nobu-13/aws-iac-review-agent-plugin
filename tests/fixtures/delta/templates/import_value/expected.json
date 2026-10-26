@@ -1,0 +1,60 @@
+{
+  "case": "import_value",
+  "covers": [
+    "R15.4 Fn::ImportValue",
+    "R4.3",
+    "R4.6 external_value present / absent"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "QueueName"
+        ],
+        "qualifiers": [
+          "expression_unevaluated",
+          "external_value"
+        ],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Queue",
+          "Properties",
+          "DelaySeconds"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::SQS::Queue",
+          "head": "AWS::SQS::Queue"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

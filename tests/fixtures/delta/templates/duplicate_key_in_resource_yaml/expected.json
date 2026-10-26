@@ -1,0 +1,30 @@
+{
+  "case": "duplicate_key_in_resource_yaml",
+  "covers": [
+    "R15.4 duplicate key: inside a Resource",
+    "R2.5"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties"
+        ],
+        "reason": "duplicate_key"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

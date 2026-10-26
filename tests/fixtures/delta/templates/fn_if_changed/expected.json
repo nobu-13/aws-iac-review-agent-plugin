@@ -1,0 +1,59 @@
+{
+  "case": "fn_if_changed",
+  "covers": [
+    "R15.4 change inside Fn::If",
+    "R4.4 conditional (Fn::If, Output Condition)"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Resources",
+          "Bucket",
+          "Properties",
+          "BucketName",
+          "Fn::If",
+          2
+        ],
+        "qualifiers": [
+          "conditional",
+          "expression_unevaluated"
+        ],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "modified",
+        "hints": [],
+        "path": [
+          "Outputs",
+          "BucketOut",
+          "Description"
+        ],
+        "qualifiers": [
+          "conditional"
+        ],
+        "resource_type": null,
+        "section": "Outputs",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

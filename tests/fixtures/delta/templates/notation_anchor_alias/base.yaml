@@ -1,0 +1,11 @@
+Resources:
+  BucketA:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: &tags
+        - Key: team
+          Value: platform
+  BucketB:
+    Type: AWS::S3::Bucket
+    Properties:
+      Tags: *tags

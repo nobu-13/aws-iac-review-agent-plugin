@@ -47,13 +47,14 @@ from __future__ import annotations
 
 import atexit
 import contextlib
+import errno
 import os
 import signal
 import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, FrozenSet, Iterator, Optional, Set, Tuple
+from typing import Any, Dict, FrozenSet, Iterator, List, Optional, Set, Tuple
 
 from iacreview.errors import (
     InputNotFoundError,
@@ -148,6 +149,94 @@ def _resolve_root(root: Path) -> Path:
         ) from exc
 
 
+def _symlink_loop_origin(path: str) -> Optional[str]:
+    """Return the link at which resolving ``path`` enters a cycle, or ``None``.
+
+    The same walk CPython 3.9.0 through 3.9.22 perform in non-strict
+    ``Path.resolve`` (3.9.23 and later, and 3.10 through 3.12, detect the same
+    cycles through ``os.path.realpath`` and name the whole unresolved path
+    instead of the link): components are joined one at a time, every symbolic
+    link met is expanded in place, and a link met again *while its own
+    expansion is still in progress* is a cycle. A link met again after its
+    expansion finished is not -- its result is reused -- so two links to one
+    target, or a long chain, are not cycles. A missing component or one that is
+    not a link is kept as it is, as non-strict resolution does.
+
+    Iterative, with an explicit stack instead of the recursion CPython uses, so
+    the depth of a chain cannot exhaust the interpreter's stack. It terminates
+    because each link is expanded at most once: a second meeting is either a
+    cached result or the cycle that ends the walk.
+
+    Args:
+        path: An absolute path.
+
+    Returns:
+        The joined path of the link that closes the cycle, spelled the way
+        CPython's ``RuntimeError("Symlink loop from ...")`` names it, or ``None``
+        when the path resolves without one.
+    """
+    sep = os.sep
+    seen: Dict[str, Optional[str]] = {}
+    current = ""
+    # Each frame: the components still to join (reversed, so ``pop`` takes the
+    # next one) and the link whose expansion the frame is, if any.
+    frames: List[Tuple[List[str], Optional[str]]] = []
+
+    def push(rest: str, link: Optional[str]) -> None:
+        nonlocal current
+        if rest.startswith(sep):
+            current = ""
+        frames.append((list(reversed(rest.split(sep))), link))
+
+    push(path, None)
+    while frames:
+        names, link = frames[-1]
+        if not names:
+            frames.pop()
+            if link is not None:
+                seen[link] = current
+            continue
+        name = names.pop()
+        if not name or name == ".":
+            continue
+        if name == "..":
+            current = current.rpartition(sep)[0]
+            continue
+        newpath = current + sep + name
+        if newpath in seen:
+            resolved = seen[newpath]
+            if resolved is None:
+                return newpath
+            current = resolved
+            continue
+        try:
+            target = os.readlink(newpath)
+        except OSError:
+            # Not a link, or not there: kept as it is.
+            current = newpath
+            continue
+        seen[newpath] = None
+        push(target, newpath)
+    return None
+
+
+def _symlink_loop_in(target: Path) -> Optional[str]:
+    """Return the cycle's link if ``target`` cannot be reached for one.
+
+    The OS reports ``ELOOP`` both for a cycle and for a chain longer than its
+    own limit (32 links on macOS, 40 on Linux), so ``ELOOP`` only decides
+    whether to look; :func:`_symlink_loop_origin` decides whether it is a cycle.
+    Any other outcome of ``os.stat`` -- success, or a missing target -- costs
+    this one call and changes nothing.
+    """
+    try:
+        os.stat(target)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            return _symlink_loop_origin(str(target))
+    return None
+
+
 def _resolve_under_root(candidate: str, root: Path) -> Path:
     """Resolve ``candidate`` and verify it stays inside ``root``.
 
@@ -177,20 +266,26 @@ def _resolve_under_root(candidate: str, root: Path) -> Path:
         # strict=False: a not-yet-existing path still normalizes. Existence is
         # a separate concern handled by the caller.
         target_real = target.resolve(strict=False)
+        loop_origin = _symlink_loop_in(target)
+        if loop_origin is not None:
+            raise RuntimeError("Symlink loop from {0!r}".format(loop_origin))
     except (OSError, RuntimeError, ValueError) as exc:
         # Untrusted input must fail cleanly rather than surface an OS-level
         # traceback (for example ValueError for an embedded NUL byte).
         #
         # ``RuntimeError`` is in the tuple for symlink cycles. On CPython 3.9
         # through 3.12, ``Path.resolve`` detects a cycle itself and raises
-        # ``RuntimeError("Symlink loop from ...")`` instead of letting the OS
-        # return ``ELOOP`` as an ``OSError``; 3.13 stopped raising for the
-        # non-strict case. Catching it keeps a workspace that contains a cycle --
-        # untrusted content, like every other input path -- from reaching the
-        # caller as a traceback instead of a documented error class, on every
-        # version. The class is the same one an ``ELOOP`` ``OSError`` already
-        # produced here, so the two spellings of one OS condition now agree
-        # (Requirement 16 AC7, AC8).
+        # ``RuntimeError("Symlink loop from ...")`` (naming the link on 3.9.0
+        # through 3.9.22, and the whole unresolved path on 3.9.23 and later
+        # and 3.10 through 3.12, which resolve through ``os.path.realpath``).
+        # 3.13 stopped raising for
+        # the non-strict case and returns the path with the cycle unresolved,
+        # so the cycle is also detected explicitly above, by the same walk and
+        # with the same message, and raised as the same ``RuntimeError``. A
+        # workspace that contains a cycle -- untrusted content, like every other
+        # input path -- is therefore an ``InvalidArgumentsError`` on every
+        # version, ahead of the containment check, rather than a traceback or a
+        # version-dependent "does not exist" (Requirement 16 AC7, AC8).
         raise InvalidArgumentsError(
             "path cannot be normalized: {0!r} ({1})".format(candidate, exc)
         ) from exc

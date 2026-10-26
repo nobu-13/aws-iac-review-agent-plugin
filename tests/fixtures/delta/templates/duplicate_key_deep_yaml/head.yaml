@@ -1,0 +1,9 @@
+Resources:
+  Function:
+    Type: AWS::Lambda::Function
+    Properties:
+      Timeout: 3
+      Environment:
+        Variables:
+          MODE: one
+          MODE: two

@@ -1,0 +1,30 @@
+{
+  "case": "normalization_yaml_timestamp",
+  "covers": [
+    "R15.4 timestamp with time (Design N-4)"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [],
+    "failure": null,
+    "observation": "no_changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "partial",
+    "uncompared_paths": [
+      {
+        "path": [
+          "Resources",
+          "Bucket",
+          "Metadata",
+          "BuiltAt"
+        ],
+        "reason": "yaml_timestamp"
+      }
+    ]
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

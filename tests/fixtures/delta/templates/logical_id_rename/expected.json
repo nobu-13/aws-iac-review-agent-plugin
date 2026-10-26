@@ -1,0 +1,56 @@
+{
+  "case": "logical_id_rename",
+  "covers": [
+    "R15.4 Logical ID rename",
+    "R4.13"
+  ],
+  "expected": {
+    "analysis_state": "analyzed",
+    "changes": [
+      {
+        "change": "removed",
+        "hints": [
+          "possible_logical_id_rename"
+        ],
+        "path": [
+          "Resources",
+          "OldBucket"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": "AWS::S3::Bucket",
+          "head": null
+        },
+        "section": "Resources",
+        "type_changed": false
+      },
+      {
+        "change": "added",
+        "hints": [
+          "possible_logical_id_rename"
+        ],
+        "path": [
+          "Resources",
+          "NewBucket"
+        ],
+        "qualifiers": [],
+        "resource_type": {
+          "base": null,
+          "head": "AWS::S3::Bucket"
+        },
+        "section": "Resources",
+        "type_changed": false
+      }
+    ],
+    "failure": null,
+    "observation": "changes_observed",
+    "semantic_limitations": [],
+    "structural_completeness": "complete",
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

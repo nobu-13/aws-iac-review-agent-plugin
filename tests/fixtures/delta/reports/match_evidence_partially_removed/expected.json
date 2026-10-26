@@ -1,0 +1,60 @@
+{
+  "case": "match_evidence_partially_removed",
+  "covers": [
+    "R15.5 part of a dedup-eligible Finding's Evidence removed",
+    "R6.13",
+    "R6.14"
+  ],
+  "declarations": {
+    "all": [
+      "reports_unmodified",
+      "same_plugin_version",
+      "same_rule_set",
+      "same_tool_configuration",
+      "same_agent_findings_input"
+    ]
+  },
+  "edits": [],
+  "expected": {
+    "analysis_state": "analyzed",
+    "by_declarations": {
+      "all": {
+        "classification_completeness": "complete",
+        "entries": [
+          {
+            "base": "bucket backup",
+            "changes": [
+              "Evidence"
+            ],
+            "classification": "Unchanged",
+            "evidence_absent_in_base": [],
+            "evidence_absent_in_head": [
+              {
+                "RuleId": "s3_deletion_policy",
+                "Source": "cfn-guard",
+                "source_comparable": true
+              }
+            ],
+            "head": "bucket backup",
+            "match_stage": 1,
+            "missing_declarations": [],
+            "observation": "matched",
+            "reasons": []
+          }
+        ],
+        "observation": "changes_observed"
+      }
+    },
+    "comparable": true,
+    "report_integrity": {
+      "base": [],
+      "head": []
+    },
+    "template_report_correspondence": "not_applicable"
+  },
+  "inputs": {
+    "base": "base.json",
+    "head": "head.json"
+  },
+  "template_pair": null
+}

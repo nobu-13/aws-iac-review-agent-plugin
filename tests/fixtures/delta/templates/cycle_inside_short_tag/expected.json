@@ -1,0 +1,24 @@
+{
+  "case": "cycle_inside_short_tag",
+  "covers": [
+    "R2.12 a cycle inside a short tag is an ordinary parse failure (Design F-15)"
+  ],
+  "expected": {
+    "analysis_state": "unanalyzable",
+    "changes": [],
+    "failure": {
+      "code": "template_parse_failure",
+      "input": "template",
+      "side": "head"
+    },
+    "observation": null,
+    "semantic_limitations": [],
+    "structural_completeness": null,
+    "uncompared_paths": []
+  },
+  "inputs": {
+    "base": "base.yaml",
+    "head": "head.yaml"
+  },
+  "limits": {}
+}

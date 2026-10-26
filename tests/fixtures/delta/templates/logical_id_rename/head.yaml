@@ -1,0 +1,7 @@
+Resources:
+  NewBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: example-bucket
+  Queue:
+    Type: AWS::SQS::Queue
