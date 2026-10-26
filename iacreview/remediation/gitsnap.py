@@ -89,10 +89,11 @@ class Snapshot:
         return h.hexdigest()
 
 
-def _git(repo: Path, args: List[str], step: str, max_bytes: int = rschema.GIT_MAX_OUTPUT_BYTES) -> proc.BoundedResult:
+def _git(repo: Path, args: List[str], step: str, max_bytes: Optional[int] = None) -> proc.BoundedResult:
     argv = [GIT, "-C", str(repo), *SAFE_OPTIONS, *args]
+    limit = rschema.GIT_MAX_OUTPUT_BYTES if max_bytes is None else max_bytes  # read at call time
     try:
-        result = proc.run_bounded(argv, timeout_s=rschema.GIT_TIMEOUT_S, max_output_bytes=max_bytes)
+        result = proc.run_bounded(argv, timeout_s=rschema.GIT_TIMEOUT_S, max_output_bytes=limit)
     except IacReviewError:
         raise GitError("repository_unreadable", step) from None
     if result.timed_out or result.output_exceeded:
