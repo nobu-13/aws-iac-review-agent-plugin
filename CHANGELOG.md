@@ -60,8 +60,10 @@ than kept as an empty heading, which is why the first release below carries
 ### Fixed
 
 - A directory target holding a symlink cycle no longer stops the review with
-  exit 1 and a Python traceback on CPython 3.9-3.12; the cycle entry is skipped
-  on every Python version, as 3.13 already did.
+  exit 1 and a Python traceback on CPython 3.9-3.12. On every Python version the
+  cycle entry is now reported in `errors[]` as an unreadable input
+  (`input_not_found`), as 3.13 already did; nothing is read through it. A
+  directory holding only cycles exits 3.
 
 ## [1.1.0] - 2026-10-26
 

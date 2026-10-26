@@ -245,15 +245,19 @@ def _is_contained(candidate: Path, resolved_root: Path) -> bool:
         candidate: Path to test. Resolved here, so symlinks are followed.
         resolved_root: Root to compare against, already ``resolve``\\ d.
 
-    A symlink cycle is "not contained": CPython 3.9 through 3.12 raise
-    ``RuntimeError`` for it from ``resolve(strict=False)``, 3.13 reports
-    ``ELOOP`` as an ``OSError``. Either way the entry resolves to nothing, so
-    nothing is read and the entry is skipped on every version, as an
-    unreadable symlinked file already was.
+    A symlink cycle is kept, not skipped. CPython 3.13 returns the cycle's
+    path unresolved, so the entry stays in the list and the reader reports it
+    as an unreadable input in ``errors[]``; CPython 3.9 through 3.12 raise
+    ``RuntimeError`` here instead. Treating that ``RuntimeError`` as "keep"
+    gives every version the 3.13 result: the cycle is named in the report, not
+    dropped silently, and no traceback is printed. Nothing is resolved or read
+    through the cycle, so containment is unaffected.
     """
     try:
         candidate.resolve(strict=False).relative_to(resolved_root)
-    except (OSError, ValueError, RuntimeError):
+    except RuntimeError:
+        return True
+    except (OSError, ValueError):
         return False
     return True
 
