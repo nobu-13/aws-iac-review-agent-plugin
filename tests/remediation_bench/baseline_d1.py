@@ -38,7 +38,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple
 
 import yaml
 
@@ -269,7 +269,7 @@ def guard(rules: Path, doc: Any, resource: str, params: Dict[str, str], names: L
         passed, skipped = set(rec["compliant"]), set(rec["not_applicable"])
     except (ValueError, KeyError, TypeError):
         raise Stop(INCOMPLETE) from None
-    if (code == 19) != bool(failed) or failed & passed:
+    if (code == 19) != bool(failed) or failed & passed or failed & skipped or passed & skipped:
         raise Stop(INCOMPLETE)
     return {n: "FAIL" if n in failed else "PASS" if n in passed else "SKIP" for n in names}
 
