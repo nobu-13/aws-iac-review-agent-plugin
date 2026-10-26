@@ -124,11 +124,60 @@ entry for a mixed directory is the existing v1.0 treatment of any unreadable
 directory entry and is not changed (a CLI behaviour change would need
 approval); a gate that needs "every candidate reviewed" must read `errors[]`.
 
+## CI run 40325732554 on `5aee146` and the fix (`0963502`, `b638f88`)
+
+Reported by the maintainer (not re-read by the agent): 6 test jobs, 4 PASS
+(macOS 3.9 / 3.11 / 3.13, Ubuntu 3.11), 2 FAIL (Ubuntu 3.9 and 3.13), both on
+`tests/integration/test_remediation_cases.py::test_case_matches_its_ground_truth[C17d]`
+with decision UNVERIFIED, exit 21 and `tool_output_too_large` as expected and
+`payload_deterministic` False. Determinism and Repository Hygiene jobs PASS.
+
+Root cause (implementation, not harness): on a timeout or the output limit,
+`proc.run_bounded` stops the process group and returns the prefix it had
+read. How long that prefix is depends on pipe buffering and scheduling. The
+verifier hashed it into `checks[].output_sha256`, so two runs of the same
+input could differ there and nowhere else. The prefix is never parsed and is
+not evidence of anything.
+
+Reproduction on macOS: the CI fixture writes in large, regular blocks and did
+not reproduce locally (C17a–C17d, 10 runs each: 1 distinct payload). A fake
+cfn-lint writing 9 MiB in random chunk sizes did: 6 runs, 6 distinct
+payloads, differing only at `/checks/<cfn-lint>/output_sha256`.
+
+Fix: a run stopped by TIMEOUT or OUTPUT_TOO_LARGE records its state with
+`output_sha256` and `exit_code` null; completed runs keep their digest. The
+decision, exit code, codes, limits (60 s, 8 MiB) and expected values are
+unchanged. After the fix: the random-chunk tool, 10 runs, 1 distinct payload;
+C16a, C16b, C17b, C17c, C17d, C18a, C18b 20 runs each and C17a 8 runs, 1
+distinct payload each. Regression tests:
+`test_an_output_limit_stop_records_no_digest_of_the_partial_output`,
+`test_a_timeout_stop_records_no_digest_of_the_partial_output` (both fail on
+the previous code), `test_a_completed_run_still_records_its_output_digest`.
+
+Also in this round: the timeout drill of C17a lowers the check timeout for the
+whole run, so at 3 s a slow runner could make the real cfn-lint time out too;
+it is now 10 s (test harness only; the fake cfn-guard sleeps 30 s). The
+Summary qualifies `task_outcome: resolved` / `already_satisfied` when the
+decision is not VERIFIED ("outcome rules only; the candidate as a whole is
+UNVERIFIED, not verified"); the payload is unchanged.
+
+Lint advisory: compared finding by finding (file and rule, line numbers
+ignored) with `v1.1.0`: ruff 40 = 40 and mypy 12 = 12, identical sets. One
+new E741 introduced by this round's test was removed before the commit. The
+advisory job exits non-zero on `v1.1.0` as well.
+
+Gates on `b638f88` (clean export, CPython 3.9.6): pytest exit 0, tests 7,067 =
+passed 7,022 + failed 0 + error 0 + skipped 45, coverage 96.82%; Benchmark
+34/34 (FP 0, FN 0); 19/19 Review_Report digests; Determinism 1 passed; Secret
+scan 0 findings in 625 files; Ground_Truth order 17/17; ruff 5 / 40, mypy 12;
+53/53 cases with payload equal across two runs. The same pytest totals on
+`0963502`. The commit after `b638f88` changes only this file.
+
 ## Not verified here
 
 | Item | Why | Where it gets verified |
 | --- | --- | --- |
-| Six-environment CI (Ubuntu / macOS × 3.9 / 3.11 / 3.13) | push needs human credentials | handoff.md A |
+| Six-environment CI on the fix commit (run 40325732554 was on `5aee146`) | push needs human credentials | handoff.md A |
 | Trusted gate runs, required check, ruleset, spoof / skip / head and base update / actor tests (G1–G10) | GitHub settings and a second, write-only account | handoff.md B |
 | Kiro Power install and SC-01 / SC-02 in Kiro, CLI-vs-Power payload equality | changes global Kiro settings | handoff.md C |
 | Independent review of the two ground-truth corrections | only the author agent reviewed them | Human review (H-P1) |
