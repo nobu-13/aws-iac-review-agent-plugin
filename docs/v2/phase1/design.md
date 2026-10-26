@@ -21,7 +21,6 @@ changing their behaviour:
 | `deltaio.parse_template` | the bounded YAML/JSON parser, duplicate-key marks, alias DAG and node/depth limits |
 | `semdiff.diff` | the typed-path structural comparison (string keys vs list indexes kept apart) |
 | `cfnlint.build_argv`, `cfnlint.parse_output`, `cfnlint.decode_cfnlint_exit` | the fixed cfn-lint invocation and strict output parser |
-| `cfnguard.build_argv`, `cfnguard.parse_records` | the fixed cfn-guard invocation and strict record parser |
 | `toolcheck.extract_version` | version text parsing |
 | `pathguard.secure_temp_file`, `pathguard.install_temp_file_cleanup` | 0600 temporary files removed on exit and on signal |
 | `proc` (`_validate_argv`, `_minimal_env`, process-group termination) | through one additive function `proc.run_bounded` (§6) |
@@ -148,10 +147,21 @@ Resources. Typed paths come from `semdiff`; display strings are never parsed bac
 
 Incomplete or unsupported comparisons are `UNVERIFIED`: any `uncompared_paths`
 (`comparison_incomplete`), a parse/structure failure (`template_not_comparable`),
-and `transform_not_expanded`, a nested stack in the target, or a
-`conditional` / `dynamic_reference_unresolved` / `external_value` /
-`expression_unevaluated` qualifier on an *allowed* change
-(`unsupported_construct`).
+`transform_not_expanded`, and on an *allowed* change a `conditional` /
+`dynamic_reference_unresolved` / `external_value` / `pre_transform` qualifier
+or an `Fn::If` anywhere in the allowed property on either side
+(`unsupported_construct`). `expression_unevaluated` alone (an `Fn::Sub` or
+`Fn::GetAtt` in the changed subtree) is not unsupported: the outcome rules and
+the statement comparison read the declared structure, and a rule that needs a
+literal fails on an expression. A contract whose Resource is missing in Base or
+has another Type is `UNVERIFIED target_resource_missing` (a nested-stack target
+lands here).
+
+`semdiff` normalizes paths with `finding.canonical_template_path`, which turns
+a digit mapping key (`"0"`) into an int. The boundary recovers the typing by
+walking both documents (`boundary.typed_path`): mapping positions become
+`str`, list positions `int`. Only exact `str` equality with the contract's
+names allows a change, so an int can never widen the scope.
 
 ## 6. Checks (`checks.py`)
 
@@ -169,12 +179,27 @@ absent target is a FAIL, not a SKIP.
 and allows) **and** a Core comparison that the statement's parsed value is equal
 on Base and Head. `outside-allowed-edits-unchanged` is the Boundary of §5.
 
+cfn-guard output is read by `checks.parse_guard_record`, not by
+`cfnguard.parse_records`: the v1.0 parser extracts every violated clause for
+Findings and rejects shapes the profile rules produce (`Block` from `some`,
+`InResolved`, an unresolved query at the root). The verifier needs only which
+named rules passed, failed or were skipped, so it reads the record envelope
+strictly (exactly the cfn-guard 3.2 keys, rule names of a fixed shape, status
+consistent with the lists, nothing below `Rule.name`); anything else is
+`OUTPUT_INVALID`. The Target is always present in the projection (`{}` when
+absent) so a missing Resource is a FAIL below `/Target`.
+
+Output digests: cfn-guard's raw output with the temp-file name replaced;
+cfn-lint's parsed results without the per-file result `Id`.
+
 Every tool call goes through `proc.run_bounded(argv, timeout_s=60, max_output_bytes=8 MiB)`:
 stdout/stderr are read incrementally, the process group is killed on timeout or
 on the cap, and the result carries `timed_out` / `output_exceeded`. Tool output
 is never copied into the report: only exit codes, counts, rule names from the
 profile, cfn-lint rule IDs matching `^[EWI][0-9]{4}$`, and SHA-256 digests.
 CPU and RSS are not limited (documented residual risk).
+`IACREVIEW_REMEDIATION_CHECK_TIMEOUT_S` may lower (never raise) the 60 s
+timeout; a lower value can only produce `TIMEOUT` (UNVERIFIED).
 
 Tool states: `PASS`, `FAIL`, `TOOL_UNAVAILABLE`, `VERSION_MISMATCH`, `TIMEOUT`,
 `FAILED`, `OUTPUT_INVALID`, `OUTPUT_TOO_LARGE`, `NOT_PASSED` (SKIP / not
@@ -232,6 +257,12 @@ outcome, violations, missing evidence, next action) and never re-decides.
 
 ## 9. Kiro Skill
 
+The Skill ships no script: a script under `skills/*/scripts/` would join the
+v1.0 script inventory, whose tests require the Review_Report CLI options. It
+calls the package CLI with `PYTHONPATH=<plugin_root>`, as the v1.1 Delta_Tool
+does.
+
+
 `skills/iac-remediation-verify/` is one thin Skill: it tells the agent to run
 `init` (draft), stop for human approval of the contract, make one candidate
 edit inside the scope, run `verify --worktree` (preview) and `explain`, then stop.
@@ -242,7 +273,7 @@ never treats its own preview as approval. The five existing Skills are unchanged
 
 * `.github/workflows/ci.yml` keeps the six-environment matrix; Phase 1 tests run
   inside the existing pytest job.
-* `examples/remediation-gate/remediation-gate.yml` is the consumer Trusted Gate
+* `docs/v2/phase1/ci/remediation-gate.yml` is the consumer Trusted Gate
   reference: `pull_request_target`, `permissions: contents: read`, checks out
   the **base** commit only, checks out the validator at a pinned commit into a
   separate directory, fetches the PR head as git objects only (no checkout),
