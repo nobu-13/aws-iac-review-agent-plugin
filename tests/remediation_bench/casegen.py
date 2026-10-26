@@ -622,8 +622,14 @@ FAKE_TOOLS = {
     ),
 }
 
-#: Seconds the guard_timeout drill lowers the check timeout to.
-DRILL_TIMEOUT_S = 3
+#: Seconds the guard_timeout drill lowers the check timeout to. The override
+#: applies to every check of the run, so it must stay well above a real
+#: cfn-lint run on a loaded CI runner (about 1-2 s locally): otherwise cfn-lint
+#: itself would sometimes time out and the payload would differ between two
+#: runs for a reason that is not the case under test. The fake cfn-guard
+#: sleeps 30 s, so it always exceeds this. The product limit (60 s) is
+#: unchanged; this only shortens the drill.
+DRILL_TIMEOUT_S = 10
 
 
 def make_bin(root: Path, tools: Optional[str]) -> Path:
