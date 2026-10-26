@@ -80,6 +80,82 @@ empty, contains a NUL character or a shell metacharacter, is absolute, has a
 drive or a `..` segment, or leaves the workspace through an existing path
 element such as a symlink.
 
+The two Templates (`checkout-base/stack/template.yaml`, then
+`checkout-head/stack/template.yaml`):
+
+```yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: pass
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: "*"
+  BuildRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: arn:aws:iam::123456789012:root
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: admin
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
+```
+
+```yaml
+AWSTemplateFormatVersion: "2010-09-09"
+Resources:
+  DeploymentRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: pass
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: iam:PassRole
+                Resource: "*"
+  AdminPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "*"
+            Resource: "*"
+```
+
 What these commands gave on a scratch workspace in which the Head adds an
 `AWS::IAM::ManagedPolicy` allowing `*` on `*`, removes an `AWS::IAM::Role`
 that had the same, and keeps a role that may pass any role (Reports made with
@@ -719,7 +795,7 @@ stderr messages and help text are not stable interfaces.
 - The existing YAML alias reference limit does not bound the expanded size; the logical node limit does.
 - The safety of the external tools that produced the input Reports (cfn-lint, cfn-guard, cdk) is not covered.
 - Markdown output and Git ref inputs are not available.
-- The v1.1 tests have been run locally on Python 3.9 only. Python 3.11 / 3.13 and the GitHub CI matrix are not verified yet.
+- GitHub CI runs the v1.1 tests on Python 3.9, 3.11 and 3.13 on Ubuntu and macOS. Other Python versions are not tested; the Python 3.12 figures in the next item are a local measurement only.
 - A JSON Template nested deeper than `MAX_TEMPLATE_DEPTH` always fails, but the failure Code depends on the Python version, because the existing JSON parser stops with `RecursionError` at a version-dependent depth. In a local measurement, Python 3.9 gave `template_depth_limit_exceeded` (exit 3) up to about 1,000 levels and `template_parse_failure` (exit 4) beyond; Python 3.13 gave `template_depth_limit_exceeded` up to about 10,000 levels and `template_parse_failure` beyond. The exact depth also depends on the call stack. Python 3.11 behaves like 3.9 in CI for the tested depth (2,000); Python 3.12 behaves like 3.13 in a local measurement (9,000 levels decode); other versions are not measured. Both results are fail-closed and deterministic on one Python version. Independently of v1.1, the v1.0 Review refuses JSON nested deeper than 512 levels as a parse failure on every Python version.
 - A Template path, a Report path or a `--reviewed-template-path` value that is a symlink loop gives `invalid_arguments` (exit 2) on every Python version: the existing path check detects the loop itself where `Path.resolve` no longer does (Python 3.13). No file is read.
 - With a Template_Pair and a Report_Pair in one run and no `--reviewed-template-path`, `New` and `Resolved` do not appear. Each Template path must be in its own Report's `target`, and Findings are matched and compared only on the same `Location.File`; two revisions read in one workspace sit at different paths, so one of these always fails and the one-sided entries are `Ambiguous`. Review both revisions at the same relative path in two checkouts and declare that path with `--reviewed-template-path`. The declaration is not verified: the tool cannot tell whether the Templates given are the ones the Reports reviewed, beyond the Logical ID check. A Report_Pair alone has no rename hint and no Template / Report check, so a renamed Logical ID can appear as `Resolved` plus `New`.
@@ -727,4 +803,5 @@ stderr messages and help text are not stable interfaces.
 - The byte-identity of v1.1 Requirement 11 AC5 holds only for reorders that preserve internal consistency (the `report.build_report` order). A raw reorder of a built Report's `findings[]` fails `rebuild_mismatch` and makes the one-sided entries `Ambiguous` (see "Order").
 - With a Report_Pair alone, for a side whose Template is unanalyzable, and for a Finding whose `Location.File` is not that side's comparison path, every integer of a Finding `TemplatePath` is written as a Token (its decimal string in plain mode), and list indexes are not shown. A digit-only mapping key such as an account ID is therefore not written in plain form by default.
 - Display safety: the JSON output is data. File paths are written as given, except that C1 control characters (U+0080 to U+009F), the bidirectional controls U+202A to U+202E and U+2066 to U+2069, and U+200E, U+200F and U+061C are written as JSON `\uXXXX` escapes (lower-case hex). The value after `json.loads` is unchanged, so a program that decodes the JSON and prints a path can still show these characters: escape them again before showing decoded values to people. Other characters, including other invisible or confusable Unicode characters, are written as they are. stderr carries no input-derived string and replaces C0 / C1 control characters, DEL and the same bidirectional characters with `\u{XXXX}`. There is no Markdown output.
+- A lone surrogate in an identifier fails in plain mode. With `--plain-identifiers`, an identifier that contains a lone surrogate (for example a Logical ID written as `\ud800` in a JSON Template) cannot be encoded as UTF-8: the tool exits 1 with the exception type name on stderr and writes no Delta_Report. The default anonymized mode writes it as a Token. Either way no partial result is written.
 - `MAX_OUTPUT_BYTES` is checked while the output is serialized: the tool first compares a lower bound of the output size (from the number of Change_Entries and uncompared paths and their path lengths) with the limit and, when the bound already exceeds it, writes the minimal Delta_Report without rendering; otherwise it stops serializing as soon as the limit is passed. Memory and time still grow with the number of Change_Entries and uncompared paths up to that point. In a local measurement (macOS, Python 3.9, one machine; not a guarantee), the two inputs that had used about 2.3 and 2.9 GiB when the limit was checked only after full serialization ended in `output_size_limit_exceeded` with a maximum RSS of 250 and 521 MiB, and inputs built so that the lower bound stays just under the limit used about 0.7 to 0.75 GiB and 14 to 16 seconds. The result is fail-closed: no partial Delta_Report is written.

@@ -349,7 +349,8 @@ finding_delta: classification_completeness=complete template_report_corresponden
 1 回で比較すると `inconsistent` になり、この 2 つの Finding は `Ambiguous`
 (`template_report_mismatch`) になる。絶対 path、`..` を含む path、symlink を通って
 workspace 外を指す path、両 pair が揃っていない場合は exit 2 である。上の抜粋は JSON を
-要約したものであり、全出力は記載の command で再現できる。
+要約したものである。2 つの Template は `docs/delta-schema.md` ("Running the tool") にあり、
+記載の command と抜粋をそのまま再現できる。
 
 Delta_Entry の分類の意味。
 
@@ -778,6 +779,11 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   不可視文字や紛らわしい Unicode 文字はそのまま書かれる。decode した値を人に見せる前に
   escape すること。stderr は入力由来の文字列を含まず、制御文字と双方向制御文字を
   `\u{XXXX}` に置き換える。Markdown 出力は無い。
+- **識別子に lone surrogate を含むと plain mode では失敗する。** `--plain-identifiers` を
+  付けると、lone surrogate を含む識別子 (たとえば JSON Template で `\ud800` と書いた
+  Logical ID) は UTF-8 に encode できず、Tool は stderr に例外の型名を出して exit 1 で終わり、
+  Delta_Report を書かない。既定の匿名化 mode では Token として書く。どちらの場合も途中結果は
+  書かない。
 - **`output_size_limit_exceeded` で終わる入力もメモリと時間を使う。** Tool は render の前に
   出力 size の下限を 128 MiB の上限と比べ、直列化中も上限を超えた時点で中止するため、上限を
   超える出力の全文は作らない。下限が上限より小さい場合は、直列化の前にすべての
@@ -786,8 +792,9 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   上限の直下になる入力は約 0.7〜0.75 GiB・14〜16 秒を使った。結果は fail-closed であり、最小の
   Delta_Report だけを書く。
 - **利用できないもの:** Markdown 出力、段階 3 (類似度) の照合、Git ref・URL・stdin・
-  directory の入力。v1.1 の test の Python 3.11 / 3.13 と GitHub CI での実行は未確認であり、
-  local の検証は Python 3.9 で行った。
+  directory の入力。
+- **test する Python version。** GitHub CI は v1.1 の test を含む test suite を Ubuntu と
+  macOS の Python 3.9、3.11、3.13 で実行する。その他の Python version は test していない。
 - **一部の失敗 Code は Python の version で変わる。** 深さの上限を超える JSON Template は
   必ず失敗するが、その Python の JSON parser が止まる深さによって
   `template_depth_limit_exceeded` (exit 3) または `template_parse_failure` (exit 4) になる。

@@ -85,6 +85,12 @@ than kept as an empty heading, which is why the first release below carries
   checked against a lower bound of the output size before rendering and while
   serializing, so the full text of an oversized output is never built. Output
   bytes, the schema and the failure Codes are unchanged.
+- **Privacy Policy and Support documentation.** `docs/privacy-policy.md` states
+  how the plugin handles data: no telemetry, no network call of its own,
+  nothing stored in the workspace, AWS credentials withheld from every child
+  process, and the host-agent and optional-MCP boundaries where data may leave
+  the plugin's control. `README.md` and `README.ja.md` gain Support and Privacy
+  Policy sections. Documentation only; no behaviour changed.
 
 ### Fixed
 

@@ -361,8 +361,9 @@ unchanged, so a doubtful input still gives `Unconfirmed` or `Ambiguous`, never
 `inconsistent` and `Ambiguous` (`template_report_mismatch`) for these two
 Findings. An absolute path, a `..` segment, a path that leaves the workspace
 through a symlink, or the option without both pairs exits 2. Excerpts above
-are abridged from the JSON; the full output and the commands are reproducible
-as written.
+are abridged from the JSON. The two Templates are listed in
+`docs/delta-schema.md` ("Running the tool"), so the commands and the excerpts
+can be reproduced as written.
 
 The classifications of a Delta_Entry:
 
@@ -876,6 +877,12 @@ mislead.
   showing them to people. stderr carries no input-derived string and replaces
   control and bidirectional characters with `\u{XXXX}`. There is no Markdown
   output.
+- **A lone surrogate in an identifier fails in plain mode.** With
+  `--plain-identifiers`, an identifier that contains a lone surrogate (for
+  example a Logical ID written as `\ud800` in a JSON Template) cannot be encoded
+  as UTF-8: the tool exits 1 with the exception type name on stderr and writes
+  no Delta_Report. The default anonymized mode writes it as a Token. Either way
+  no partial result is written.
 - **An input that ends in `output_size_limit_exceeded` still costs memory and
   time.** The tool compares a lower bound of the output size with the 128 MiB
   limit before rendering and stops serializing once the limit is passed, so no
@@ -886,8 +893,10 @@ mislead.
   just under the limit used about 0.7 to 0.75 GiB and 14 to 16 seconds.
   The result is fail-closed: only the minimal Delta_Report is written.
 - **Not available:** Markdown output, a stage-3 (similarity) match, Git ref, URL,
-  stdin or directory inputs. Python 3.11 / 3.13 and GitHub CI runs of the v1.1
-  tests are not verified yet; local verification used Python 3.9.
+  stdin or directory inputs.
+- **Tested Python versions.** GitHub CI runs the test suite, including the v1.1
+  tests, on Python 3.9, 3.11 and 3.13 on Ubuntu and macOS. Other Python versions
+  are not tested.
 - **Some failure Codes depend on the Python version.** A JSON Template nested
   deeper than the depth limit always fails, as `template_depth_limit_exceeded`
   (exit 3) or `template_parse_failure` (exit 4) depending on where the Python
