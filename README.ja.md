@@ -258,7 +258,7 @@ python3 skills/iac-review/scripts/run_iac_review.py \
 `--agent-findings`、`--confirm-cdk-synth`、`--verbose` である。各 `SKILL.md` が自身の
 option と出力を網羅的に記述している。
 
-**2 つの revision の比較 (Delta_Tool、v1.1、未 Release)。** `iacreview/deltacli.py` は
+**2 つの revision の比較 (Delta_Tool、v1.1.0 で追加)。** `iacreview/deltacli.py` は
 Base と Head の CloudFormation Template (Semantic Diff) と、Base と Head の Review_Report
 (Finding Delta) の一方または両方を比較し、Delta_Report の JSON 文書 1 つを stdout へ書く。
 比較 Tool であって品質 Gate ではなく、改善した・修正された・安全である・合格したと主張する
@@ -733,7 +733,7 @@ network access、credentials、外部へ送られるデータ、失敗時の挙�
   `ground_truth.json` が `template.yaml` と同一の commit か、それより前の commit に現れる
   ことを確認する CI チェックは未了である。
 
-**Delta_Tool (v1.1、未 Release)**
+**Delta_Tool (v1.1.0)**
 
 完全な一覧は `docs/delta-schema.md` にある。ここには誤解を招きやすいものを挙げる。
 

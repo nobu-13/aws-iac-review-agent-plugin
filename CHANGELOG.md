@@ -44,6 +44,18 @@ than kept as an empty heading, which is why the first release below carries
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.1.0] - 2026-10-26
+
+Adds the Delta_Tool, a read-only, deterministic comparison of two
+CloudFormation Templates and/or two Review_Reports, as a module entry point
+rather than a Skill, and makes two v1.0 failure modes the same on every Python
+version. The existing Skills, the 13-field Finding, the Review_Report and its
+`schema_version` `1.0.0`, the exit code table and the run-time dependencies are
+unchanged; the one observable change to a v1.0 review is that a JSON Template
+nested deeper than 512 levels is now a parse failure on every version.
+
 ### Added
 
 - **The Delta_Tool (v1.1): `python3 -m iacreview.deltacli`.** A read-only
@@ -515,7 +527,8 @@ deletes nothing in AWS, and applies no fix on its own.
 
 [keep-a-changelog]: https://keepachangelog.com/en/1.1.0/
 [semver]: https://semver.org/spec/v2.0.0/
-[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nobu-13/aws-iac-review-agent-plugin/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v1.1.0
 [1.0.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v1.0.0
 [0.9.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.9.0
 [0.8.0]: https://github.com/nobu-13/aws-iac-review-agent-plugin/releases/tag/v0.8.0

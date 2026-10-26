@@ -264,7 +264,7 @@ top of the bundled ones, `--format {json,sarif}` (default `json`),
 `--agent-findings`, `--confirm-cdk-synth`, `--verbose`.
 Each `SKILL.md` documents its own options and output in full.
 
-**Comparing two revisions (Delta_Tool, v1.1, unreleased).** `iacreview/deltacli.py`
+**Comparing two revisions (Delta_Tool, added in v1.1.0).** `iacreview/deltacli.py`
 compares a Base and a Head CloudFormation Template (the Semantic Diff) and/or a
 Base and a Head Review_Report (the Finding Delta), and writes one Delta_Report
 JSON document to stdout. It is a comparison tool, not a quality gate: no field
@@ -818,7 +818,7 @@ dashes in the original are written as `--` here to keep this file ASCII.
   today; the CI check that a case's `ground_truth.json` appears in the same
   commit as its `template.yaml`, or earlier, is still owed.
 
-**Delta_Tool (v1.1, unreleased)**
+**Delta_Tool (v1.1.0)**
 
 `docs/delta-schema.md` keeps the full list; these are the ones most likely to
 mislead.
