@@ -31,71 +31,118 @@ was behind; untracked `.agents/` only). The branch
 
 ## Commits
 
-| Commit | Scope |
-| --- | --- |
-| `c96896c` | OBS-1: `cdk._is_contained` treats `RuntimeError` from a symlink cycle as not contained; regression test |
-| `88e48ee` | `proc.run_bounded`, `iacreview/remediation/`, profiles, Skill, cases, tests, design |
-| `676c7fd` | public spec, evaluation, handoff, traceability test, comparison harness |
-| (this commit) | this evidence file |
+| Commit | Scope | Code or check conditions changed? |
+| --- | --- | --- |
+| `c96896c` | OBS-1 first fix (cycle treated as not contained) | yes |
+| `88e48ee` | `proc.run_bounded`, `iacreview/remediation/`, profiles, Skill, cases, tests, design | yes |
+| `676c7fd` | public spec, evaluation, handoff, traceability test, comparison harness | tests only |
+| `4688b74` | evidence and design notes | docs |
+| `feed1b4` | OBS-1 correction: cycles reported in `errors[]`, not dropped | yes (`cdk.py`) |
+| `96177a5` | typed-path ambiguity never allows a change | yes (`boundary.py`) |
+| `b4ee268` | failure-path tests; gitsnap reads its output limit at call time | yes (`gitsnap.py`) |
+| `f7413b6`, `e70c24b` | comparison per AC45, D0 / D1 baselines, docs | tests and docs |
+| final commit | this evidence file | docs only |
 
-Changed existing files: `iacreview/proc.py` (additive), `iacreview/cdk.py`
-(OBS-1), `tests/unit/test_skills.py` (closed Skill list gains one entry),
-`CHANGELOG.md` (Unreleased). `plugin.json`, `pyproject.toml`, CI, Steering,
-`.gitignore`, schemas and every other existing test are unchanged.
+**Verified commit: `e70c24b`.** Every gate below ran on it. The final commit
+differs from it only in this file (`git diff --stat e70c24b HEAD` lists
+`docs/v2/phase1/implementation-evidence.md` and nothing else), so no gate needs
+re-running for it.
+
+Changed existing files since `v1.1.0`: `iacreview/proc.py` (additive),
+`iacreview/cdk.py` (OBS-1), `tests/unit/test_skills.py` (the closed Skill list
+gains one entry), `CHANGELOG.md` (Unreleased). `plugin.json`,
+`pyproject.toml`, CI, Steering, `.gitignore`, schemas and every other existing
+test are unchanged.
 
 <a id="gates"></a>
-## Phase 1 head (G-P1-5)
+## Phase 1 gates on `e70c24b` (G-P1-5)
 
-Run on the working tree at `676c7fd` (Python 3.9.6) unless noted.
+| Gate | Command | Exit | Result | Baseline (`v1.1.0`) |
+| --- | --- | --- | --- | --- |
+| pytest + coverage on a clean export (no `.kiro/`, no `.agents/`) | `git archive e70c24b \| tar -x`; `python3 -m pytest -p no:cacheprovider -rs --cov=iacreview --cov=benchmark/harness --cov-fail-under=80 --junitxml=…` | 0 | JUnit: tests 7,060 = passed 7,015 + failed 0 + error 0 + skipped 45; coverage 96.82%; 1,035 s | clean export: 44 skipped |
+| Benchmark | `python3 benchmark/harness/run_benchmark.py --cases benchmark/cases --mode combined` | 0 | PASS, 34/34 matched, FP 0, FN 0 | 34/34 |
+| v1.0 Review_Report digests | `run_iac_review.py --target <t>` for the 17 benchmark cases and 2 examples, SHA-256 compared with docs/v2/v1.1-implementation-evidence.md §5-2 | 0 ×19 | 19/19 equal | 19/19 |
+| Determinism | `PYTHONHASHSEED=random python3 -m pytest tests/property/test_prop_determinism.py` | 0 | 1 passed | passed |
+| Secret scan | `python3 .github/scripts/scan_secrets.py` | 0 | 0 findings in 625 tracked files | 0 / 568 |
+| Ground_Truth order | `python3 .github/scripts/check_ground_truth_order.py --cases benchmark/cases` | 0 | 17/17 | 17/17 |
+| ruff | `ruff check iacreview` / `ruff check .` | 1 | 5 / 40 (all pre-existing) | 5 / 40 |
+| mypy | `mypy iacreview` | 1 | 12 errors in 7 files (none in new code) | 12 |
+| Phase 1 cases | `python3 tests/remediation_bench/run_cases.py` | 0 | 53/53 match; payload digest equal across two runs for every case | — |
+| Comparison | `python3 tests/remediation_bench/compare.py` | 0 | evaluation.md (per-case acceptance identical in two runs) | — |
+| H-ENV helper tests | `python3 -m pytest .agents/tasks/phase1/henv/test_phase1_henv.py` (local, not committed) | 0 | 23 passed | — |
+| Local gate simulation | helper `push-branch` + `demo-prepare` against local bare remotes, then `verify` per scenario branch | — | G1 VERIFIED (0); G2, G3, G4, G5, G6, G10, G7 BLOCKED (20); G8 UNVERIFIED `base_not_ancestor_of_head` (21); validator pinned to the commit, not the branch | — |
 
-| Gate | Exit | Result | Baseline |
-| --- | --- | --- | --- |
-| pytest + coverage, clean export of `676c7fd` (no `.kiro/`, no `.agents/`) | 0 | JUnit: 7,030 tests, 0 failures, 0 errors, 45 skipped (6,985 passed); coverage 96.37%; 909 s | v1.1 clean export: 44 skipped |
-| pytest + coverage, working tree before the last test fix | 1 | 6,993 passed, 1 failed, 36 skipped; the failure was `test_cfn_lint_states[not json]` hitting its own 2 s timeout under load, fixed in `676c7fd` (timeout only for the timeout case); the fixed file passes 43/43 | — |
-| Benchmark `--mode combined` | 0 | PASS, 34/34 matched, FP 0, FN 0 | 34/34 |
-| Determinism (`PYTHONHASHSEED=random`) | 0 | 1 passed | passed |
-| Secret scan (tracked) | 0 | 0 findings in 623 files | 0 / 568 |
-| Ground_Truth order | 0 | 17/17 | 17/17 |
-| ruff `iacreview` / `.` | 1 | 5 / 40 | 5 / 40 |
-| mypy `iacreview` | 1 | 12 errors in 7 files (none in new code) | 12 |
-| Phase 1 cases `python3 tests/remediation_bench/run_cases.py` | 0 | 53/53 match ground truth, payload digest equal across two runs for every case | — |
-| A/B/C/D comparison | 0 | see evaluation.md | — |
-
-Skips in the clean export: 44 are the v1.1 ones (Spec files under `.kiro/`,
-clean benchmark cases, placeholder detectors); the one new skip is
+Skips (45): 44 are the v1.1 ones (Spec files under `.kiro/`, clean benchmark
+cases, placeholder detectors, one prompt fixture); the one new skip is
 `test_a_non_utf8_file_name_is_handled_and_redacted`, which APFS cannot run
-(it refuses non-UTF-8 file names) and Linux CI is expected to run. No Phase 1
+(non-UTF-8 file names are refused) and Linux CI is expected to run. No Phase 1
 test depends on `.kiro/`.
 
-Coverage of new modules (working-tree run): remediation package 83–100% per
-module (`gitsnap.py` 83%, the rest ≥ 89%).
+Coverage by file (clean run), with the reviewed gaps:
+
+| File | Cover | Uncovered, after review |
+| --- | --- | --- |
+| `remediation/gitsnap.py` | 87% | git output-format / ls-tree / ls-files format errors, an oid of the wrong shape after `cat-file -s`, a worktree read racing a writer; each raises `GitError` → ERROR or UNVERIFIED (never VERIFIED) |
+| `remediation/checks.py` | 94% | `--version` that times out or overflows; guard records whose lists are not lists (covered by unit tests on `parse_guard_record`) |
+| `remediation/contract.py` | 94% | individual "invalid value" branches of fields already covered by the same validator |
+| `remediation/boundary.py` | 94% | `_operation` lookups on malformed documents; a path through a scalar |
+| `remediation/profiles.py` | 94% | malformed shipped-profile branches (no profile ships malformed) |
+| `remediation/report.py`, `verify.py`, `cli.py` | 94–96% | non-UTF-8 statement text in canonical JSON, `--output` write failures |
+| `proc.py` | 91% | v1.0 lines; the new `run_bounded` branches are covered |
+
+The trust and exception branches found uncovered in the first round (missing
+or symlinked contract, working-tree change during the run, oversized or
+non-UTF-8 Template, Base with the required Sid twice, change-entry limit,
+broken profile, git limits, unmerged index, submodule entries, every
+`--check-binding` reason) now have tests in
+`tests/unit/test_remediation_failure_paths.py`.
 
 <a id="clean-checkout"></a>
 ## Clean checkout (AC41, G-P1-6)
 
-`git archive 676c7fd | tar -x` into an empty directory (no `.kiro/`, no
-`.agents/`, no untracked files), then the full pytest + coverage command above
-from that directory: exit 0, counts as in the table. That run includes the 53
-cases (`tests/integration/test_remediation_cases.py`), the CLI tests, the
-traceability test over `docs/v2/phase1/ac-traceability.json` and the reference
-gate checks.
+`git archive e70c24b | tar -x` into an empty directory (no `.kiro/`, no
+`.agents/`, no untracked files), then the full pytest + coverage command
+above from that directory: exit 0, counts as in the table. That run includes
+the 53 cases, the CLI tests, the traceability test over
+`docs/v2/phase1/ac-traceability.json` and the reference gate checks.
+
+## OBS-1 re-check (directory input)
+
+`run_iac_review.py --target <dir>/ --sources iam-review`, CPython 3.9.6 (and
+3.12 / 3.13 with the 3.9 site-packages, reference only):
+
+| Directory | `c96896c` (first fix) | `feed1b4` (current) | `v1.1.0` |
+| --- | --- | --- | --- |
+| `ok.yaml` + `loop.yaml → loop.yaml` | exit 0, files `[ok.yaml]`, `errors[]` empty (cycle dropped silently) | exit 0, files `[ok.yaml]`, `errors[]`: `input_not_found` for `loop.yaml`; same on 3.12 / 3.13 | 3.9–3.12: exit 1 + traceback; 3.13: as current |
+| `loop.yaml` only | exit 8 | exit 3, `errors[]`: `input_not_found` for `loop.yaml` | 3.9–3.12: exit 1 + traceback |
+| `ok.yaml`, `link.yaml → ok.yaml`, `sub/s.yaml` | exit 0, files `[ok, sub/s]`, `input_not_found` for `link.yaml` | unchanged | unchanged |
+| two-link cycle + `ok.yaml` | as first row | `input_not_found` for both links | as first row |
+
+No traceback in any current run. The single-file path keeps exit 2
+(`tests/regression/test_sec_symlink_loop.py`). Exit 0 with an `errors[]`
+entry for a mixed directory is the existing v1.0 treatment of any unreadable
+directory entry and is not changed (a CLI behaviour change would need
+approval); a gate that needs "every candidate reviewed" must read `errors[]`.
 
 ## Not verified here
 
 | Item | Why | Where it gets verified |
 | --- | --- | --- |
-| Six-environment CI (Ubuntu / macOS × 3.9 / 3.11 / 3.13) | push needs human credentials | handoff.md step 1–2 |
-| Trusted gate runs, required check, ruleset, spoof / skip / head update / actor tests | GitHub settings and a second account | handoff.md step 3–6 |
-| Kiro Power install and SC-01 / SC-02 in Kiro, CLI-vs-Power payload equality | changes global Kiro settings | handoff.md step 7 |
-| Third-party first run (10 minutes) | no third party | Phase 2 pilot |
+| Six-environment CI (Ubuntu / macOS × 3.9 / 3.11 / 3.13) | push needs human credentials | handoff.md A |
+| Trusted gate runs, required check, ruleset, spoof / skip / head and base update / actor tests (G1–G10) | GitHub settings and a second, write-only account | handoff.md B |
+| Kiro Power install and SC-01 / SC-02 in Kiro, CLI-vs-Power payload equality | changes global Kiro settings | handoff.md C |
+| Independent review of the two ground-truth corrections | only the author agent reviewed them | Human review (H-P1) |
+| Any Phase 1 advantage over D1 beyond these 53 decisions | not measured | Phase 2 |
+| Third-party first run (10 minutes), human effort | no third party; no human timing | Phase 2 pilot |
 | Python 3.11 / 3.13 locally | only 3.9.6 has the dependencies on this machine | CI |
 
 ## Process notes
 
 * While confirming that the OBS-1 regression test fails without the fix, the
   agent once used `git stash push iacreview/cdk.py` / `git stash pop` on its
-  own uncommitted change only (no pre-existing work involved); later checks
-  used a file copy instead.
+  own uncommitted change only. Re-checked: `git stash list` is empty, no
+  pre-existing work was involved, and the committed `cdk.py` history is
+  `c96896c` → `feed1b4`. Later checks use a file copy; stash is not used again.
 * Two ground-truth corrections, with before/after and reasons:
   `benchmark/remediation/ground-truth-changes.md`.
 * Design changes found during implementation and recorded in design.md: the
