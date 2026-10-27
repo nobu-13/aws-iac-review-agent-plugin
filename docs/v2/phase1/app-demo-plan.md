@@ -36,6 +36,7 @@ plugin repo  app-push-scripts        new branch phase1/app-gate-scripts @ f77a58
 GitHub UI    register the App (no repository needed yet), generate one key outside git
 new repo     app-publish             public repo + main (App workflow included)   ── W0 starts
 GitHub UI    install the App on the new repository only
+read-only    app-verify-installation (App JWT) or app-attest-installation (UI check)
 new repo     app-environment         remediation-publisher: main only, no admin bypass
 new repo     app-secrets             environment secret (stdin) + 2 repository variables
 GitHub UI    Actions policy          allow pull_request_target for the gate file only
@@ -58,6 +59,34 @@ Why this order:
 * The ruleset comes last because its expected source needs an App that "must
   have recently submitted a check run" (GitHub documentation). The bootstrap
   PR produces that check through the real gate; no check is posted by hand.
+
+### Verifying the installation
+
+gh's token (an OAuth token of the GitHub CLI) cannot read App installations:
+`GET /user/installations` needs a GitHub App *user access token*, and
+`GET /repos/{owner}/{repo}/installation` and `GET /app/installations` need
+the App's JWT. The helper therefore checks with gh only what gh can read —
+the App's public description (`GET /apps/{slug}`: id, owner, permissions,
+events) — and requires one of two installation records, no older than 24 h,
+before any setting is changed:
+
+* `app-verify-installation --app-key <pem>` (method `app_jwt`): signs a
+  9-minute JWT with the system `openssl` (the key is read only by openssl),
+  reads `GET /app` and `GET /app/installations`, mints a 1-hour installation
+  token restricted to `metadata: read`, lists `GET /installation/repositories`
+  and revokes the token (`DELETE /installation/token`). It requires exactly one
+  installation, on the owner, `repository_selection: selected`, the demo as
+  the only repository, the three permissions, no events, not suspended.
+* `app-attest-installation` (method `human_attested`): the Human checks the
+  installation page in the UI against a fixed checklist and types the
+  repository name. Recorded as attested, not as an API verification; the
+  bootstrap App check later corroborates it.
+
+Without a record every step stops (dry runs list it as a blocker and exit
+WAITING_HUMAN). Every gh call is logged as method, endpoint and HTTP status
+(`app-api-calls.json`, `app-state.json`); gh's error line is kept with tokens,
+JWTs and key blocks redacted. A 404 means "absent"; any other failure stops
+with the call that failed.
 
 ## 4. Bootstrap
 
@@ -101,10 +130,20 @@ Do not, during W0:
 * approve workflow runs of fork PRs (public repository: anyone may open one);
 * create the ruleset by any route other than `app-protect`.
 
-`app-state` flags a merged PR, a moved `main`, repository secrets or extra
-rulesets, and every later step stops on them. If W0 was broken, archive the
-repository and start over with a new name. The legacy demo is unaffected
-either way.
+`app-state` measures W0 from the repository's `created_at` and reports the
+elapsed minutes. Abort conditions (every step stops, `W0 abort: …`):
+
+* W0 open longer than 120 minutes (warning after 60). The Human either
+  archives the repository and starts over with a new name, or decides to
+  continue with `--w0-extend-to <minutes>` (≤ 1440, recorded in
+  `app-state.json`);
+* a merged PR, a moved `main`, repository-level secrets, or extra rulesets;
+* branches other than `main`, `g0-bootstrap`, `g9-probe`;
+* collaborators other than the owner, deploy keys, or webhooks;
+* open PRs from this repository other than G0 / G9.
+
+Open fork PRs are a warning (do not approve their workflow runs). The legacy
+demo is unaffected either way.
 
 ## 6. Scenarios and expected results (fixed before any run)
 
