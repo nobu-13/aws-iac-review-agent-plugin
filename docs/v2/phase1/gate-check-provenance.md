@@ -74,10 +74,12 @@ second account would show.
 
 ### Option A — GitHub App check run (recommended for a personal repository)
 
-Spike (prototype, threat model, setup cost, recommendation):
-[spike-app-publisher.md](spike-app-publisher.md). The spike refines the
-names below to check `remediation-gate/verified` and environment
-`remediation-publisher`.
+**Decision:** adopted as an optional reference implementation, not a
+product dependency; not deployed. Design, threat model, permissions
+(including `statuses:write` for the expected source), the 2026-12-02 event
+policy, and the ordered Human steps with rollback:
+[spike-app-publisher.md](spike-app-publisher.md). It refines the names below
+to check `remediation-gate/verified` and environment `remediation-publisher`.
 
 | | Before | After |
 | --- | --- | --- |
@@ -87,7 +89,7 @@ names below to check `remediation-gate/verified` and environment
 | Can a PR workflow produce it? | yes (any job named `verify`) | only with the App's private key |
 | Where the key lives | — | an environment secret of environment `remediation-gate` whose deployment branches are the default branch only. Per the 2025-12-08 change, `pull_request` jobs evaluate environment rules against `refs/pull/<n>/merge` and cannot use it; `pull_request_target` evaluates against the default branch |
 | PR code executed | none | none (the publisher reads only the verify job's outputs) |
-| New permissions | — | App with `checks: write` only, installed on the demo repository; the workflow's `GITHUB_TOKEN` stays `contents: read` |
+| New permissions | — | App with Checks and Commit statuses write (the latter only because the ruleset's expected source requires it; the minted token gets `checks: write` only), installed on the demo repository; the workflow's `GITHUB_TOKEN` stays `contents: read` |
 
 Needs: create and install the App, an environment with a branch policy and
 the secret, a workflow change (publisher job), and a ruleset change (required
