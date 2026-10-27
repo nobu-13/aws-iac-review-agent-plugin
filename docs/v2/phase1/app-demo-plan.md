@@ -310,3 +310,83 @@ Without `--execute` it changes nothing. The key reaches `gh secret set` on
 stdin from a file outside any git work tree; the helper never prints or
 copies it. 75 offline tests cover the targets, pins, legacy refusal, payloads,
 the key handling, the classification and the offline gate run.
+
+## 11. Restart on a second App demo (W0 minimised)
+
+Status: **planned, nothing on GitHub created or changed**. The first App demo
+(`nobu-13/iac-remediation-app-gate-demo`) reached 109 of 120 W0 minutes with
+`main` only: no environment, no secret, no PR, no ruleset. It is kept as a
+record and archived after Human approval. W0 is not extended.
+
+Unchanged: App 5489276 (`nobu-13-remediation-gate`) and its existing key
+(fingerprint pinned), validator `5412a73`, gate scripts `f77a58c`, H-ENV
+`a24fb3f`, the legacy demo and ruleset `25921565`, PR #8, the W0 limit (120 min).
+
+New: `nobu-13/iac-remediation-app-gate-demo-2`, targets
+`appdemo2-targets.json` (same pins; `retired_demos` lists the first App demo,
+which every command from this file refuses to touch), working copy and
+evidence under `out/app-demo-2/`. `app-prepare` and `app-simulate` (11/11) have
+already run for it locally.
+
+### What changes in the flow
+
+* **The repository is created empty** (`app-create-repo`). With no branch
+  there is nothing to protect, so the App installation, JWT check,
+  environment, secret, variables and Actions policy are all done before `main`
+  exists.
+* **W0 starts when `main` is created**: the earlier of GitHub's
+  `branch_creation` activity for `main` and the helper's own record written
+  just before the push. If neither is available, the repository's creation
+  time (earlier, so conservative).
+* **`app-w0` covers the whole W0 with one approval**: push `main`, push
+  `g0-bootstrap` / `g9-probe` and open their PRs, wait for the G0 App check and
+  G9 MERGEABLE (records both), create the ruleset, read it back, write
+  `app-w0-summary.json` (start, end, minutes). Before anything it requires a
+  passing simulation for these heads, the scripts on GitHub, a fresh sealed
+  installation record, the environment with the secret, both variables, no
+  repository secret, an empty repository and the W0 abort checks. It cannot
+  check the Actions policy (UI only); the approval text names it. W0 lasts
+  about as long as one gate run (a few minutes; not measured yet).
+* **Installation move check**: the JWT record must list exactly the new demo;
+  a retired demo still selected, the legacy demo, or the new demo missing are
+  reported by name and block every step.
+* **`app-retire`** saves a read-only snapshot of its targets' demo, then
+  archives it (`gh repo archive`). Archiving makes the repository read-only and
+  stops workflows, which ends its W0 at once; `gh repo unarchive` reverses it.
+
+### Order and dependencies
+
+| # | Step | Kind | Depends on | Why this place |
+| --- | --- | --- | --- | --- |
+| R1 | `app-retire` (first App demo's targets) | GitHub, approval | — | ends the first demo's W0 before 120 min; keeps it as a record |
+| R2 | `app-create-repo` (demo-2) | GitHub, approval | simulation, scripts branch | nothing unprotected: no branch |
+| R3 | App → Configure: *Only select repositories* = demo-2 only (remove the first demo) | UI | R2 | an App can only be installed on an existing repository |
+| R4 | `app-verify-installation --app-key <pem>` | read-only + 1 h token, revoked | R3 | proves demo-2 only, seals the record (valid 24 h) |
+| R5 | `app-environment` | GitHub, approval | R4 | every changing step needs the installation record |
+| R6 | `app-secrets --pem <pem> --client-id <id>` | GitHub, approval | R5 | the secret lives in the environment |
+| R7 | Actions policy: allow `pull_request_target` for `.github/workflows/remediation-gate.yml` | UI | R2 | the first PR must start the gate |
+| R8 | `app-preflight` | read-only | R4–R7 | expect `phase: pre_w0`, no problems |
+| R9 | `app-w0` | GitHub, one approval | R8, within 24 h of R4 | the whole W0 |
+| R10 | delete the local `.pem` | local | R9 | the key is then only the environment secret |
+
+R7 can be done any time between R2 and R9. Scenarios (G1–G11) follow as before
+(`app-scenarios`, `app-evidence`, `app-push-update`, `app-steal`).
+
+### Rollback
+
+| Step | Rollback | Effect |
+| --- | --- | --- |
+| R1 | `gh repo unarchive nobu-13/iac-remediation-app-gate-demo --yes` | first demo writable again (W0 would reopen) |
+| R2 | archive (`app-retire` with `appdemo2-targets.json`) or delete by hand | nothing depends on it |
+| R3 | Configure: select the first demo again, remove demo-2 | — |
+| R4 | none | the token was revoked; if not, it expires within 1 h |
+| R5 | `gh api -X DELETE repos/<demo-2>/environments/remediation-publisher` | removes the secret as well |
+| R6 | `gh secret delete … --env remediation-publisher`, `gh variable delete …` | publish fails closed |
+| R7 | delete the policy | the gate does not start (fail closed) |
+| R9 before the ruleset | `app-retire` with `appdemo2-targets.json` | archive ends W0 at once |
+| R9 after the ruleset | delete the ruleset only if it is wrong (W0 reopens), otherwise keep | — |
+
+If `app-w0` stops (timeout, gate failure, ruleset differs) it says that W0 is
+open and offers exactly two ways on: re-run `app-w0 --execute` (it resumes and
+skips what is on GitHub) or `app-retire` (archive). The 120-minute limit and
+the abort conditions of §5 apply from the first push of `main`.
