@@ -203,11 +203,26 @@ stay as published; the scenarios run as the owner through a separate command
 set (handoff.md B). The items that need a write-only, non-bypass actor, a
 merge or a ruleset change are recorded as NOT VERIFIED there and below.
 
+## Owner run of the demo gate (G1–G6, G10)
+
+Run by the maintainer with `phase1_henv_owner.py`; saved evidence read by the
+agent. All seven gate runs came from the base gate and decided as expected
+(G1 success, the others failure at the verify step). The first
+classification marked all seven FAILED because the helper wrongly required
+the run SHA to differ from the PR head; GitHub records `pull_request_target`
+runs and their checks on the PR head. The rule is fixed and tested; offline
+re-classification gives gate PROVEN for all seven. A product finding remains:
+in G3 and G6 a PR workflow produced a same-named `verify` check from the same
+app, which the required-check rule cannot tell apart. Details, SHAs, run ids
+and options: [gate-check-provenance.md](gate-check-provenance.md).
+
 ## Not verified here
 
 | Item | Why | Where it gets verified |
 | --- | --- | --- |
-| Gate runs G1–G7 and G10 as the owner | not yet run | handoff.md B (owner run) |
+| Gate runs G1–G6, G10 as the owner | run; gate decisions proven offline, check links need one more read-only `owner-evidence` | gate-check-provenance.md |
+| Required check provenance (G3, G6) | FAILED: same-named check from an untrusted run | decision: gate-check-provenance.md |
+| G7 | not run (stopped for the decision) | handoff.md B |
 | AC28 write-only actor merge refusal, G1 positive mergeability, check-vs-review attribution, admin bypass, G8, G9 | no second account; a merge or ruleset change would be needed | NOT VERIFIED (separate approval and account required) |
 | Kiro Power install and SC-01 / SC-02 in Kiro, CLI-vs-Power payload equality | changes global Kiro settings | handoff.md C |
 | Independent review of the two ground-truth corrections | only the author agent reviewed them | Human review (H-P1) |

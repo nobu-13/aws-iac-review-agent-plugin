@@ -359,9 +359,9 @@
    ],
    "cases": [],
    "evidence": [
-    "handoff.md#g-ci"
+    "gate-check-provenance.md"
    ],
-   "note": "static part PASS; runtime: owner-run gate logs (event, workflow path, run SHA, validator pin, trusted contract) via handoff.md B"
+   "note": "runtime: all seven owner-run gate logs show the base checkout, pinned validator, trusted contract and read-only token (gate-check-provenance.md); the helper's run-SHA rule was wrong and is fixed"
   },
   {
    "id": "AC26",
@@ -372,13 +372,13 @@
    ],
    "cases": [],
    "evidence": [
-    "handoff.md#g-ci"
+    "gate-check-provenance.md"
    ],
    "note": "static part PASS; runtime: owner-run gate logs via handoff.md B"
   },
   {
    "id": "AC27",
-   "status": "WAITING_HUMAN",
+   "status": "FAIL",
    "method": "demo PRs with spoofed and skipped same-named checks, head update, missing protection",
    "tests": [],
    "cases": [
@@ -386,9 +386,9 @@
     "C24a"
    ],
    "evidence": [
-    "handoff.md#demo-scenarios"
+    "gate-check-provenance.md"
    ],
-   "note": "owner run: G3, G6, G7 (handoff.md B); base update G8 and the merge parts need a merge or a second account: NOT VERIFIED"
+   "note": "owner run: an untrusted PR workflow produced a 'verify' check from the same app next to the gate's failing one (G3 success, G6 skipped); the required check (name + app) cannot tell them apart. Decision needed: gate-check-provenance.md"
   },
   {
    "id": "AC28",

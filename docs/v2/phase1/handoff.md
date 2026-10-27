@@ -119,6 +119,15 @@ FAILED means the observation contradicts the expectation (for example the
 gate failed in an install step, or a spoof satisfied the rollup). It is
 reported as a finding, not retried around.
 
+### Result of the first owner run
+
+G1–G6 and G10 ran. The gate decided correctly from the base workflow; the
+helper's run-SHA rule was wrong (fixed); G3 / G6 showed that a PR workflow can
+produce a same-named `verify` check. **Stop before G7** until a decision on
+[gate-check-provenance.md](gate-check-provenance.md). The next step is only
+the read-only `owner-evidence` re-run (it now links check runs to their
+workflow runs by check suite).
+
 ### Not verifiable with the owner alone (NOT VERIFIED)
 
 * AC28: a write-only, non-bypass actor cannot merge a violating PR and can
