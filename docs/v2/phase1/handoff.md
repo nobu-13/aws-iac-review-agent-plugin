@@ -109,7 +109,7 @@ state. Each G is then classified by rules fixed in the code before any run:
 | ID | PROVEN when | Merge part (owner run) |
 | --- | --- | --- |
 | G1 | gate `verify` step success from the base gate; a successful `verify` appears in the PR status rollup | NOT_PROVEN: the owner is the only code owner and cannot approve their own PR |
-| G2, G4, G5, G10 | gate fails at the verify step only, run from the base gate (event `pull_request_target`, gate path, run SHA ≠ PR head, pinned validator, trusted contract, no relaxed contract) | NOT_PROVEN: review is always missing, so BLOCKED cannot be attributed to the check |
+| G2, G4, G5, G10 | gate fails at the verify step only, run from the base gate (event `pull_request_target`, gate path, run recorded on the PR head, pinned validator, trusted contract, no relaxed contract) | NOT_PROVEN: review is always missing, so BLOCKED cannot be attributed to the check |
 | G3, G6 | as above; FAILED if the PR's own same-named `verify` makes the rollup look successful / skipped without the gate's failure | NOT_PROVEN while two `verify` results exist |
 | G7 | after `owner-push-update`, the newest gate run (new head SHA in its log) fails and an earlier run succeeded | — |
 | G8 | always NOT_PROVEN: moving `main` needs a merge | — |

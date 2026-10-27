@@ -1,0 +1,162 @@
+# SPIKE PROTOTYPE (not deployed). Option A of docs/v2/phase1/gate-check-provenance.md.
+#
+# Same verification as docs/v2/phase1/ci/remediation-gate.yml, split into two
+# jobs of one base-branch workflow:
+#
+#   verify   no secrets, GITHUB_TOKEN contents: read. Checks out the base
+#            commit and the pinned validator, fetches the PR head as objects
+#            only, runs the verifier, exposes exit code, verified head SHA and
+#            payload digest as job outputs. Its own Actions check ("verify")
+#            is no longer the required check.
+#   publish  needs: verify, always runs. Uses environment
+#            "remediation-publisher" (deployment branches: default branch only,
+#            admin bypass disabled) to read the App private key, mints an
+#            installation token scoped to this repository with checks: write,
+#            and creates the check run "remediation-gate/verified" on the event's
+#            head SHA. It checks out nothing and runs no repository code except
+#            the pinned publisher script from the validator.
+#
+# The ruleset's required check becomes "remediation-gate/verified" with the
+# App as its expected source. A PR workflow can still name a job anything, but
+# it cannot create a check run as the App without the private key, and the
+# environment's branch policy keeps that key away from pull_request /
+# workflow_dispatch / push runs on any ref other than the default branch.
+#
+# Not applied anywhere. Applying it needs the Human steps listed in
+# docs/v2/phase1/spike-app-publisher.md (App, installation, environment,
+# secret, event policy, ruleset source).
+name: remediation-gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      exit_code: ${{ steps.verify.outputs.exit_code }}
+      head_sha: ${{ steps.verify.outputs.head_sha }}
+      payload_sha256: ${{ steps.verify.outputs.payload_sha256 }}
+    env:
+      VALIDATOR_REPOSITORY: nobu-13/aws-iac-review-agent-plugin
+      VALIDATOR_COMMIT: "0000000000000000000000000000000000000000"
+      CONTRACT_PATH: .iac-remediation/contracts/billing-mode-orders.yaml
+      CFN_LINT_VERSION: "1.46.0"
+      PYYAML_VERSION: "6.0.3"
+    steps:
+      - name: Check out the base revision (trusted configuration)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: subject
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the PR head as objects only
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -eu
+          git -C subject -c protocol.allow=never -c protocol.https.allow=always \
+            fetch --no-tags --no-recurse-submodules --no-write-fetch-head "$REPO_URL" \
+            "+refs/pull/${PR_NUMBER}/head:refs/remediation/head"
+          fetched="$(git -C subject rev-parse --verify refs/remediation/head^{commit})"
+          if [ "$fetched" != "$HEAD_SHA" ]; then
+            echo "PR head moved after this event; the newer push gets its own run." >&2
+            exit 1
+          fi
+
+      - name: Check out the pinned validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.VALIDATOR_REPOSITORY }}
+          ref: ${{ env.VALIDATOR_COMMIT }}
+          path: validator
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned tools (from the validator, not from the PR)
+        run: |
+          set -eu
+          python3 -m pip install "PyYAML==${PYYAML_VERSION}" "cfn-lint==${CFN_LINT_VERSION}"
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 validator/.github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Verify the candidate against the approved contract
+        id: verify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IACREVIEW_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          set -u
+          report="${RUNNER_TEMP}/remediation-report.json"
+          PYTHONPATH="${GITHUB_WORKSPACE}/validator" python3 -m iacreview.remediation verify \
+            --repo subject --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --config-rev "$BASE_SHA" --contract "$CONTRACT_PATH" \
+            --execution-mode trusted_ci --repository-id "$GITHUB_REPOSITORY" \
+            --output "$report"
+          status=$?
+          digest="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["metadata"]["payload_sha256"])' "$report" 2>/dev/null)"
+          {
+            echo "exit_code=${status}"
+            echo "head_sha=${HEAD_SHA}"
+            echo "payload_sha256=${digest}"
+          } >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+  publish:
+    needs: verify
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: remediation-publisher
+    permissions: {}
+    steps:
+      - name: Check out the pinned publisher only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: nobu-13/aws-iac-review-agent-plugin
+          ref: "0000000000000000000000000000000000000000"
+          path: validator
+          persist-credentials: false
+          sparse-checkout: docs/v2/phase1/ci/spike/publish_check.py
+          sparse-checkout-cone-mode: false
+
+      - name: Mint an installation token (checks write, this repository only)
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.REMEDIATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.REMEDIATION_APP_PRIVATE_KEY }}
+          permission-checks: write
+
+      - name: Publish the decision as the required check
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          CHECK_NAME: remediation-gate/verified
+          EVENT_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          VERIFY_JOB_RESULT: ${{ needs.verify.result }}
+          VERIFIED_HEAD_SHA: ${{ needs.verify.outputs.head_sha }}
+          VERIFY_EXIT_CODE: ${{ needs.verify.outputs.exit_code }}
+          PAYLOAD_SHA256: ${{ needs.verify.outputs.payload_sha256 }}
+        run: python3 validator/docs/v2/phase1/ci/spike/publish_check.py

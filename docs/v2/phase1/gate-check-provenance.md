@@ -74,6 +74,11 @@ second account would show.
 
 ### Option A — GitHub App check run (recommended for a personal repository)
 
+Spike (prototype, threat model, setup cost, recommendation):
+[spike-app-publisher.md](spike-app-publisher.md). The spike refines the
+names below to check `remediation-gate/verified` and environment
+`remediation-publisher`.
+
 | | Before | After |
 | --- | --- | --- |
 | Who decides | gate job (base workflow, `contents: read`) | unchanged |
