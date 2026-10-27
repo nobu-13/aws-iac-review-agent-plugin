@@ -209,6 +209,11 @@ Not verified: whether the ruleset UI or API accepts an App without
 
 ## 7. Human GitHub operations, in order, with rollback
 
+**Superseded** by [app-demo-plan.md](app-demo-plan.md): the legacy demo's
+ruleset and `main` are not changed; Option A is tested on a new repository
+whose first commit holds the App workflow. The table below is kept as the
+record of the earlier proposal only.
+
 Before H1, record the current state (read-only):
 `gh api repos/nobu-13/iac-remediation-gate-demo/rulesets/25921565 > ruleset-25921565.before.json`,
 the SHA of the demo `main`, and the published gate file's SHA-256. The

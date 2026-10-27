@@ -130,9 +130,9 @@ workflow runs by check suite).
 
 Decided since: Option A is an optional reference implementation, not
 deployed. H-ENV keeps `pinned_commit` `a24fb3f` and validator `5412a73`;
-the helper is not relaxed, so H-ENV runs are made from `a24fb3f`. Deploying
-A is a separate, ordered list of Human steps with rollback
-([spike-app-publisher.md](spike-app-publisher.md) §7). Independently of A,
+the helper is not relaxed, so H-ENV runs are made from `a24fb3f`. Option A
+is tested on a new App demo repository; the legacy demo stays as published
+([app-demo-plan.md](app-demo-plan.md)). Independently of A,
 the demo needs an Actions event policy allowing `pull_request_target` for
 the gate file before 2026-12-02, or the gate stops running (step H7).
 

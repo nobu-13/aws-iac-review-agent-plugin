@@ -347,10 +347,13 @@ def test_invalid_configuration_publishes_nothing(event_file: Path, overrides: Di
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("fake", [FakeGitHub(status=401), FakeGitHub(status=403), FakeGitHub(status=404), FakeGitHub(status=422),
-                                  FakeGitHub(status=500), FakeGitHub(status=200), FakeGitHub(status=302),
-                                  FakeGitHub(error=urllib.error.URLError("down")), FakeGitHub(error=TimeoutError())],
-                         ids=["401", "403", "404", "422", "500", "200", "302", "unreachable", "timeout"])
+@pytest.mark.parametrize("fake", [FakeGitHub(status=401), FakeGitHub(status=403), FakeGitHub(status=404), FakeGitHub(status=409),
+                                  FakeGitHub(status=422), FakeGitHub(status=429), FakeGitHub(status=500), FakeGitHub(status=502),
+                                  FakeGitHub(status=503), FakeGitHub(status=200), FakeGitHub(status=202), FakeGitHub(status=302),
+                                  FakeGitHub(error=urllib.error.URLError("down")), FakeGitHub(error=TimeoutError()),
+                                  FakeGitHub(error=ConnectionResetError())],
+                         ids=["401-bad-token", "403-forbidden-or-rate-limited", "404-not-installed", "409", "422-invalid", "429-rate-limited",
+                              "500", "502", "503", "200", "202", "302", "unreachable", "timeout", "reset"])
 def test_a_failed_publish_fails_the_job_so_the_required_check_stays_missing(
     event_file: Path, fake: FakeGitHub, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -363,15 +366,40 @@ def test_a_failed_publish_fails_the_job_so_the_required_check_stays_missing(
         FakeGitHub(app_id=15368), FakeGitHub(app_id=None), FakeGitHub(tamper={"app": None}),
         FakeGitHub(tamper={"head_sha": OTHER}), FakeGitHub(tamper={"name": "verify"}),
         FakeGitHub(tamper={"conclusion": "failure"}), FakeGitHub(tamper={"external_id": "999.1:" + DIGEST}),
-        FakeGitHub(tamper={"status": "in_progress"}), FakeGitHub(raw=b"not json"), FakeGitHub(raw=b"[]"), FakeGitHub(raw=b""),
+        FakeGitHub(tamper={"status": "in_progress"}), FakeGitHub(tamper={"status": "queued", "conclusion": None}),
+        FakeGitHub(tamper={"name": None}), FakeGitHub(tamper={"head_sha": HEAD.upper()}),
+        FakeGitHub(raw=b"not json"), FakeGitHub(raw=b"[]"), FakeGitHub(raw=b""), FakeGitHub(raw=b"\xff"),
     ],
     ids=["actions-app", "no-app-id", "no-app", "other-head", "other-name", "other-conclusion", "other-external-id",
-         "not-completed", "text", "array", "empty"],
+         "not-completed", "queued", "no-name", "head-case", "text", "array", "empty", "binary"],
 )
 def test_a_response_that_does_not_confirm_the_request_is_not_success(
     event_file: Path, fake: FakeGitHub, capsys: pytest.CaptureFixture[str]
 ) -> None:
     assert run(env(event_file), fake, capsys) == 4
+
+
+def test_the_app_id_may_come_back_as_a_number_or_a_string(event_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    assert run(env(event_file), FakeGitHub(app_id=int(APP_ID)), capsys) == 0
+    assert run(env(event_file), FakeGitHub(app_id=APP_ID), capsys) == 0
+    assert run(env(event_file), FakeGitHub(app_id=APP_ID + "0"), capsys) == 4
+
+
+def test_a_failed_publish_is_never_retried_as_success(event_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    # One POST per run: a retry belongs to a re-run of the workflow, which gets a new external_id attempt.
+    fake = FakeGitHub(status=502)
+    assert run(env(event_file), fake, capsys) == 3 and len(fake.requests) == 1
+
+
+def test_error_messages_carry_no_response_body_or_token(event_file: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    class Leaky(FakeGitHub):
+        def open(self, request: Any, timeout: float = 0) -> FakeResponse:
+            self.requests.append(request)
+            raise urllib.error.HTTPError(request.full_url, 403, "secret-body " + TOKEN, {}, io.BytesIO(b"secret-body"))  # type: ignore[arg-type]
+
+    code = pub.publish(env(event_file), opener=Leaky())
+    err = capsys.readouterr().err
+    assert code == 3 and "secret-body" not in err and TOKEN not in err and "HTTP 403" in err
 
 
 def test_an_oversized_response_is_not_parsed(event_file: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:

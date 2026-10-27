@@ -77,8 +77,9 @@ second account would show.
 **Decision:** adopted as an optional reference implementation, not a
 product dependency; not deployed. Design, threat model, permissions
 (including `statuses:write` for the expected source), the 2026-12-02 event
-policy, and the ordered Human steps with rollback:
-[spike-app-publisher.md](spike-app-publisher.md). It refines the names below
+policy: [spike-app-publisher.md](spike-app-publisher.md). It is tested on a
+new App demo repository; this demo's ruleset and `main` stay unchanged
+([app-demo-plan.md](app-demo-plan.md)). It refines the names below
 to check `remediation-gate/verified` and environment `remediation-publisher`.
 
 | | Before | After |
