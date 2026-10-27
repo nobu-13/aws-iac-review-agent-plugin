@@ -130,8 +130,31 @@ merged; G1's CLEAN state is read, not used.
 
 `app-simulate` runs the pinned gate offline (validator `5412a73`,
 `gate_outputs.py` and the publisher's decision from `f77a58c`) on every
-prepared head. All eleven give the App conclusion above (G0/G1 VERIFIED,
-the rest BLOCKED).
+prepared head, with the same report hand-off as the workflow (`verify
+--output <dir>/remediation-report.json`, then `gate_outputs.py` reads that
+file). A scenario passes only if the verifier wrote a decision report,
+`gate_outputs.py` accepted it, the decision is the expected one **and** the
+report carries the expected cause codes (below). A failure caused by a
+missing or refused report is the gate failing closed, not the scenario's
+evidence, and fails the simulation.
+
+| ID | Decision | Cause codes required |
+| --- | --- | --- |
+| G0, G1 | VERIFIED | none (any code fails) |
+| G2, G9 | BLOCKED | `template_change_outside_scope` (IAM edit) |
+| G3, G3S, G6, G11 | BLOCKED | `file_added_outside_scope` (PR workflow file) |
+| G4 | BLOCKED | `file_added_outside_scope`, `template_change_outside_scope` |
+| G5 | BLOCKED | `file_modified_outside_scope` and one of `template_change_outside_scope` / `operation_not_allowed` / `parent_replaced` |
+| G10 | BLOCKED | `file_modified_outside_scope`, `file_added_outside_scope`, `template_change_outside_scope` |
+
+Before running, it checks that the interpreter imports PyYAML 6.0.3 and that
+cfn-lint 1.46.0 and cfn-guard are on PATH (the workflow's pins); otherwise it
+stops without simulating. Every step that pushes (`app-push-scripts`,
+`app-publish`, `app-bootstrap`, `app-scenarios`, `app-push-update`,
+`app-steal`) refuses unless the saved result passed for all scenarios with
+the same validator, gate-scripts pin, demo `main` and scenario heads. The
+simulation runs the verifier on the local Python (3.9 here); the workflow uses
+3.11 — a difference the GitHub run covers.
 
 ## 7. Evidence
 
