@@ -82,6 +82,26 @@ before any setting is changed:
   repository name. Recorded as attested, not as an API verification; the
   bootstrap App check later corroborates it.
 
+An App installable "only on this account" is private, so `GET /apps/{slug}`
+answers 404. Only then may the JWT record stand in for the App's identity: the
+record carries what `GET /app` returned with the App's own JWT (id, slug,
+owner, permissions, events), and these are checked like the public answer.
+When the public endpoint does answer, both must agree. Any other status stops.
+
+The JWT record (`record_version` 2) is accepted only if all of these hold;
+otherwise every step fails closed:
+
+* exact key set, `problems: []`, the five calls with 200 / 200 / 201 / 200 / 204;
+* `verified_at` within the last 24 h and not in the future (5 min skew);
+* App identity, installation (selected, demo only, three permissions, no
+  events, not suspended) as planned;
+* sealed: SHA-256 of the canonical body, an RS256 signature over it made with
+  the key GitHub accepted in the same run, and the key's public half;
+* the key's fingerprint (`base64(SHA-256(public key DER))`, GitHub's documented
+  format) equals `app_key_fingerprint` in the targets, which the Human copies
+  from App settings → Credentials → Key pairs. A record edited after sealing,
+  re-signed with another key, or carrying a swapped key is rejected.
+
 Without a record every step stops (dry runs list it as a blocker and exit
 WAITING_HUMAN). Every gh call is logged as method, endpoint and HTTP status
 (`app-api-calls.json`, `app-state.json`); gh's error line is kept with tokens,
