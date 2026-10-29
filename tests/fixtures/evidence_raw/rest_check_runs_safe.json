@@ -1,0 +1,31 @@
+{
+  "check_runs": [
+    {
+      "app": {
+        "id": 1000001,
+        "name": "Synthetic App",
+        "slug": "synthetic-app"
+      },
+      "conclusion": "failure",
+      "external_id": "900000002.1:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "html_url": "https://github.com/synthetic-owner/synthetic-repo/runs/900000001",
+      "id": 900000001,
+      "name": "remediation-gate/verified",
+      "output": {
+        "summary": "file_added_outside_scope",
+        "title": "Remediation gate: BLOCKED"
+      },
+      "status": "completed"
+    }
+  ],
+  "security_and_analysis": {
+    "secret_scanning": {
+      "status": "disabled"
+    },
+    "secret_scanning_push_protection": {
+      "status": "disabled"
+    }
+  },
+  "total_count": 1
+}

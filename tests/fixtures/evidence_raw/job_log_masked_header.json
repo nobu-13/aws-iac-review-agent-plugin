@@ -1,0 +1,8 @@
+{
+  "log_excerpt": [
+    "git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***",
+    "GITHUB_TOKEN Permissions",
+    "Contents: read",
+    "Metadata: read"
+  ]
+}

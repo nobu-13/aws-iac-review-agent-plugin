@@ -1,0 +1,3320 @@
+{
+  "created_by_work_package": "WP3",
+  "entries": [
+    {
+      "completeness": "INCOMPLETE",
+      "description": "App JWT installation check (2026-10-27T05:01:04Z)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E01",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "A01"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "5341953e808e7bc8c3b68a9683873225beff7252d2805481eb27253caf71517b",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-installation.json",
+          "present": true,
+          "size": 2257
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "App installation re-check (2026-10-28T07:10:06Z)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E02",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "A01"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "5fc1380b8990acd6a6bd1bc6d4d121677e47ee63361a6f0dfb381fae4491f83c",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-installation.20261028T071009470273Z-1.json",
+          "present": true,
+          "size": 2257
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Ruleset created_at, secret names",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E03",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "A02",
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "3726beace6320b99db437db1f7b584c9aec31595021b75495b8e187bf9767ac5",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-state-after-protect.json",
+          "present": true,
+          "size": 1402
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Ruleset payload sent (integration_id, bypass_actors)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E04",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "A02"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "66077657ed1345d43385a8e55a4740fbde64c2c8a891debf2828015a9d24f902",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-ruleset.json",
+          "present": true,
+          "size": 934
+        }
+      ],
+      "source_type": "LOCAL_FILE",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Effective rules of main (field effective_rules_main)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E05",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "A02",
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "aef16bc06cbcdaa3fc353a4ad5c998ba1d2ab63a25b2a00665e56061f410bdce",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.20261028T040542388065Z-1.json",
+          "present": true,
+          "size": 11713
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Environment main only, no admin bypass",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E06",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "A06"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "cd31eeb250bc63cc16d4a17951e458d9eb6619ba52855d2c8c999b5e2e7456b1",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-environment.json",
+          "present": true,
+          "size": 208
+        },
+        {
+          "current_sha256": "e3b96b503dae931a5a672cb62a16fc1b73386726a9b84bc4d9d4dd01f2698cae",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-environment-policy.json",
+          "present": true,
+          "size": 35
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Actions policy, key reference scope",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E07",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "A07",
+          "G11"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "e918d8f6b319de3afc1878d27489018b81c05b2617baa8fa051988f3ba073754",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11-preflight.json",
+          "present": true,
+          "size": 1958
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Local time just before the main push (07:08:53Z)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E08",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "fccce0e6c5dd94d2bd8b190c01c7720ef66d3c8da39b663d79ee1e93810a1b03",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-start.json",
+          "present": true,
+          "size": 96
+        }
+      ],
+      "source_type": "LOCAL_FILE",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "W0 views: G0 CLEAN, G9 MERGEABLE",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E09",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G0",
+          "G9",
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "11d7cb6d1a8fc07bba335aac03908053d14a33ee594bc3770e7f1c56cb1f2f8f",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-views.json",
+          "present": true,
+          "size": 1721
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "W0 summary minutes -29884748.9 (old parser)",
+      "historical_classification": {
+        "index_status": "revoked",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E10",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "a5c55035f295134748dd1e189284a8fc3e1228023cfa7bdd06d99ddd2592b027",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-summary.json",
+          "present": true,
+          "size": 210
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "REVOKED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "W0 EXACT 57.759 s (no verification record)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E11",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "cbe8e94d80733f902ea3fbdeab5667059db0b8d98bf568bea37508646a904584",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-measurement.20261027T074710078440Z-1.json",
+          "present": true,
+          "size": 2645
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "SUPERSEDED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "W0 BOUNDED 52.759-65.247 s (final)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E12",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "3b44f7a4367518ad65f75bbb69d9178daeeec596af32572c3f2fd41eb1603e8c",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-measurement.20261027T075258100273Z-1.json",
+          "present": true,
+          "size": 1520
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "W0 BOUNDED 0.001-65.247 s",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E13",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "c30c0ff8ff17dbe635a7a142997e993d381e268eb03fea2111f3901cb549bfde",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-measurement.json",
+          "present": true,
+          "size": 1858
+        },
+        {
+          "current_sha256": "c6989d9ad6d4a33fc3169bc432db6dee94ad03723183e2c4f38036d7a5a774af",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-w0-measurement.20261027T072345636421Z.json",
+          "present": true,
+          "size": 2076
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "SUPERSEDED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "First demo: W0 125 minutes (limit 120)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E14",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0-demo1"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "e50f250ce943c28f19d998fc08be80e013fef3b377d007c0e053eb7e8a6f9c7b",
+          "path": ".agents/tasks/phase1/henv/out/app-demo/app-retire-snapshot.json",
+          "present": true,
+          "size": 3547
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Offline simulation 11/11",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E15",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC06",
+          "AC09",
+          "AC10"
+        ],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "1a19cf4add5cd483c176f15f5db199933694f776180281f9d7b42f91b6cf5f6e",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-simulate.json",
+          "present": true,
+          "size": 8739
+        }
+      ],
+      "source_type": "LOCAL_FILE",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Gate run job logs (11 runs, verify + publish), gh run view --log text",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E16",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC25",
+          "AC26"
+        ],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "c0a1e150b4e38c26ec46f03900be4758fa356877cd98b6c1f5e3a293f3cf3217",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40465385826-publish.log",
+          "present": true,
+          "size": 29087
+        },
+        {
+          "current_sha256": "cbaf270ccbc1d9a622fbe9d68a9843922cd668210800c770bd7406ad9b47fc73",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40465385826-verify.log",
+          "present": true,
+          "size": 106842
+        },
+        {
+          "current_sha256": "f8a26c84402f295891103fab90ce5552b7872708af689f99d2c4785b1d1a9969",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40465389998-publish.log",
+          "present": true,
+          "size": 29091
+        },
+        {
+          "current_sha256": "822049f34cf4b54cac63ae5d8a42770918932abb5acdcef4e87570127a7b97db",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40465389998-verify.log",
+          "present": true,
+          "size": 107016
+        },
+        {
+          "current_sha256": "2e6368a21e61e57b53bf75bd1d593ee4aa6c0f6298b88335fb2e940e4f90c086",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470463117-publish.log",
+          "present": true,
+          "size": 29085
+        },
+        {
+          "current_sha256": "77d10025bc484b024e51da90a46fd14fe1de815e3c37dc4062bb29fc60e5c7a0",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470463117-verify.log",
+          "present": true,
+          "size": 107303
+        },
+        {
+          "current_sha256": "9851553d1b1de8cdaf4fa4cf3faee9f182f90ac7d37bf855d7a90d5a67e3effa",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470473038-publish.log",
+          "present": true,
+          "size": 29087
+        },
+        {
+          "current_sha256": "c9aba5735af437434b1b3d03ac54eecc981e55b7c016fa580c3df31a135559df",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470473038-verify.log",
+          "present": true,
+          "size": 107471
+        },
+        {
+          "current_sha256": "6c921faec8cba69a7afbb99a3dd0c1a63547948dee392e119c9255d869e8c0d9",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470482710-publish.log",
+          "present": true,
+          "size": 29087
+        },
+        {
+          "current_sha256": "3c49be291ce4ef03ca315c73ef0bbf1e8d136575d5a298905eee1c4e105d55b1",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470482710-verify.log",
+          "present": true,
+          "size": 107787
+        },
+        {
+          "current_sha256": "ec3f5859232bd192917a10a50cbecd3d42000ca6eceb2a4157de04bca826d783",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470490668-publish.log",
+          "present": true,
+          "size": 29084
+        },
+        {
+          "current_sha256": "f1b2ee8e90607a55df4c0e39361aa4f8b1b02cdf6e25b7ccf3e7e9268a32ec18",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470490668-verify.log",
+          "present": true,
+          "size": 107971
+        },
+        {
+          "current_sha256": "e37db4396ba3184b970f5c6b2142b764a3c3062b4c2933c4fc82d7fe18e548c2",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470497713-publish.log",
+          "present": true,
+          "size": 29084
+        },
+        {
+          "current_sha256": "93cbb16f846517765c415bf6163077e0b7cdcb98f29b17f6e83f6fca5fc53532",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470497713-verify.log",
+          "present": true,
+          "size": 107973
+        },
+        {
+          "current_sha256": "284b5c8d64f1eefc33f135dcbeabf9b1f6de3d2eacde496c413b778e65b5699e",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470507134-publish.log",
+          "present": true,
+          "size": 29085
+        },
+        {
+          "current_sha256": "50a934084d07d687dd8ee4e29b772c8b0e6eb20291a029aaad8b24cb38e2ddf5",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470507134-verify.log",
+          "present": true,
+          "size": 108130
+        },
+        {
+          "current_sha256": "09da80ab1246a7c9b7bdd0fc04e502cd9e6ff6ca030c45a55a21352b0eea3f56",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470515127-publish.log",
+          "present": true,
+          "size": 29091
+        },
+        {
+          "current_sha256": "b82ce22ff3a1c1f48ea6c598a3056e196d92fa9522643b51a31042b0c5d2cdcd",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470515127-verify.log",
+          "present": true,
+          "size": 108279
+        },
+        {
+          "current_sha256": "40491ec85adefb5260c75ab7698b06966bf278864940af8cab0ed3106c884e8b",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470526682-publish.log",
+          "present": true,
+          "size": 29085
+        },
+        {
+          "current_sha256": "d0394a900ffa8975dce5b8ecc84426669ada27e875001db61483aba7c4966271",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40470526682-verify.log",
+          "present": true,
+          "size": 108283
+        },
+        {
+          "current_sha256": "5559bf873a1d583de2a6a6b0fcbeaf7beb38f3c90f2e19e957c143f5c27d76b3",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40633751205-publish.log",
+          "present": true,
+          "size": 29084
+        },
+        {
+          "current_sha256": "745621ee4882342b1d98b2b2b46e9845b3e0f425c7d0e8fc614081085f84f1ef",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-run-40633751205-verify.log",
+          "present": true,
+          "size": 108753
+        }
+      ],
+      "source_type": "LOCAL_FILE",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "JOB_LOG_TEXT_NOT_API_BODY",
+        "NO_CAPTURE_TIMESTAMP",
+        "OVERWRITABLE_SAVE_PATH",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Downloaded gate report artifacts (11)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E17",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC06",
+          "AC09",
+          "AC10",
+          "AC19",
+          "AC22"
+        ],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "272fa5736d85e98af91212c73fad7b7a9ce837872a79b3e7e807d825a48958d0",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40465385826/remediation-report.json",
+          "present": true,
+          "size": 5423
+        },
+        {
+          "current_sha256": "1387033fffa09078fbcc6ded01318b9d7e0fcccf1b38a2ed77b64851751052bd",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40465389998/remediation-report.json",
+          "present": true,
+          "size": 5832
+        },
+        {
+          "current_sha256": "27175863e4e6abf2282e16484c35687fcaa1423f7fd2a015688ca3a6c6267940",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470463117/remediation-report.json",
+          "present": true,
+          "size": 5423
+        },
+        {
+          "current_sha256": "be0417500f5da3fd8b6d16e77bd43ff9a1cd8ea61de835de23f66dfcad352156",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470473038/remediation-report.json",
+          "present": true,
+          "size": 5832
+        },
+        {
+          "current_sha256": "b76eb3dad35c600bf01b38987c48ed3434a29ee7ef7784e00da143605f33f30c",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470482710/remediation-report.json",
+          "present": true,
+          "size": 5631
+        },
+        {
+          "current_sha256": "bf7dbcf84c0b35203ccc5b76d7af319e96f46ceb83c86ab6c38b66a37e48d0ee",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470490668/remediation-report.json",
+          "present": true,
+          "size": 5631
+        },
+        {
+          "current_sha256": "0f38ce2678a431d195b3a62618cdb3e5dc5d6387a02494de3e38ba8d3ce3d9b0",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470497713/remediation-report.json",
+          "present": true,
+          "size": 6032
+        },
+        {
+          "current_sha256": "afaab6d566b865609e2d81094b5891054bde6e20ea1d2cf5cbefa918c5b907c1",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470507134/remediation-report.json",
+          "present": true,
+          "size": 6192
+        },
+        {
+          "current_sha256": "397485592697249223014bc0b14eff25dabc3c3685d32d91ac2ff744cc8ccad9",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470515127/remediation-report.json",
+          "present": true,
+          "size": 5631
+        },
+        {
+          "current_sha256": "4a5f9653101d9713b51e5a401cd6fbc85f5855f0138eff4801cea61d9ea153bb",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40470526682/remediation-report.json",
+          "present": true,
+          "size": 6235
+        },
+        {
+          "current_sha256": "99483c344bb4e0cfc40498106c9ed615d512dc78ec3086e224efbffb1f01759c",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/artifacts/40633751205/remediation-report.json",
+          "present": true,
+          "size": 5631
+        }
+      ],
+      "source_type": "LOCAL_FILE",
+      "traceability_limitations": [
+        "ARTIFACT_FILE_HASH_NOT_RECORDED_AT_DOWNLOAD",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "gate / app_check / merge axes and isRequired values (helper output)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": "required axis re-decided by rev2 against s7 (G3/G3S/G6 FAILED); G11 item revoked"
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E18",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC06",
+          "AC19",
+          "AC25",
+          "AC26",
+          "AC27",
+          "AC28"
+        ],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "a12963494033d6a982727eee3af45a3212865722f061c7b7bb5a0241459c5e20",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-evidence.20261028T045529589034Z-1.json",
+          "present": true,
+          "size": 99543
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "G11_ITEM_REVOKED",
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "REQUIRED_AXIS_REDECIDED_IN_REV2",
+        "TRANSCRIBED_FIELDS"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Same classification as E18 (earlier)",
+      "historical_classification": {
+        "index_status": "intermediate",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E19",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "a12963494033d6a982727eee3af45a3212865722f061c7b7bb5a0241459c5e20",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-evidence.20261028T044355543031Z-1.json",
+          "present": true,
+          "size": 99543
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "G11_ITEM_REVOKED",
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Reclassified earlier evidence",
+      "historical_classification": {
+        "index_status": "intermediate",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E20",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "30236cb171b5718b7b1ed9f538c87376b5806914ae33b9f658eeea248c161b43",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-evidence-reclassified.json",
+          "present": true,
+          "size": 108844
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Shows G2 etc. as FAILED (wrong rule)",
+      "historical_classification": {
+        "index_status": "revoked",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E21",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G0",
+          "G1",
+          "G10",
+          "G11",
+          "G2",
+          "G3",
+          "G3S",
+          "G4",
+          "G5",
+          "G6",
+          "G9"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "e989c7c4a63241b8606402c0001c68f0ee63ea4315830d40bc4f72074b14614e",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-evidence.json",
+          "present": true,
+          "size": 70012
+        },
+        {
+          "current_sha256": "987cd7c21d8ead98c3ff221e30a4b6719ce1a3bb2217ce778202a24ff1957152",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/app-evidence.md",
+          "present": true,
+          "size": 4206
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "REVOKED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 B1/B2/B3 final, status history",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E22",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "aef16bc06cbcdaa3fc353a4ad5c998ba1d2ab63a25b2a00665e56061f410bdce",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.20261028T040542388065Z-1.json",
+          "present": true,
+          "size": 11713
+        },
+        {
+          "current_sha256": "222dca042a3da457b7da11ce62f5bcfe9cc5be8c696664abf31d784fad940cf4",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.20261028T040542388697Z-1.md",
+          "present": true,
+          "size": 1016
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "PRE_DEFINITION_TIME_UNVERIFIABLE",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 before any post",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23-1",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "536e2fe7ea10b09047545ce207a64d586894030fb580042f5dc541e192c98bb8",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.json",
+          "present": true,
+          "size": 5897
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "SUPERSEDED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 B1 observation",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23-2",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "f9b347da80d1de7e2aa5781155129c2ba3bdb51ec818b245be572cba741be9d9",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.20261028T040004673403Z-1.json",
+          "present": true,
+          "size": 8008
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "SUPERSEDED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 B2 observation",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23-3",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "953324bbc61c2fce65481ee60e1697e8fc20bb5cb393e1a8781b5f0dbe012685",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-evidence.20261028T040217185864Z-1.json",
+          "present": true,
+          "size": 9847
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "SUPERSEDED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 post record without status_id",
+      "historical_classification": {
+        "index_status": "not_used",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-1",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "550a97443c13c50ac51979e56d8d17a9afa809f3c780ef722b6786043e6f3a3f",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.json",
+          "present": true,
+          "size": 245
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NOT_USED_FOR_DECISION",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 status 57436545514 (success)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-2",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "3ab48dcee53d87ea832620febbd1fd70ff9bd5dca9a81746d851baa25ee0532d",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.20261028T035944597353Z-1.json",
+          "present": true,
+          "size": 313
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 post record without status_id",
+      "historical_classification": {
+        "index_status": "not_used",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-3",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "46ea4ebb68d6490da6515d9f1f4db0f85e794c6b96dc70412231cf3c294d8867",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.20261028T040118348473Z-1.json",
+          "present": true,
+          "size": 245
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NOT_USED_FOR_DECISION",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 status 57436649900 (failure)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-4",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "a5b6a52b6b59fb53f686f30b4c2b032a4d5d46f12024945c5a0bd4a3ab6f0903",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.20261028T040158338565Z-1.json",
+          "present": true,
+          "size": 313
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 post record without status_id",
+      "historical_classification": {
+        "index_status": "not_used",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-5",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "6edc1d84157f63b650c2222a516dcc1ab1359d9c999e8063c47ff0251790e56b",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.20261028T040455904421Z-1.json",
+          "present": true,
+          "size": 247
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NOT_USED_FOR_DECISION",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G12 status 57436800269 (success)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E23b-6",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "ed12daa196e68ce2dc2499b73ece595cd8b6c80fb56a9d29870fac7bf966a7c6",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g12-status-posts.20261028T040518447449Z-1.json",
+          "present": true,
+          "size": 315
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G11 incident: three findings (runs human-reported)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E24",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "d3e9fea815cf0d4ef55b2da93131f431829f4203e2ebf6911a9333b40a3ea0fc",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11-incident-evidence.json",
+          "present": true,
+          "size": 2528
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "HUMAN_REPORTED_PARTS",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G11 artifact-mismatch incident note",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E25",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "6ffaf020e04702a413071765d2589f5276c66d2a560c8f12bca689329d483d5b",
+          "path": ".agents/tasks/phase1/henv/g11-artifact-mismatch-incident.md",
+          "present": true,
+          "size": 3614
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Branch integrity: drift detected",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E26",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "0dbdcab3184aa8a64e70a6a94920957d2173094bee39d135da8222e44d20475a",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/branch-integrity.20261028T053023925824Z-1.json",
+          "present": true,
+          "size": 36846
+        },
+        {
+          "current_sha256": "1e00f71b595a18c4a268d72c8124f5aede9022ba2012e3c78374d17b0f5311e1",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/branch-integrity.20261028T055746603637Z-1.json",
+          "present": true,
+          "size": 36846
+        }
+      ],
+      "source_type": "LOCAL_GIT_DERIVED",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Existing PR classification",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E27",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11",
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "5109fe5fa14abef3fb29bdcf981e8cc4f1556325854247a130d2f91f1bb3edf7",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/existing-pr-classification.json",
+          "present": true,
+          "size": 31923
+        }
+      ],
+      "source_type": "LOCAL_GIT_DERIVED",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G11b integrity gate ready, refspec",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E28",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "7b92541f9b5db639564f7cf0be0374b862f52773d145921eba5f5a021afd8695",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11b-integrity.20261028T071027277739Z-1.json",
+          "present": true,
+          "size": 4357
+        }
+      ],
+      "source_type": "LOCAL_GIT_DERIVED",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G11b integrity intermediate records",
+      "historical_classification": {
+        "index_status": "intermediate",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E28-i",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "6732901eee581d759f349dc6df75e6aa8f14b528dafe8017f6b4a057230f9c54",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11b-integrity.json",
+          "present": true,
+          "size": 634
+        },
+        {
+          "current_sha256": "f0d6a87ebb1acd4aeb7eedee1f7ac6e9bbe75dc0e7263f91d75492ce4312fd1d",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11b-integrity.20261028T061811862216Z-1.json",
+          "present": true,
+          "size": 542
+        },
+        {
+          "current_sha256": "8008b8b47619a378dc9cb901e0865cedd145b7bddfb0ce835a89f7192bd310a3",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11b-integrity.20261028T062453831890Z-1.json",
+          "present": true,
+          "size": 4357
+        }
+      ],
+      "source_type": "LOCAL_GIT_DERIVED",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Push integrity: commit / tree, 6 file SHA-256",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E29",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "cf885c25c986ca17f5f9e47ea7b0d51285d5b3e7d2102564df735e210f903b86",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/push-integrity.json",
+          "present": true,
+          "size": 2594
+        }
+      ],
+      "source_type": "LOCAL_GIT_DERIVED",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "G11b probe runs: environment refused, no step",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E30",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "8cfc5266a998cc6fec549a3d4bb9b8b2765b620c9481424d47b91a2bea14bd1d",
+          "path": ".agents/tasks/phase1/henv/out/app-demo-2/g11b-evidence.json",
+          "present": true,
+          "size": 6443
+        }
+      ],
+      "source_type": "DERIVED_HELPER_OUTPUT",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Legacy demo AC27 FAIL",
+      "historical_classification": {
+        "index_status": "current",
+        "note": "historical hash covers the tracked document only"
+      },
+      "historical_hash": {
+        "kind": "git_blob",
+        "recorded_in": "git commit 4bd6e015d88b01d34dc83dc2b2d2ffb0058358b2",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "docs/v2/phase1/gate-check-provenance.md": "4ad253379a4123a30568cbbcd7fbe19b987b1b50"
+        }
+      },
+      "legacy_evidence_id": "E31",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "legacy-G3",
+          "legacy-G6"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "b05c4ac592dfa53c632969d5b09e083a992c51ba4a5f890e16753051b700d263",
+          "path": "docs/v2/phase1/gate-check-provenance.md",
+          "present": true,
+          "size": 7937
+        },
+        {
+          "current_sha256": "5434898a730ac8ea62752ad374b00b9cf84415a0630e8378cb6c0367c470fdc5",
+          "path": ".agents/tasks/phase1/henv/out/owner-evidence.md",
+          "present": true,
+          "size": 3351
+        },
+        {
+          "current_sha256": "096b6e6444dac717e8f877c5363daea2ba6b07dfac0ce5a45673d56117bf10e6",
+          "path": ".agents/tasks/phase1/henv/out/owner-evidence-reclassified.md",
+          "present": true,
+          "size": 3216
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED",
+        "NO_CAPTURE_TIMESTAMP",
+        "PARTLY_UNTRACKED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "53 case comparison",
+      "historical_classification": {
+        "index_status": "current",
+        "note": "historical hash covers the tracked document only"
+      },
+      "historical_hash": {
+        "kind": "git_blob",
+        "recorded_in": "git commit 4bd6e015d88b01d34dc83dc2b2d2ffb0058358b2",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "docs/v2/phase1/evaluation.md": "2da6a6c2c39cbbc14ae592df0a270306f9ac4058"
+        }
+      },
+      "legacy_evidence_id": "E32",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC45",
+          "AC46"
+        ],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "b3ce359385d3f037bdcb75edf3e2357af36c6fc093288ee84f74502c70e900ff",
+          "path": "docs/v2/phase1/evaluation.md",
+          "present": true,
+          "size": 7879
+        },
+        {
+          "current_sha256": "cbf0557c34fd3bdad8b2b382d5019ec8ecaae5697dda341b4c89728e6bb818b2",
+          "path": ".agents/tasks/phase1/runs2/compare3.json",
+          "present": true,
+          "size": 61937
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED",
+        "NO_CAPTURE_TIMESTAMP",
+        "PARTLY_UNTRACKED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Local gate, CI 6 environments",
+      "historical_classification": {
+        "index_status": "current",
+        "note": "historical hash covers the tracked document only"
+      },
+      "historical_hash": {
+        "kind": "git_blob",
+        "recorded_in": "git commit 4bd6e015d88b01d34dc83dc2b2d2ffb0058358b2",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "docs/v2/phase1/implementation-evidence.md": "9758ef15b0e53a8ff69265ddfe3cce9ab41d3b18"
+        }
+      },
+      "legacy_evidence_id": "E33",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC01",
+          "AC43"
+        ],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "c0f910eb84517c1a6024339d7035481bf3b3d4c59cea1bbe9047efc1cae8ee3a",
+          "path": "docs/v2/phase1/implementation-evidence.md",
+          "present": true,
+          "size": 16352
+        },
+        {
+          "current_sha256": "3560117b2fd864a527f77f859942c6c502148051bc07f6331df941d4e30b704c",
+          "path": ".agents/tasks/phase1/henv/out/ci-run-40416536363-summary.txt",
+          "present": true,
+          "size": 53619
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED",
+        "NO_CAPTURE_TIMESTAMP",
+        "PARTLY_UNTRACKED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "AC map (2026-10-27)",
+      "historical_classification": {
+        "index_status": "stale",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "git_blob",
+        "recorded_in": "git commit a24fb3f837fc63225e1accc5a7d1a8d961d5be99",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "docs/v2/phase1/ac-traceability.json": "7a62860441f3d3020410e9f955a5e5e49e42ff95"
+        }
+      },
+      "legacy_evidence_id": "E34",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC42"
+        ],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "b6df66bdf8be4ff8a6e7f9ba025bfcf5c2b12c2aa81b043905dbf90489284e60",
+          "path": "docs/v2/phase1/ac-traceability.json",
+          "present": true,
+          "size": 15363
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED",
+        "NO_CAPTURE_TIMESTAMP",
+        "STALE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Pre-fixed criteria s5-s7, s11",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "git_blob",
+        "recorded_in": "git commit 4bd6e015d88b01d34dc83dc2b2d2ffb0058358b2",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "docs/v2/phase1/app-demo-plan.md": "4fe902c64080c6ec9de18c8e3e71629e5c48c8dc"
+        }
+      },
+      "legacy_evidence_id": "E35",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G3",
+          "G3S",
+          "G6"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "fbc6dcc42288cafc2708885e5f66a86fec9df57b0a5169cb03cf7cd4e5542000",
+          "path": "docs/v2/phase1/app-demo-plan.md",
+          "present": true,
+          "size": 24367
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED",
+        "NO_CAPTURE_TIMESTAMP"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Helper and helper tests (untracked)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E36",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "493177b44f488f96cf54f1aa02d9dedda9a5310cbac6cd61a236e0a8083228bf",
+          "path": ".agents/tasks/phase1/henv/phase1_appdemo.py",
+          "present": true,
+          "size": 262795
+        },
+        {
+          "current_sha256": "0c68f924bf0989f4258cbfcc127e7ebeaf83cbc50b37a8095ab1d8f6f502303d",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo.py",
+          "present": true,
+          "size": 43917
+        },
+        {
+          "current_sha256": "c32b5e16532da82dcf65610eb827e4d12bd3905f384ef4b8cd54ccb594f5c28c",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_auth.py",
+          "present": true,
+          "size": 40529
+        },
+        {
+          "current_sha256": "94da34c9a6a6053c1321aecfa29ecd8b159acbb204d894bd3193a1551c37a787",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_branch_integrity.py",
+          "present": true,
+          "size": 5343
+        },
+        {
+          "current_sha256": "044f2f4f058ff46638b8d7f05862a728a4a917a00d1f76b8184906eb1d6abd8e",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_g11.py",
+          "present": true,
+          "size": 8148
+        },
+        {
+          "current_sha256": "1d2f83fc9f41d93998ec75af240d5640258b56070d33de6218bb3c14a09e8b16",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_g11b.py",
+          "present": true,
+          "size": 13748
+        },
+        {
+          "current_sha256": "579625782124c64536e6e840c57465b913e358c0d3f252c7d89ae1c7013caf74",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_g12.py",
+          "present": true,
+          "size": 8541
+        },
+        {
+          "current_sha256": "89f4dc3313d824550085785e5eb1b276673e04bdc0e7fdc7a5f4083ad02d4544",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_install_observe.py",
+          "present": true,
+          "size": 15600
+        },
+        {
+          "current_sha256": "173da4b0cee729061fb5a402345728d0f239c4569eab85a39bdc467c72f27f7d",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_outcome.py",
+          "present": true,
+          "size": 9057
+        },
+        {
+          "current_sha256": "f551598a3a259334ed75b75b196342ebd4cac442adc2688d80e0fc41e01085cf",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_push_gate.py",
+          "present": true,
+          "size": 26782
+        },
+        {
+          "current_sha256": "1a6ee2b46f61d43bac71d93e87d0c4fecafb18301f7b0593b2e0f77a222d2a74",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_required.py",
+          "present": true,
+          "size": 11733
+        },
+        {
+          "current_sha256": "bdcdfb8b40634aec6b98c54cbdd627031935100a2ef26114789ab51abd7f8604",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_restart.py",
+          "present": true,
+          "size": 23529
+        },
+        {
+          "current_sha256": "971785bf6f2fa3f521c31541505d68edb8d64727f85c8e57684197024125699d",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_w0time.py",
+          "present": true,
+          "size": 21974
+        }
+      ],
+      "source_type": "HELPER_CODE",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "git log of app-demo-plan.md: s7 isRequired criterion kept from 24b7a6e to 4bd6e01",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "git_section",
+        "recorded_in": "git commits 24b7a6e..4bd6e01",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          "section_7_sha256": "efe674de6a49ed371f09538b40368c97b2c033a188c7afcd23a4ee945fb8f15e"
+        }
+      },
+      "legacy_evidence_id": "E37",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G3",
+          "G3S",
+          "G6"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "fbc6dcc42288cafc2708885e5f66a86fec9df57b0a5169cb03cf7cd4e5542000",
+          "path": "docs/v2/phase1/app-demo-plan.md",
+          "present": true,
+          "size": 24367
+        }
+      ],
+      "source_type": "GIT_HISTORY",
+      "traceability_limitations": [
+        "GIT_DATE_SELF_DECLARED"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Helper _required_part / spoof_part (s7 required criterion not implemented)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E38",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G3",
+          "G3S",
+          "G6"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "493177b44f488f96cf54f1aa02d9dedda9a5310cbac6cd61a236e0a8083228bf",
+          "path": ".agents/tasks/phase1/henv/phase1_appdemo.py",
+          "present": true,
+          "size": 262795
+        }
+      ],
+      "source_type": "HELPER_CODE",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Helper G12_EXPERIMENTS (pre-definition, time unverifiable)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E39",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [
+          "AC27"
+        ],
+        "scenarios": [
+          "G12"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "493177b44f488f96cf54f1aa02d9dedda9a5310cbac6cd61a236e0a8083228bf",
+          "path": ".agents/tasks/phase1/henv/phase1_appdemo.py",
+          "present": true,
+          "size": 262795
+        }
+      ],
+      "source_type": "HELPER_CODE",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "PRE_DEFINITION_TIME_UNVERIFIABLE",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Regression test of the old W0 parser",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "E40",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "W0"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "971785bf6f2fa3f521c31541505d68edb8d64727f85c8e57684197024125699d",
+          "path": ".agents/tasks/phase1/henv/test_phase1_appdemo_w0time.py",
+          "present": true,
+          "size": 21974
+        }
+      ],
+      "source_type": "HELPER_CODE",
+      "traceability_limitations": [
+        "HELPER_REVISION_UNKNOWN",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "NOT_CAPTURED",
+      "description": "PR #14: workflow SHA-256 from GitHub, runs refused, 0 steps (human report)",
+      "historical_classification": {
+        "index_status": "supporting_only",
+        "note": "rev3: the hash and the refusal were later confirmed by GE-* (transcribed)"
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "H01",
+      "provenance_assurance": "HUMAN_REPORTED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [],
+      "source_type": "HUMAN_REPORT",
+      "traceability_limitations": [
+        "CONFIRMED_LATER_BY_API_TRANSCRIPT",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "HUMAN_REPORTED_ONLY",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "NOT_CAPTURED",
+      "description": "PR #14 merge state BLOCKED (human report)",
+      "historical_classification": {
+        "index_status": "supporting_only",
+        "note": "rev3: still not proven by API (needs authenticated GraphQL)"
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "H02",
+      "provenance_assurance": "HUMAN_REPORTED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC28"
+        ],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [],
+      "source_type": "HUMAN_REPORT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "HUMAN_REPORTED_ONLY",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "NOT_CAPTURED",
+      "description": "G11 runs 40633751220 / 40633745102: failure, 0 steps (human report)",
+      "historical_classification": {
+        "index_status": "supporting_only",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "H03",
+      "provenance_assurance": "HUMAN_REPORTED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11"
+        ]
+      },
+      "source_files": [],
+      "source_type": "HUMAN_REPORT",
+      "traceability_limitations": [
+        "CONFIRMED_LATER_BY_API_TRANSCRIPT",
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "HUMAN_REPORTED_ONLY",
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Unauthenticated GET supplement: fields transcribed from responses",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/README.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/github-evidence.json": "e7e4c3423211fd4b23971bf7067e6e28e30fd1ec902cb5a1f3be5983dff02eef"
+        }
+      },
+      "legacy_evidence_id": "GE-JSON",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_UNAVAILABLE",
+      "related": {
+        "acs": [
+          "AC25",
+          "AC26"
+        ],
+        "scenarios": [
+          "G11",
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "e7e4c3423211fd4b23971bf7067e6e28e30fd1ec902cb5a1f3be5983dff02eef",
+          "path": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/github-evidence.json",
+          "present": true,
+          "size": 10012
+        }
+      ],
+      "source_type": "API_TRANSCRIBED",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "RAW_UNAVAILABLE",
+        "TRANSCRIBED_FIELDS",
+        "UNAUTHENTICATED_GET",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "publisher-probe.yml content field (base64) at 719f949",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/README.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/raw/publisher-probe.yml@719f949.b64": "62f1681bd3d4129255a0de80df171c2e7ab8c14f175ce1ae5cb8826e24ca33d0"
+        }
+      },
+      "legacy_evidence_id": "GE-RAW-PROBE",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_FIELD_ONLY",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "62f1681bd3d4129255a0de80df171c2e7ab8c14f175ce1ae5cb8826e24ca33d0",
+          "path": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/raw/publisher-probe.yml@719f949.b64",
+          "present": true,
+          "size": 383
+        }
+      ],
+      "source_type": "API_TRANSCRIBED",
+      "traceability_limitations": [
+        "CONTENT_FIELD_ONLY_BLOB_ID_VERIFIED",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNAUTHENTICATED_GET",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "steal.yml content field (base64) at 049f19e",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/README.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/raw/steal.yml@049f19e.b64": "1b911f7aaa13590ca887e6e0f82ee65fe163142b311726bdaf30d10148025e0d"
+        }
+      },
+      "legacy_evidence_id": "GE-RAW-STEAL",
+      "provenance_assurance": "SELF_DECLARED_UNVERIFIED",
+      "raw_api_response": "RAW_FIELD_ONLY",
+      "related": {
+        "acs": [
+          "AC26"
+        ],
+        "scenarios": [
+          "G11"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "1b911f7aaa13590ca887e6e0f82ee65fe163142b311726bdaf30d10148025e0d",
+          "path": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/raw/steal.yml@049f19e.b64",
+          "present": true,
+          "size": 1025
+        }
+      ],
+      "source_type": "API_TRANSCRIBED",
+      "traceability_limitations": [
+        "CONTENT_FIELD_ONLY_BLOB_ID_VERIFIED",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNAUTHENTICATED_GET",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "How the supplement was fetched, fidelity, SHA-256",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "GE-README",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": [
+          "G11",
+          "G11b"
+        ]
+      },
+      "source_files": [
+        {
+          "current_sha256": "68908fc034bf698d17c71eb999df3449af7e263172e87075f1de676b40df89bf",
+          "path": ".agents/tasks/phase1/final-acceptance/github-evidence-20261028/README.md",
+          "present": true,
+          "size": 4100
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev1 phase1-final-acceptance-summary.md (superseded by rev2)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/phase1-final-acceptance-summary.md": "55095cca74739dfcabbdc10ddb893b004a350deaf5d1ff7efe1b88fca976baba"
+        }
+      },
+      "legacy_evidence_id": "P1-REV1-FINAL-ACCEPTANCE-SUMMARY",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "55095cca74739dfcabbdc10ddb893b004a350deaf5d1ff7efe1b88fca976baba",
+          "path": ".agents/tasks/phase1/final-acceptance/phase1-final-acceptance-summary.md",
+          "present": true,
+          "size": 15000
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "SUPERSEDED",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev1 phase1-acceptance-matrix.csv (superseded by rev2)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/phase1-acceptance-matrix.csv": "53890141f13dbffcb6a3e96b5e570f9ec0f55cf8e1b156f81030a1db443f3835"
+        }
+      },
+      "legacy_evidence_id": "P1-REV1-ACCEPTANCE-MATRIX",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "53890141f13dbffcb6a3e96b5e570f9ec0f55cf8e1b156f81030a1db443f3835",
+          "path": ".agents/tasks/phase1/final-acceptance/phase1-acceptance-matrix.csv",
+          "present": true,
+          "size": 6253
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "SUPERSEDED",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev1 phase1-evidence-index.md (superseded by rev2)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/phase1-evidence-index.md": "f5f50e355b6588adb0cc1d0c20296991c1aaeae704ea1b799f4f9e4202f3169f"
+        }
+      },
+      "legacy_evidence_id": "P1-REV1-EVIDENCE-INDEX",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "f5f50e355b6588adb0cc1d0c20296991c1aaeae704ea1b799f4f9e4202f3169f",
+          "path": ".agents/tasks/phase1/final-acceptance/phase1-evidence-index.md",
+          "present": true,
+          "size": 9396
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "SUPERSEDED",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev1 phase1-open-risks.md (superseded by rev2)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/phase1-open-risks.md": "6e590a517e020cd4da0caad66a374fadd919a1bb2114b0ddc34878a1bac2fb96"
+        }
+      },
+      "legacy_evidence_id": "P1-REV1-OPEN-RISKS",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "6e590a517e020cd4da0caad66a374fadd919a1bb2114b0ddc34878a1bac2fb96",
+          "path": ".agents/tasks/phase1/final-acceptance/phase1-open-risks.md",
+          "present": true,
+          "size": 5100
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "SUPERSEDED",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev1 phase1-community-contribution-summary.md (superseded by rev2)",
+      "historical_classification": {
+        "index_status": "superseded",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "recorded_sha256",
+        "recorded_in": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+        "status": "HISTORICAL_HASH_MATCHES",
+        "values": {
+          ".agents/tasks/phase1/final-acceptance/phase1-community-contribution-summary.md": "ea6f720108a9343fe0fc772338a6de424f2fc1f92731b1eb59b178564875b593"
+        }
+      },
+      "legacy_evidence_id": "P1-REV1-COMMUNITY-CONTRIBUTION-SUMMARY",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "ea6f720108a9343fe0fc772338a6de424f2fc1f92731b1eb59b178564875b593",
+          "path": ".agents/tasks/phase1/final-acceptance/phase1-community-contribution-summary.md",
+          "present": true,
+          "size": 5028
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "NO_CAPTURE_TIMESTAMP",
+        "SUPERSEDED",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev2 phase1-final-acceptance-summary.md (current)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV2-FINAL-ACCEPTANCE-SUMMARY",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "fabcf5962d0852a1275df5da24797b95e5d0d0fb8a717455e27d9f065a3a7489",
+          "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-final-acceptance-summary.md",
+          "present": true,
+          "size": 19371
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev2 phase1-acceptance-matrix.csv (current)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV2-ACCEPTANCE-MATRIX",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "a78895c46f90da8c9f8876bec68e8a25054ef277a6d6e911ca3abd90e7958e5b",
+          "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-acceptance-matrix.csv",
+          "present": true,
+          "size": 7304
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev2 phase1-evidence-index.md (current)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV2-EVIDENCE-INDEX",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "07216f600b938d5e39936d073da402ebfa914c5b495887f89bd3bb7c4b76520d",
+          "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-evidence-index.md",
+          "present": true,
+          "size": 10432
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev2 phase1-open-risks.md (current)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV2-OPEN-RISKS",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "facc1da1b0fa4fffc9697d3b486e806aef545fdb1ebf511c0903a7986ac0feb3",
+          "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-open-risks.md",
+          "present": true,
+          "size": 4802
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev2 phase1-community-contribution-summary.md (current)",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV2-COMMUNITY-CONTRIBUTION-SUMMARY",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "6f1ef692e6ff87643b215e47ff2e2ca1daf42fc1bbddbeb2cefd35d3d4599ac7",
+          "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-community-contribution-summary.md",
+          "present": true,
+          "size": 5291
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev3 phase1-ac-traceability.rev3.json",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV3-AC-TRACEABILITY-JSON",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "52b3f803f7c0b7d37510c30885be1aa9c6ea227b6b7df907caaaa0e7274d4139",
+          "path": ".agents/tasks/phase1/final-acceptance/rev3/phase1-ac-traceability.rev3.json",
+          "present": true,
+          "size": 28040
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev3 phase1-ac-traceability.rev3.md",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV3-AC-TRACEABILITY",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "c472d86c1022dacf49da0aa09faa0e9daa1d739c23f09def9e7fc119beffd20e",
+          "path": ".agents/tasks/phase1/final-acceptance/rev3/phase1-ac-traceability.rev3.md",
+          "present": true,
+          "size": 17140
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev3 phase1-evidence-finalization.md",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV3-EVIDENCE-FINALIZATION",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "bc6d47206469f7c1ae17a6dde3536f446fd57e40db80254624764cd4a1b1a522",
+          "path": ".agents/tasks/phase1/final-acceptance/rev3/phase1-evidence-finalization.md",
+          "present": true,
+          "size": 4637
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "rev3 phase2-handoff.md",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REV3-P2-HANDOFF",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "fe095ad2e851b0f372fc72d87081511b8e17dc055680bcfab69f46b3eae4f56c",
+          "path": ".agents/tasks/phase1/final-acceptance/rev3/phase2-handoff.md",
+          "present": true,
+          "size": 6798
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    },
+    {
+      "completeness": "INCOMPLETE",
+      "description": "Revision list with rev1 hashes",
+      "historical_classification": {
+        "index_status": "current",
+        "note": ""
+      },
+      "historical_hash": {
+        "kind": "none",
+        "recorded_in": null,
+        "status": "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "values": {}
+      },
+      "legacy_evidence_id": "P1-REVISIONS",
+      "provenance_assurance": "DOCUMENTARY",
+      "raw_api_response": "NOT_APPLICABLE",
+      "related": {
+        "acs": [],
+        "scenarios": []
+      },
+      "source_files": [
+        {
+          "current_sha256": "93fa5d26a23966d6ef86457798e5f4ce5f572aeb32fd48e701c024f6c3b6e5d4",
+          "path": ".agents/tasks/phase1/final-acceptance/REVISIONS.md",
+          "present": true,
+          "size": 1615
+        }
+      ],
+      "source_type": "DOCUMENT",
+      "traceability_limitations": [
+        "HISTORICAL_INTEGRITY_NOT_PROVEN",
+        "NO_CAPTURE_TIMESTAMP",
+        "UNTRACKED_RECORD"
+      ]
+    }
+  ],
+  "historical_helper_revision": "UNKNOWN",
+  "index_sources": [
+    {
+      "current_sha256": "07216f600b938d5e39936d073da402ebfa914c5b495887f89bd3bb7c4b76520d",
+      "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-evidence-index.md",
+      "present": true,
+      "size": 10432
+    },
+    {
+      "current_sha256": "52b3f803f7c0b7d37510c30885be1aa9c6ea227b6b7df907caaaa0e7274d4139",
+      "path": ".agents/tasks/phase1/final-acceptance/rev3/phase1-ac-traceability.rev3.json",
+      "present": true,
+      "size": 28040
+    },
+    {
+      "current_sha256": "fabcf5962d0852a1275df5da24797b95e5d0d0fb8a717455e27d9f065a3a7489",
+      "path": ".agents/tasks/phase1/final-acceptance/rev2/phase1-final-acceptance-summary.md",
+      "present": true,
+      "size": 19371
+    }
+  ],
+  "is_reevaluation": false,
+  "map_id": "phase1-legacy-evidence-map",
+  "map_schema_version": 1,
+  "map_version": 1,
+  "statement": "Read-only map of the Phase 1 evidence as it exists at WP3. It records where each item is, what kind of record it is and what it cannot show. It is not a re-evaluation: Phase 1 results are quoted from rev2/rev3 and are not re-decided. A raw response captured later is a new observation and never stands in for a Phase 1 record.",
+  "subjects": [
+    {
+      "axes": {
+        "issuer_pinning_independent_proof": "NOT_PROVEN",
+        "merge_blocking": "PASS",
+        "required_check": "FAILED"
+      },
+      "basis": "rev2 s3-1 / C1; rev3 AC27",
+      "evidence_ids": [
+        "E18",
+        "E35",
+        "E37",
+        "E38",
+        "E16",
+        "E17"
+      ],
+      "limitations": [
+        "isRequired values exist only in helper output E18 (RAW_UNAVAILABLE); not re-fetched (rev3 EG11)"
+      ],
+      "phase1_result": "FAILED",
+      "subject": "G3"
+    },
+    {
+      "axes": {
+        "issuer_pinning_independent_proof": "NOT_PROVEN",
+        "merge_blocking": "PASS",
+        "required_check": "FAILED"
+      },
+      "basis": "rev2 s3-1 / C1; rev3 AC27",
+      "evidence_ids": [
+        "E18",
+        "E35",
+        "E37",
+        "E38",
+        "E16",
+        "E17"
+      ],
+      "limitations": [
+        "isRequired values exist only in helper output E18 (RAW_UNAVAILABLE); not re-fetched (rev3 EG11)"
+      ],
+      "phase1_result": "FAILED",
+      "subject": "G3S"
+    },
+    {
+      "axes": {
+        "issuer_pinning_independent_proof": "NOT_PROVEN",
+        "merge_blocking": "PASS",
+        "required_check": "FAILED"
+      },
+      "basis": "rev2 s3-1 / C1; rev3 AC27",
+      "evidence_ids": [
+        "E18",
+        "E35",
+        "E37",
+        "E38",
+        "E16",
+        "E17"
+      ],
+      "limitations": [
+        "isRequired values exist only in helper output E18 (RAW_UNAVAILABLE); not re-fetched (rev3 EG11)"
+      ],
+      "phase1_result": "FAILED",
+      "subject": "G6"
+    },
+    {
+      "axes": {},
+      "basis": "rev2 s3-3; rev3 s1",
+      "evidence_ids": [
+        "E07",
+        "E24",
+        "E25",
+        "E26",
+        "E27",
+        "H03",
+        "GE-JSON",
+        "GE-RAW-STEAL"
+      ],
+      "limitations": [
+        "the audited probe never ran; the observed workflow was the drifted one (cef683fb)"
+      ],
+      "phase1_result": "NOT_PROVEN",
+      "subject": "G11"
+    },
+    {
+      "axes": {},
+      "basis": "rev2 s3-3; rev3 s1",
+      "evidence_ids": [
+        "E27",
+        "E28",
+        "E28-i",
+        "E29",
+        "E30",
+        "H01",
+        "H02",
+        "GE-JSON",
+        "GE-RAW-PROBE"
+      ],
+      "limitations": [
+        "n=1",
+        "H02 (BLOCKED) stays human-reported",
+        "API answers are transcribed fields, not raw bodies (EG10)"
+      ],
+      "phase1_result": "PASS",
+      "subject": "G11b"
+    },
+    {
+      "axes": {
+        "B1": "PARTIAL",
+        "B2": "OBSERVED",
+        "B3": "PASS",
+        "issuer_pinning_independent_proof": "NOT_PROVEN"
+      },
+      "basis": "rev2 s3-2, s4, s6",
+      "evidence_ids": [
+        "E05",
+        "E22",
+        "E23-1",
+        "E23-2",
+        "E23-3",
+        "E23b-1",
+        "E23b-2",
+        "E23b-3",
+        "E23b-4",
+        "E23b-5",
+        "E23b-6",
+        "E39"
+      ],
+      "limitations": [
+        "the pre-definition G12_EXPERIMENTS lives in the untracked helper; its creation time is unverifiable (EG4)"
+      ],
+      "phase1_result": "PARTIAL",
+      "subject": "G12"
+    },
+    {
+      "axes": {
+        "head_replacement_G7": "NOT_PROVEN",
+        "issuer_pinning_independent_proof": "NOT_PROVEN",
+        "legacy_same_name_check": "FAILED",
+        "merge_blocked_by_gate_failure": "PASS",
+        "missing_protection_G9": "PASS",
+        "s7_required_isRequired_criterion": "FAILED"
+      },
+      "basis": "rev3 AC27",
+      "evidence_ids": [
+        "E18",
+        "E35",
+        "E37",
+        "E31"
+      ],
+      "limitations": [
+        "FAILED is the pre-fixed criterion result, not an observed bypass"
+      ],
+      "phase1_result": "FAILED",
+      "subject": "AC27"
+    }
+  ]
+}

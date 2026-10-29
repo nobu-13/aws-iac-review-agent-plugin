@@ -1,0 +1,16 @@
+{
+  "author": {
+    "avatar_url": "https://avatars.example.invalid/u/1",
+    "id": 1,
+    "login": "synthetic-user"
+  },
+  "commit": {
+    "author": {
+      "date": "2026-10-29T00:00:00Z",
+      "email": "synthetic.person@example.invalid",
+      "name": "Synthetic Person"
+    },
+    "message": "synthetic commit"
+  },
+  "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
