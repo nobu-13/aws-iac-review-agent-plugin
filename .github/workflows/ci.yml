@@ -12,6 +12,11 @@
 #   3. a secret scan over the repository (Requirement 9 AC1)
 #   4. the commit order of every benchmark Ground_Truth against its Template
 #      (Requirement 11 AC14, AC15)
+#   5. the public-safety preflight (Phase 2 M1 WP1), in the hygiene job
+#   6. the M1 evidence integrity gate (`evidence-integrity`): the evidence tests
+#      with no unexpected skip, and the synthetic replay, the final report, the
+#      evaluator source and the Definition compared with the approved baseline
+#      in `tests/fixtures/evidence_replay/expected.json`
 #
 # Plus one job that re-runs the determinism property with a randomized hash
 # seed, because a property about byte-identical stdout is only worth as much as
@@ -232,6 +237,62 @@ jobs:
         run: |
           python3 .github/scripts/check_ground_truth_order.py \
             --cases benchmark/cases
+
+      - name: Run the public-safety preflight
+        # Phase 2 M1 WP1: `.agents/` is ignored, nothing under `.agents/` or
+        # `.kiro/` is tracked, no nested repository or local targets file is in
+        # the public set, and no secret rule matches. Standard library only.
+        run: |
+          python3 .github/scripts/public_preflight.py
+
+  evidence-integrity:
+    # Phase 2 M1 Evidence Integrity Foundation. Synthetic evidence only: no
+    # secret, no token beyond the read-only GITHUB_TOKEN, no cache, no artifact,
+    # and the tests make no network call. Full history, because the Definition's
+    # verified commits are read with `git cat-file` (a shallow clone skips that
+    # test, and a skip here fails the job). The check script compares the
+    # current source with the approved baseline and never updates the expected
+    # values; tests that need the private Phase 1 evidence (`.agents/`) are
+    # reported as NOT_VERIFIED in the job summary, not as a pass.
+    name: evidence integrity (M1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      EVIDENCE_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Check out the repository with full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # Nothing in this job fetches or pushes after the checkout.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pytest
+        # `iacreview.evidence` uses the standard library only; the evidence
+        # tests need pytest and nothing else.
+        run: |
+          python3 -m pip install "${PYTEST_SPEC}"
+
+      - name: Run the evidence tests
+        run: |
+          python3 -m pytest -p no:cacheprovider -rs \
+            --junitxml="${RUNNER_TEMP}/evidence-junit.xml" \
+            tests/unit/test_evidence_*.py
+
+      - name: Check skips, replay hashes and the baseline
+        # Runs even when the tests failed, so that the summary is written. The
+        # job still fails: a failed step above fails it, and this step exits
+        # non-zero on any mismatch or unexpected skip.
+        if: ${{ always() }}
+        run: |
+          python3 .github/scripts/evidence_ci_check.py \
+            --junit "${RUNNER_TEMP}/evidence-junit.xml" \
+            --expected tests/fixtures/evidence_replay/expected.json
 
   lint:
     # Advisory. design.md's Dependency Strategy recommends `ruff` and `mypy` and

@@ -1,0 +1,15 @@
+{
+  "baseline_commit": "dd6f6295272834175b1eb0eb10ddf23dffc46fed",
+  "definition_id": "phase1-app-demo-s7",
+  "definition_path": "iacreview/evidence/definitions/phase1-app-demo-s7.v1.json",
+  "definition_sha256": "fb4ddef0b86d36e436e4492e1ff2d209812e80b6e993dea47ba07dc7a856b1d0",
+  "definition_version": 1,
+  "evaluator_source_sha256": "ee765e0c18ba76b9d4a27a0d4277548f21296757f03a77879763d1824dae58d6",
+  "evaluator_version": "iacreview.evidence.evaluator/1",
+  "expected_format": "iacreview.evidence.ci-expected/1",
+  "final_report_sha256": "4b1f2c5441ea9a421bdb0b8d402a608acbf96ced7f128d30f443939746f55b47",
+  "legacy_result_path": "docs/v2/phase2/m1/wp5/legacy-reevaluation-results.json",
+  "legacy_result_sha256": "731a1846ce5bb6102bea478fbc613b85ccb6b3cf90fc736dd62b8bbeaa8e1748",
+  "native_result_sha256": "24f091d1f8be65603a4d5d2cd62052758295155e00be200b59a8ff45238a2a48",
+  "synthetic_spec": "m1-pipeline-seven-scenarios/1"
+}

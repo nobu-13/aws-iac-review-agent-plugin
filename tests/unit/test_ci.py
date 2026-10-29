@@ -91,9 +91,13 @@ DETERMINISM_JOB = "determinism"
 #: The job that runs the two repository-wide checks.
 HYGIENE_JOB = "repository-hygiene"
 
+#: The Phase 2 M1 evidence integrity gate (CI Integration).
+EVIDENCE_JOB = "evidence-integrity"
+
 #: Jobs whose failure must fail the workflow. Task 28.2's lint job is
-#: deliberately not one of them.
-GATE_JOBS: Tuple[str, ...] = (MATRIX_JOB, DETERMINISM_JOB, HYGIENE_JOB)
+#: deliberately not one of them. The evidence job joined in the Phase 2 M1 CI
+#: Integration.
+GATE_JOBS: Tuple[str, ...] = (MATRIX_JOB, DETERMINISM_JOB, HYGIENE_JOB, EVIDENCE_JOB)
 
 #: The advisory ``ruff`` / ``mypy`` job (Task 28.2). Not a gate: its findings are
 #: a report, and design.md's Dependency Strategy keeps both tools optional.
@@ -1491,3 +1495,71 @@ def test_the_shell_is_stated_explicitly(workflow: Dict[str, Any]) -> None:
     """One shell on both operating systems, so a step behaves the same on each."""
     defaults = workflow.get("defaults") or {}
     assert (defaults.get("run") or {}).get("shell") == "bash"
+
+
+# ---------------------------------------------------------------------------
+# Phase 2 M1: the evidence integrity gate and the public-safety preflight
+# ---------------------------------------------------------------------------
+
+
+def _checkout_of(workflow: Dict[str, Any], name: str) -> Dict[str, Any]:
+    steps = [s for s in steps_of(workflow, name) if str(s.get("uses", "")).startswith("actions/checkout@")]
+    assert len(steps) == 1, name
+    return steps[0]
+
+
+def test_the_evidence_job_runs_on_linux_with_python_3_11(workflow: Dict[str, Any]) -> None:
+    job = job_of(workflow, EVIDENCE_JOB)
+    assert str(job["runs-on"]).startswith(LINUX_PREFIX)
+    setup = [s for s in steps_of(workflow, EVIDENCE_JOB) if str(s.get("uses", "")).startswith("actions/setup-python@")]
+    assert len(setup) == 1 and str(setup[0]["with"]["python-version"]) == "3.11"
+
+
+def test_the_evidence_job_checks_out_full_history_without_persisting_credentials(workflow: Dict[str, Any]) -> None:
+    """The Definition's verified commits are read from history; nothing pushes after the checkout."""
+    checkout = _checkout_of(workflow, EVIDENCE_JOB)
+    assert checkout["with"]["fetch-depth"] == 0 and checkout["with"]["persist-credentials"] is False
+
+
+def test_the_evidence_job_keeps_the_read_only_token_and_uses_no_secret_cache_or_artifact(
+    workflow: Dict[str, Any], workflow_text: str
+) -> None:
+    job = job_of(workflow, EVIDENCE_JOB)
+    assert "permissions" not in job and workflow.get("permissions") == {"contents": "read"}
+    assert not re.search(r"\$\{\{\s*secrets\.", workflow_text)
+    uses = {str(s.get("uses", "")).split("@", 1)[0] for s in steps_of(workflow, EVIDENCE_JOB) if s.get("uses")}
+    assert uses == {"actions/checkout", "actions/setup-python"}
+    setup = next(s for s in steps_of(workflow, EVIDENCE_JOB) if str(s.get("uses", "")).startswith("actions/setup-python@"))
+    assert "cache" not in setup["with"]
+
+
+def test_no_privileged_trigger_is_used(workflow: Dict[str, Any]) -> None:
+    """External pull requests never run with secrets or a write token here."""
+    triggers = workflow.get("on", workflow.get(True))
+    assert isinstance(triggers, dict)
+    assert not {"pull_request_target", "workflow_run"} & set(triggers)
+
+
+def test_the_evidence_job_installs_pytest_only(workflow: Dict[str, Any]) -> None:
+    installs = [c for c in run_commands(workflow, EVIDENCE_JOB) if "pip install" in c]
+    assert [c.strip() for c in installs] == ['python3 -m pip install "${PYTEST_SPEC}"']
+
+
+def test_the_evidence_job_runs_the_evidence_tests_and_the_check(workflow: Dict[str, Any]) -> None:
+    commands = run_commands(workflow, EVIDENCE_JOB)
+    tests = [c for c in commands if "-m pytest" in c]
+    assert len(tests) == 1 and "tests/unit/test_evidence_*.py" in tests[0] and "--junitxml=" in tests[0]
+    checks = [c for c in commands if "evidence_ci_check.py" in c]
+    assert len(checks) == 1 and "--expected tests/fixtures/evidence_replay/expected.json" in checks[0]
+    assert (REPO_ROOT / "tests" / "fixtures" / "evidence_replay" / "expected.json").is_file()
+    assert (REPO_ROOT / ".github" / "scripts" / "evidence_ci_check.py").is_file()
+
+
+def test_the_evidence_check_runs_even_after_a_test_failure(workflow: Dict[str, Any]) -> None:
+    """`always()` writes the summary; it does not make the job pass (the failed step still fails it)."""
+    check = next(s for s in steps_of(workflow, EVIDENCE_JOB) if "evidence_ci_check.py" in str(s.get("run", "")))
+    assert check.get("if") == "${{ always() }}" and not check.get("continue-on-error", False)
+
+
+def test_the_hygiene_job_runs_the_public_preflight(workflow: Dict[str, Any]) -> None:
+    assert any("python3 .github/scripts/public_preflight.py" in c for c in run_commands(workflow, HYGIENE_JOB))
