@@ -474,6 +474,18 @@ def _with_validator(c02: cs.Chain, change: Any) -> bytes:
     return reseal(obj)
 
 
+#: Placeholder for "a Python version other than the report's". The c02 report is built in this process, so its
+#: ``validator.python`` is the running interpreter's version (3.13 on a 3.13 runner): a fixed literal can equal it.
+OTHER_PYTHON = "<other python>"
+
+
+def _other_python(original: Any) -> str:
+    """A well-formed ``X.Y`` that is never the report's own value."""
+    changed = next(v for v in ("0.1", "0.2") if v != original)
+    assert changed != original
+    return changed
+
+
 VALIDATOR_SCHEMA_VIOLATIONS = [
     ("unknown key", lambda v: v.__setitem__("extra", "x")),
     ("missing name", lambda v: v.pop("name")),
@@ -504,8 +516,12 @@ def test_tc_03_09_a_validator_object_outside_the_schema_is_report_invalid(c02: c
 
 
 @pytest.mark.parametrize("key,value", [("name", "another/validator"), ("plugin_version", "9.9.9"), ("plugin_version", None),
-                                       ("source_sha256", "0" * 64), ("python", "3.13")])
+                                       ("source_sha256", "0" * 64), ("python", OTHER_PYTHON)])
 def test_tc_03_10_one_identity_field_changed_is_linked_and_only_diagnosed(c02: cs.Chain, key: str, value: Any) -> None:
+    original = report_obj(c02)["payload"]["validator"][key]
+    if value == OTHER_PYTHON:
+        value = _other_python(original)
+    assert value != original  # the change must really change the field
     data = _with_validator(c02, lambda v: v.__setitem__(key, value))
     ctx, loaded = context(c02, with_verification(c02, "identity-{0}-{1}.json".format(key, cs.sha256(repr(value).encode())[:6]), data))
     res = lk.check_verification(ctx, loaded)
@@ -526,7 +542,10 @@ def test_tc_03_10_the_unchanged_identity_is_diagnosed_as_matching(c02: cs.Chain)
                                         ("manifest_file", "verification_digest_mismatch")])
 def test_tc_03_11_an_identity_change_with_a_stale_digest_is_broken(c02: cs.Chain, stale: str, code: str) -> None:
     obj = report_obj(c02)
-    obj["payload"]["validator"]["python"] = "3.13"
+    original = obj["payload"]["validator"]["python"]
+    changed = _other_python(original)
+    assert changed != original
+    obj["payload"]["validator"]["python"] = changed
     data = remediation_report.serialize(obj).encode("ascii") if stale == "metadata" else reseal(obj)
     doc = with_verification(c02, "identity-stale-{0}.json".format(stale), data)
     if stale == "manifest_payload":
@@ -542,7 +561,10 @@ def test_tc_03_12_the_identity_diagnostic_stays_out_of_the_payload(c02: cs.Chain
     from iacreview.chain import validator
 
     same = validator.validate(c02.path, c02.setup.repo)
-    data = _with_validator(c02, lambda v: v.__setitem__("python", "3.13"))
+    original = report_obj(c02)["payload"]["validator"]["python"]
+    changed = _other_python(original)
+    assert changed != original
+    data = _with_validator(c02, lambda v: v.__setitem__("python", changed))
     path = cs.write_manifest(c02.root, with_verification(c02, "identity-python-run.json", data), "identity-manifest.json")
     other = validator.validate(path, c02.setup.repo)
     links = [{e["link"]: e for e in r["payload"]["links"]} for r in (same, other)]
@@ -551,7 +573,7 @@ def test_tc_03_12_the_identity_diagnostic_stays_out_of_the_payload(c02: cs.Chain
     assert [d["code"] for d in same["metadata"]["diagnostics"]] == ["validator_identity_matches"]
     assert [d["code"] for d in other["metadata"]["diagnostics"]] == ["validator_identity_differs"]
     text = json.dumps(other["payload"])
-    assert "validator_identity_differs" not in text and "3.13" not in text
+    assert "validator_identity_differs" not in text and '"{0}"'.format(changed) not in text
 
 
 def test_tc_03_12_without_a_recomputation_the_identity_is_not_compared(c02: cs.Chain, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
