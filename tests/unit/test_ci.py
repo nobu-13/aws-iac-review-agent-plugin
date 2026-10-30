@@ -94,10 +94,13 @@ HYGIENE_JOB = "repository-hygiene"
 #: The Phase 2 M1 evidence integrity gate (CI Integration).
 EVIDENCE_JOB = "evidence-integrity"
 
+#: The Phase 2 M2 remediation evidence chain gate (WP1, independent of the M1 job).
+CHAIN_JOB = "chain-integrity"
+
 #: Jobs whose failure must fail the workflow. Task 28.2's lint job is
 #: deliberately not one of them. The evidence job joined in the Phase 2 M1 CI
-#: Integration.
-GATE_JOBS: Tuple[str, ...] = (MATRIX_JOB, DETERMINISM_JOB, HYGIENE_JOB, EVIDENCE_JOB)
+#: Integration, the chain job in Phase 2 M2 WP1.
+GATE_JOBS: Tuple[str, ...] = (MATRIX_JOB, DETERMINISM_JOB, HYGIENE_JOB, EVIDENCE_JOB, CHAIN_JOB)
 
 #: The advisory ``ruff`` / ``mypy`` job (Task 28.2). Not a gate: its findings are
 #: a report, and design.md's Dependency Strategy keeps both tools optional.

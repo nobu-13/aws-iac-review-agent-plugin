@@ -294,6 +294,63 @@ jobs:
             --junit "${RUNNER_TEMP}/evidence-junit.xml" \
             --expected tests/fixtures/evidence_replay/expected.json
 
+  chain-integrity:
+    # Phase 2 M2 Remediation Evidence Chain (WP1). Independent of the M1
+    # `evidence-integrity` job: neither job `needs` the other, this job does not
+    # read the M1 expected values, and the M1 job and its script are unchanged.
+    # Synthetic chains only (the frozen Phase 1 cases, synthetic GitHub answers
+    # in an M1 store): no secret, no token beyond the read-only GITHUB_TOKEN, no
+    # cache, no artifact, no network call from the tests. The default checkout
+    # depth is enough: the tests build their own repositories. The check script
+    # never updates the expected digests.
+    name: remediation evidence chain (M2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing in this job fetches or pushes after the checkout.
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        # The verification is recomputed with the pinned profile tools, and the
+        # review fixtures are produced by the iac-review script: PyYAML, pytest
+        # and cfn-lint, as in the test job.
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install \
+            "${PYYAML_SPEC}" \
+            "${PYTEST_SPEC}" \
+            "cfn-lint==${CFN_LINT_VERSION}"
+
+      - name: Install cfn-guard
+        run: |
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 .github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Run the chain tests
+        run: |
+          python3 -m pytest -p no:cacheprovider -rs \
+            --junitxml="${RUNNER_TEMP}/chain-junit.xml" \
+            tests/unit/test_chain_*.py
+
+      - name: Check required tests, skips and the reviewed validator digest
+        # Runs even when the tests failed, so that the summary is written. The
+        # job still fails: a failed step above fails it, and this step exits
+        # non-zero on any failure, skip, missing test or digest mismatch.
+        if: ${{ always() }}
+        run: |
+          python3 .github/scripts/chain_ci_check.py \
+            --junit "${RUNNER_TEMP}/chain-junit.xml" \
+            --expected tests/fixtures/chain_replay/expected.json
+
   lint:
     # Advisory. design.md's Dependency Strategy recommends `ruff` and `mypy` and
     # deliberately keeps both out of the required dependencies: Requirement 16

@@ -1,0 +1,145 @@
+{
+  "errors": [],
+  "findings": [
+    {
+      "Confidence": "Confirmed",
+      "Evidence": [
+        {
+          "Detail": "Principal \"lambda.amazonaws.com\" under Service is service and none of ['aws:principalorgid', 'aws:sourceaccount', 'aws:sourcearn'] is present in this statement. Detected in the trust_policy at Resources.OrdersFunctionRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "cross_service_missing_condition",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "The trust policy allows sts:AssumeRole for the service principal \"lambda.amazonaws.com\" under Service and carries no Condition key. Detected in the trust_policy at Resources.OrdersFunctionRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "privesc_broad_trust",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Effect is Allow on the sensitive action \"sts:AssumeRole\" and the statement carries no Condition key. Detected in the trust_policy at Resources.OrdersFunctionRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "sensitive_prefix_without_condition",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Unresolved intrinsic function: Fn::GetAtt.",
+          "Excerpt": null,
+          "RuleId": "unresolvable_value",
+          "Source": "IAM Review"
+        }
+      ],
+      "Finding": "[cross_service_missing_condition] This statement grants access to the service principal \"lambda.amazonaws.com\" without an aws:SourceAccount, aws:SourceArn or aws:PrincipalOrgID condition.",
+      "FindingType": "Security",
+      "ID": 1,
+      "Location": {
+        "Column": null,
+        "File": "infra/template.yaml",
+        "Line": null,
+        "TemplatePath": [
+          "Resources",
+          "OrdersFunctionRole",
+          "Properties",
+          "AssumeRolePolicyDocument",
+          "Statement",
+          0
+        ]
+      },
+      "Normalized_Category": "IAM",
+      "Recommendation": "Add aws:SourceAccount or aws:SourceArn naming the account and resource allowed to invoke this grant, or aws:PrincipalOrgID to confine it to your organization.",
+      "Resource": "OrdersFunctionRole",
+      "Severity": "HIGH",
+      "Source": [
+        "IAM Review"
+      ],
+      "SuggestedRemediation": null,
+      "WhyItMatters": "A grant to an AWS service or to another account with no aws:SourceAccount, aws:SourceArn or aws:PrincipalOrgID condition is open to the confused-deputy pattern: a third party can ask the same service to act on this resource on their behalf."
+    },
+    {
+      "Confidence": "Confirmed",
+      "Evidence": [
+        {
+          "Detail": "cfn-lint reported E3638 at Error level: Additional properties are not allowed ('ProvisionedThroughput')",
+          "Excerpt": null,
+          "RuleId": "E3638",
+          "Source": "cfn-lint"
+        }
+      ],
+      "Finding": "[E3638] Additional properties are not allowed ('ProvisionedThroughput')",
+      "FindingType": "Validity",
+      "ID": 2,
+      "Location": {
+        "Column": 7,
+        "File": "infra/template.yaml",
+        "Line": 20,
+        "TemplatePath": [
+          "Resources",
+          "OrdersTable",
+          "Properties",
+          "ProvisionedThroughput"
+        ]
+      },
+      "Normalized_Category": "TemplateQuality",
+      "Recommendation": "When 'BillingMode' is 'PAY_PER_REQUEST' don't specify 'ProvisionedThroughput'",
+      "Resource": "OrdersTable",
+      "Severity": "HIGH",
+      "Source": [
+        "cfn-lint"
+      ],
+      "SuggestedRemediation": null,
+      "WhyItMatters": "Validate DynamoDB BillingMode pay per request configuration"
+    }
+  ],
+  "schema_version": "1.0.0",
+  "sources_enabled": [
+    "cfn-lint",
+    "IAM Review"
+  ],
+  "summary": {
+    "by_finding_type": {
+      "BestPractice": 0,
+      "Informational": 0,
+      "Security": 1,
+      "Validity": 1
+    },
+    "by_severity": {
+      "CRITICAL": 0,
+      "HIGH": 2,
+      "INFO": 0,
+      "LOW": 0,
+      "MEDIUM": 0
+    },
+    "by_source": {
+      "Agent Review": 0,
+      "IAM Review": 1,
+      "Network Review": 0,
+      "Quality Review": 0,
+      "Secret Review": 0,
+      "cfn-guard": 0,
+      "cfn-lint": 1
+    },
+    "by_template_group": {
+      "standalone": 2,
+      "synthesized": 0
+    },
+    "passed_all_checks": false,
+    "total": 2
+  },
+  "target": {
+    "cdk": {
+      "detected": false,
+      "synthesis": "not_applicable",
+      "synthesized_templates": []
+    },
+    "files": [
+      "infra/template.yaml"
+    ]
+  },
+  "tools": [
+    {
+      "available": true,
+      "name": "cfn-lint",
+      "version": "1.46.0"
+    }
+  ]
+}

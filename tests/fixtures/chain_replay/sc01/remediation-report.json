@@ -1,0 +1,174 @@
+{
+  "metadata": {
+    "duration_ms": 0,
+    "generated_at": "2026-10-30T06:00:00Z",
+    "payload_sha256": "8d6ab9867a4001b6320c6b4a772b47a4d991da81e8a711b0f58427cb1447c7b2",
+    "run_id": "1"
+  },
+  "payload": {
+    "checks": [
+      {
+        "check_id": "cfn-lint",
+        "counts": {
+          "Error": 0,
+          "Informational": 0,
+          "Warning": 0
+        },
+        "exit_code": 0,
+        "input_sha256": "ac06e33b574b683499aed25cb978e5b54f3f699db089eac2680aa060faaf3d87",
+        "output_sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+        "rule_ids": [],
+        "rule_states": {},
+        "side": "head",
+        "state": "PASS"
+      },
+      {
+        "check_id": "profile-guard",
+        "counts": {
+          "compliant": 0,
+          "not_applicable": 0,
+          "not_compliant": 1
+        },
+        "exit_code": 19,
+        "input_sha256": "9d8fb77ae55ef08adc054955e6812f6e37692912631d793d34d17b7ec8149db3",
+        "output_sha256": "84cfd6921307043047a28ac9e3f2a61e3a29abd5448a3b1ab5155abb33bc13fc",
+        "rule_ids": [],
+        "rule_states": {
+          "billing_mode_consistent": "FAIL"
+        },
+        "side": "base",
+        "state": "FAIL"
+      },
+      {
+        "check_id": "profile-guard",
+        "counts": {
+          "compliant": 1,
+          "not_applicable": 0,
+          "not_compliant": 0
+        },
+        "exit_code": 0,
+        "input_sha256": "ccbe82c7adbde2fe8fbd0d48beb1f395b88cbeed04abaf7c4fa75d8840170e7d",
+        "output_sha256": "37fe4befde4e5cc81f5341d33cb75490e2ffe6c1f988153cdb3e4a47a136b29e",
+        "rule_ids": [],
+        "rule_states": {
+          "billing_mode_consistent": "PASS"
+        },
+        "side": "head",
+        "state": "PASS"
+      }
+    ],
+    "decision": "VERIFIED",
+    "diagnostics": [],
+    "enforcement_status": "not_verified",
+    "execution_mode": "local_preview",
+    "exit_code": 0,
+    "invariants": [
+      {
+        "base": "PASS",
+        "head": "PASS",
+        "invariant_id": "outside-allowed-edits-unchanged"
+      }
+    ],
+    "next_action": "human_review",
+    "not_verified": [
+      "runtime_behavior",
+      "effective_iam_permissions",
+      "resource_replacement",
+      "deployment",
+      "merge_enforcement"
+    ],
+    "outcomes": [
+      {
+        "base": "FAIL",
+        "head": "PASS",
+        "outcome_id": "billing-mode-consistent"
+      }
+    ],
+    "preview_only": false,
+    "runtime_validated": false,
+    "snapshot_notes": [],
+    "stage_reached": "checks_run",
+    "subject": {
+      "base": {
+        "commit": "1d1478bba18df4621240f44775554c10f94542c8",
+        "snapshot_sha256": "d2cb1006a4abf322945d59cdef0bfa755f61fe4d50c3b9d35c48b20cdd429c95",
+        "tree": "0a321a3efd5e7f4b2ab76bb9878c86b5eb6ba58d"
+      },
+      "head": {
+        "commit": "9ac40fba2c07b1015a43a080b8b253ebb0ad461e",
+        "kind": "commit",
+        "snapshot_sha256": "f27a665efac136a0bd07ed707c4cf5f0140196a2152c39fdb74e8d3f2bee751c",
+        "tree": "72ce7f5160d9cd462d9317a48540f4f8ea72bdc4"
+      },
+      "repository_id": "synthetic-owner/synthetic-repo",
+      "target_template": {
+        "base_blob": "36ce0a5b08a03c78053c06b222a3921363747e1c",
+        "base_sha256": "4d5eb6a5a445b1c77f32dc8ebd566a4f5c1351d753056985a352cc461f5750ef",
+        "head_blob": "45ffbaa0b5757325470b1929127c194bfcf41e03",
+        "head_format": "yaml",
+        "head_sha256": "ac06e33b574b683499aed25cb978e5b54f3f699db089eac2680aa060faaf3d87",
+        "path": "infra/template.yaml"
+      }
+    },
+    "task_outcome": "resolved",
+    "tools": [
+      {
+        "name": "cfn-lint",
+        "observed_version": "1.46.0",
+        "required_version": "1.46.0",
+        "state": "PASS"
+      },
+      {
+        "name": "cfn-guard",
+        "observed_version": "3.2.1",
+        "required_version": "3.2.1",
+        "state": "PASS"
+      }
+    ],
+    "trust": {
+      "allowed_edits": [
+        {
+          "operations": [
+            "add",
+            "replace"
+          ],
+          "property": "BillingMode",
+          "resource": "OrdersTable"
+        },
+        {
+          "operations": [
+            "remove"
+          ],
+          "property": "ProvisionedThroughput",
+          "resource": "OrdersTable"
+        }
+      ],
+      "approval_binding": "config_commit_is_ancestor_of_base",
+      "approved": true,
+      "contract_id": "billing-mode-orders",
+      "contract_path": ".iac-remediation/contracts/billing-mode-orders.yaml",
+      "contract_sha256": "5f476a84320e30fa78ee2528a28494cab0e2b4e22aa45482a5ed3f4db14dbdd5",
+      "contract_source": "git_revision",
+      "profile_id": "dynamodb-billing-mode-v1",
+      "profile_sha256": "8329a3c7648fc400c7b4d364c8d43c52d7d7152cda35014b91eba1be182fea96",
+      "profile_version": "1",
+      "rules": [
+        {
+          "file": "rules.guard",
+          "sha256": "f410adb088ae72c3acd573204f20d34070cf3d7782a2c5e4005f4cb728994a00"
+        }
+      ],
+      "task_id": "repair-orders-table",
+      "trusted_config_commit": "1d1478bba18df4621240f44775554c10f94542c8"
+    },
+    "validator": {
+      "name": "aws-iac-review-agent-plugin/iacreview.remediation",
+      "plugin_version": "1.1.0",
+      "python": "3.9",
+      "source_sha256": "19f41278df59dfe50a94ebc91399dfbca18907c27259f0017f3cadd008e22c08"
+    },
+    "violations": []
+  },
+  "report_kind": "remediation_verification",
+  "report_schema_version": "0.1.0"
+}
