@@ -1,0 +1,194 @@
+# SPIKE PROTOTYPE (not deployed). Option A of docs/v2/phase1/gate-check-provenance.md,
+# design and Human steps in docs/v2/phase1/spike-app-publisher.md.
+#
+# Same verification as docs/v2/phase1/ci/remediation-gate.yml, split into two
+# jobs of one base-branch workflow:
+#
+#   verify   no secrets, no environment, GITHUB_TOKEN contents: read. Checks
+#            out the base commit and the pinned validator, fetches the PR head
+#            as objects only, runs the verifier, and derives its outputs from
+#            the report (gate_outputs.py): exit code, decision, verified head,
+#            payload digest. Its own Actions check ("verify") is no longer the
+#            required check.
+#   publish  needs: verify, always runs. Uses environment
+#            "remediation-publisher" (deployment branches: default branch only,
+#            admin bypass disabled) to read the App private key, mints an
+#            installation token for this repository with checks: write, and
+#            creates the check run "remediation-gate/verified" on the event's
+#            head SHA (publish_check.py). It runs no repository code, only the
+#            pinned gate scripts.
+#
+# Two pins, both fixed at deployment by the Human:
+#   VALIDATOR_COMMIT     the verifier (iacreview/). Kept at 5412a73, the
+#                        validator of the H-ENV runs.
+#   GATE_SCRIPTS_COMMIT  the commit holding docs/v2/phase1/ci/spike/. The
+#                        all-zero placeholder makes both checkouts fail, so an
+#                        unpinned copy can never publish (fail closed).
+#
+# The workflow file must live at .github/workflows/remediation-gate.yml on the
+# default branch; the publisher refuses any other workflow ref.
+name: remediation-gate
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remediation-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  VALIDATOR_REPOSITORY: nobu-13/aws-iac-review-agent-plugin
+  VALIDATOR_COMMIT: "5412a730ade13d6fe939d71cee636e280e92d4db"
+  GATE_SCRIPTS_COMMIT: "0000000000000000000000000000000000000000"
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    outputs:
+      exit_code: ${{ steps.outputs.outputs.exit_code }}
+      decision: ${{ steps.outputs.outputs.decision }}
+      head_sha: ${{ steps.outputs.outputs.head_sha }}
+      payload_sha256: ${{ steps.outputs.outputs.payload_sha256 }}
+    env:
+      CONTRACT_PATH: .iac-remediation/contracts/billing-mode-orders.yaml
+      CFN_LINT_VERSION: "1.46.0"
+      PYYAML_VERSION: "6.0.3"
+    steps:
+      - name: Check out the base revision (trusted configuration)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: subject
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Fetch the PR head as objects only
+        env:
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          set -eu
+          git -C subject -c protocol.allow=never -c protocol.https.allow=always \
+            fetch --no-tags --no-recurse-submodules --no-write-fetch-head "$REPO_URL" \
+            "+refs/pull/${PR_NUMBER}/head:refs/remediation/head"
+          fetched="$(git -C subject rev-parse --verify refs/remediation/head^{commit})"
+          if [ "$fetched" != "$HEAD_SHA" ]; then
+            echo "PR head moved after this event; the newer push gets its own run." >&2
+            exit 1
+          fi
+
+      - name: Check out the pinned validator
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.VALIDATOR_REPOSITORY }}
+          ref: ${{ env.VALIDATOR_COMMIT }}
+          path: validator
+          persist-credentials: false
+
+      - name: Check out the pinned gate scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.VALIDATOR_REPOSITORY }}
+          ref: ${{ env.GATE_SCRIPTS_COMMIT }}
+          path: gate-scripts
+          persist-credentials: false
+          sparse-checkout: docs/v2/phase1/ci/spike/gate_outputs.py
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+
+      - name: Install pinned tools (from the validator, not from the PR)
+        run: |
+          set -eu
+          python3 -m pip install "PyYAML==${PYYAML_VERSION}" "cfn-lint==${CFN_LINT_VERSION}"
+          bin_dir="${RUNNER_TEMP}/review-tools/bin"
+          python3 validator/.github/scripts/install_cfn_guard.py --bin-dir "${bin_dir}"
+          echo "${bin_dir}" >> "${GITHUB_PATH}"
+
+      - name: Verify the candidate against the approved contract
+        id: verify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          IACREVIEW_RUN_ID: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # The default shell is "bash -e"; turn -e off so that the status of a
+          # BLOCKED / UNVERIFIED / ERROR run is recorded before the step fails.
+          set +e -u
+          PYTHONPATH="${GITHUB_WORKSPACE}/validator" python3 -m iacreview.remediation verify \
+            --repo subject --base "$BASE_SHA" --head "$HEAD_SHA" \
+            --config-rev "$BASE_SHA" --contract "$CONTRACT_PATH" \
+            --execution-mode trusted_ci --repository-id "$GITHUB_REPOSITORY" \
+            --output "${RUNNER_TEMP}/remediation-report.json"
+          status=$?
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit "$status"
+
+      - name: Derive the outputs from the report
+        id: outputs
+        if: always()
+        env:
+          REPORT_PATH: ${{ runner.temp }}/remediation-report.json
+          VERIFY_STATUS: ${{ steps.verify.outputs.status }}
+          EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          EXPECTED_CONTRACT_PATH: ${{ env.CONTRACT_PATH }}
+        run: python3 gate-scripts/docs/v2/phase1/ci/spike/gate_outputs.py
+
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: remediation-report
+          path: ${{ runner.temp }}/remediation-report.json
+          if-no-files-found: error
+
+  publish:
+    needs: verify
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    environment: remediation-publisher
+    permissions: {}
+    steps:
+      - name: Check out the pinned publisher only
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.VALIDATOR_REPOSITORY }}
+          ref: ${{ env.GATE_SCRIPTS_COMMIT }}
+          path: gate-scripts
+          persist-credentials: false
+          sparse-checkout: docs/v2/phase1/ci/spike/publish_check.py
+          sparse-checkout-cone-mode: false
+
+      - name: Mint an installation token (checks write, this repository only)
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.REMEDIATION_APP_CLIENT_ID }}
+          private-key: ${{ secrets.REMEDIATION_APP_PRIVATE_KEY }}
+          permission-checks: write
+
+      - name: Publish the decision as the required check
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          EXPECTED_APP_ID: ${{ vars.REMEDIATION_APP_ID }}
+          CHECK_NAME: remediation-gate/verified
+          VERIFY_JOB_RESULT: ${{ needs.verify.result }}
+          VERIFY_EXIT_CODE: ${{ needs.verify.outputs.exit_code }}
+          VERIFY_DECISION: ${{ needs.verify.outputs.decision }}
+          VERIFIED_HEAD_SHA: ${{ needs.verify.outputs.head_sha }}
+          PAYLOAD_SHA256: ${{ needs.verify.outputs.payload_sha256 }}
+        run: python3 gate-scripts/docs/v2/phase1/ci/spike/publish_check.py

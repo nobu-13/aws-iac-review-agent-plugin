@@ -1,0 +1,25 @@
+contract_schema_version: "0.1.0"
+contract_id: "billing-mode-orders"
+profile_id: "dynamodb-billing-mode-v1"
+profile_version: "1"
+task_id: "repair-orders-table"
+target:
+  template_path: "infra/template.yaml"
+scope:
+  allowed_edits:
+    - resource: "OrdersTable"
+      property: "BillingMode"
+      operations: ["add", "replace"]
+    - resource: "OrdersTable"
+      property: "ProvisionedThroughput"
+      operations: ["remove"]
+intent:
+  required_outcomes:
+    - "billing-mode-consistent"
+  preserve_invariants:
+    - "outside-allowed-edits-unchanged"
+  parameters: {}
+verification:
+  required_checks:
+    - "cfn-lint"
+    - "profile-guard"

@@ -44,7 +44,26 @@ than kept as an empty heading, which is why the first release below carries
 
 ## [Unreleased]
 
-Nothing yet.
+### Added
+
+- Phase 1 bounded remediation verifier (experimental, unreleased):
+  `python3 -m iacreview.remediation init | verify | explain`. It checks one
+  candidate fix to a CloudFormation Template against a remediation contract
+  read from a trusted git revision, and writes a new
+  Remediation_Verification_Report (schema 0.1.0) with decisions VERIFIED /
+  BLOCKED / UNVERIFIED / ERROR and exit codes 0 / 20 / 21 / 22 of its own.
+  Two profiles: `dynamodb-billing-mode-v1`, `iam-inline-policy-overbroad-v1`.
+  It edits no file, calls no AWS API and never merges. See `docs/v2/phase1/`.
+- Skill `iac-remediation-verify`, which drives that CLI. The five existing
+  Skills, their scripts and outputs are unchanged.
+
+### Fixed
+
+- A directory target holding a symlink cycle no longer stops the review with
+  exit 1 and a Python traceback on CPython 3.9-3.12. On every Python version the
+  cycle entry is now reported in `errors[]` as an unreadable input
+  (`input_not_found`), as 3.13 already did; nothing is read through it. A
+  directory holding only cycles exits 3.
 
 ## [1.1.0] - 2026-10-26
 

@@ -52,9 +52,11 @@ records that residual risk.
 from __future__ import annotations
 
 import os
+import selectors
 import shutil
 import signal
 import subprocess
+import time
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, List, Optional, Sequence
 
@@ -73,8 +75,10 @@ from iacreview.errors import os_error_detail as _os_error_detail
 
 __all__ = [
     "INHERITED_ENV_VARS",
+    "BoundedResult",
     "ProcResult",
     "run",
+    "run_bounded",
 ]
 
 #: Environment variables copied from the parent into the child, and nothing
@@ -301,6 +305,127 @@ def run(argv: List[str], timeout_s: int) -> ProcResult:
         stdout=stdout,
         stderr=stderr,
         timed_out=False,
+    )
+
+
+@dataclass(frozen=True)
+class BoundedResult:
+    """Outcome of :func:`run_bounded`. Output is kept as bytes.
+
+    Attributes:
+        exit_code: The child's exit status, or ``None`` when it was killed
+            because of ``timed_out`` or ``output_exceeded``.
+        stdout: Captured stdout, at most ``max_output_bytes`` in total with
+            ``stderr``.
+        stderr: Captured stderr.
+        timed_out: The wall-clock limit was reached and the group was killed.
+        output_exceeded: stdout + stderr exceeded the limit and the group was
+            killed. The captured output is truncated and must not be parsed.
+    """
+
+    exit_code: Optional[int]
+    stdout: bytes
+    stderr: bytes
+    timed_out: bool = False
+    output_exceeded: bool = False
+
+
+def run_bounded(argv: List[str], timeout_s: int, max_output_bytes: int) -> BoundedResult:
+    """Execute ``argv`` like :func:`run`, with an output limit and no exception on timeout.
+
+    Added for the Phase 1 remediation verifier (Design 6). :func:`run` keeps its
+    behaviour; this function shares its safety properties -- argv array,
+    ``shell=False``, closed stdin, :func:`_minimal_env`, a new session and
+    process-group termination -- and adds two things :func:`run` cannot give:
+
+    * stdout and stderr are read incrementally and the whole group is killed as
+      soon as their total exceeds ``max_output_bytes``, so a tool cannot make
+      this process buffer an unbounded amount of output;
+    * a timeout or an exceeded limit is reported in the result rather than
+      raised, so the caller can record it as a check state.
+
+    Raises:
+        InvalidArgumentsError: ``argv`` is malformed or a limit is not positive.
+        ToolUnavailableError: ``argv[0]`` was not found on ``PATH``.
+        ToolExecutionError: The child could not be started.
+    """
+    _validate_argv(argv)
+    for name, value in (("timeout_s", timeout_s), ("max_output_bytes", max_output_bytes)):
+        if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+            raise InvalidArgumentsError("{0} must be a positive int, got {1!r}".format(name, value))
+    tool = _tool_name(argv[0])
+    resolved = shutil.which(argv[0])
+    if resolved is None:
+        raise ToolUnavailableError(
+            "required external tool not found on PATH: {0}".format(tool),
+            tool=tool,
+            remediation="Install {0} and ensure it is on PATH.".format(tool),
+        )
+    try:
+        proc_handle = subprocess.Popen(  # noqa: S603 - shell=False, argv array
+            [resolved, *argv[1:]],
+            shell=False,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            env=_minimal_env(),
+            cwd=None,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise ToolExecutionError(
+            "failed to execute {0}: {1}".format(tool, _os_error_detail(exc)),
+            tool=tool,
+        ) from exc
+
+    chunks: Dict[str, List[bytes]] = {"stdout": [], "stderr": []}
+    total = 0
+    timed_out = False
+    exceeded = False
+    deadline = time.monotonic() + timeout_s
+    selector = selectors.DefaultSelector()
+    assert proc_handle.stdout is not None and proc_handle.stderr is not None
+    selector.register(proc_handle.stdout, selectors.EVENT_READ, "stdout")
+    selector.register(proc_handle.stderr, selectors.EVENT_READ, "stderr")
+    try:
+        while selector.get_map():
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                timed_out = True
+                break
+            for key, _ in selector.select(timeout=min(remaining, 0.5)):
+                data = os.read(key.fileobj.fileno(), 65536)  # type: ignore[union-attr]
+                if not data:
+                    selector.unregister(key.fileobj)
+                    continue
+                total += len(data)
+                if total > max_output_bytes:
+                    exceeded = True
+                    break
+                chunks[key.data].append(data)
+            if exceeded:
+                break
+        if not (timed_out or exceeded):
+            remaining = max(deadline - time.monotonic(), 0.001)
+            try:
+                proc_handle.wait(timeout=remaining)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+    finally:
+        selector.close()
+    if timed_out or exceeded:
+        _terminate_process_group(proc_handle)
+        exit_code: Optional[int] = None
+    else:
+        exit_code = proc_handle.returncode
+        proc_handle.stdout.close()
+        proc_handle.stderr.close()
+    return BoundedResult(
+        exit_code=exit_code,
+        stdout=b"".join(chunks["stdout"]),
+        stderr=b"".join(chunks["stderr"]),
+        timed_out=timed_out,
+        output_exceeded=exceeded,
     )
 
 

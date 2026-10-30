@@ -1,0 +1,73 @@
+# Synthetic fixture for SC-01 (not data from a real account or a published
+# experiment). The Orders table declares on-demand billing and also carries a
+# ProvisionedThroughput block, which only applies to PROVISIONED billing. That
+# mismatch is the inconsistency the SC-01 contract asks to fix, and nothing
+# else in this file may change.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Orders service (synthetic SC-01 fixture)
+Parameters:
+  Stage:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+Resources:
+  OrdersTable:
+    Type: AWS::DynamoDB::Table
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      AttributeDefinitions:
+        - AttributeName: pk
+          AttributeType: S
+      KeySchema:
+        - AttributeName: pk
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      SSESpecification:
+        SSEEnabled: true
+      Tags:
+        - Key: stage
+          Value: !Ref Stage
+  OrdersFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: orders-table-access
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Sid: OrdersTableReadWrite
+                Effect: Allow
+                Action:
+                  - dynamodb:GetItem
+                  - dynamodb:PutItem
+                Resource: !GetAtt OrdersTable.Arn
+  OrdersFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.12
+      Handler: index.handler
+      Role: !GetAtt OrdersFunctionRole.Arn
+      Code:
+        ZipFile: |
+          def handler(event, context):
+              return None
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref OrdersTable
+          LOG_LEVEL: INFO
+Outputs:
+  OrdersTableName:
+    Value: !Ref OrdersTable

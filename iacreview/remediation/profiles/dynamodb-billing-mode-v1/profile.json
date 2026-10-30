@@ -1,0 +1,27 @@
+{
+  "profile_id": "dynamodb-billing-mode-v1",
+  "profile_version": "1",
+  "title": "DynamoDB Table: make BillingMode and ProvisionedThroughput consistent",
+  "resource_type": "AWS::DynamoDB::Table",
+  "allowed_properties": {
+    "BillingMode": ["add", "replace"],
+    "ProvisionedThroughput": ["add", "replace", "remove"]
+  },
+  "outcomes": {
+    "billing-mode-consistent": {"guard_rule": "billing_mode_consistent"}
+  },
+  "invariants": {
+    "outside-allowed-edits-unchanged": {"kind": "boundary", "mandatory": true}
+  },
+  "parameters": {},
+  "mandatory_checks": ["cfn-lint", "profile-guard"],
+  "tools": {"cfn-lint": "1.46.0", "cfn-guard": "3.2.1"},
+  "init": {
+    "contract_id": "billing-mode-{resource_slug}",
+    "task_id": "repair-{resource_slug}-billing-mode",
+    "allowed_edits": [
+      {"property": "BillingMode", "operations": ["add", "replace"]},
+      {"property": "ProvisionedThroughput", "operations": ["remove"]}
+    ]
+  }
+}

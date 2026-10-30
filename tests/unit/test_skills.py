@@ -63,6 +63,15 @@ SKILL_NAMES: Tuple[str, ...] = (
     "iam-review",
 )
 
+#: Skills added after v1.0 with their own output contract, which the
+#: envelope-specific tests below do not apply to. Phase 1 adds one
+#: (``docs/v2/phase1/design.md`` section 9); its document is checked by
+#: ``tests/unit/test_skill_remediation_verify.py``. Discovery covers both lists.
+ADDED_SKILL_NAMES: Tuple[str, ...] = ("iac-remediation-verify",)
+
+#: Every Skill directory the plugin ships, in sorted order.
+ALL_SKILL_NAMES: Tuple[str, ...] = tuple(sorted(SKILL_NAMES + ADDED_SKILL_NAMES))
+
 #: The sections Requirement 2 AC13 requires, spelled as the five Skills spell
 #: them and in the order all five use. Order is asserted as well as presence: a
 #: reader comparing two Skills should not have to hunt for the same section in
@@ -499,7 +508,7 @@ def _write_skill_md(directory: Path, body: str, *, name: str = "stub") -> None:
 
 
 def test_every_expected_skill_is_discovered(skill_docs: Dict[str, SkillDoc]) -> None:
-    assert tuple(sorted(skill_docs)) == SKILL_NAMES
+    assert tuple(sorted(skill_docs)) == ALL_SKILL_NAMES
 
 
 def test_no_skill_directory_of_the_plugin_is_skipped(skills_root: Path) -> None:
@@ -526,7 +535,7 @@ def test_a_broken_sibling_does_not_disable_the_real_skills(
 
     valid, skipped = discover_skills(root)
 
-    assert tuple(doc.name for doc in valid) == SKILL_NAMES
+    assert tuple(doc.name for doc in valid) == ALL_SKILL_NAMES
     assert skipped == (
         SkippedSkill("no-heading", SKIP_NO_TOP_LEVEL_HEADING),
         SkippedSkill("no-skill-md", SKIP_NO_SKILL_MD),

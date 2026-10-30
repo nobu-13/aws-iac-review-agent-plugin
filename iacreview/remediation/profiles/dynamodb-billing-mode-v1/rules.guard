@@ -1,0 +1,22 @@
+# Profile dynamodb-billing-mode-v1 (Phase 1). Evaluated by the remediation
+# verifier on a projection {"Target": <contract Resource>, "Params": {...}}.
+# No rule-level `when`: an absent Target is a FAIL, never a SKIP.
+#
+# billing_mode_consistent: the Table declares a valid billing mode, and
+# ProvisionedThroughput is present exactly when the mode is PROVISIONED (the
+# CloudFormation default when BillingMode is absent). Global secondary indexes
+# are not evaluated in Phase 1.
+rule billing_mode_consistent {
+    Target.Type == "AWS::DynamoDB::Table"
+    Target.Properties is_struct
+    when Target.Properties.BillingMode exists {
+        Target.Properties.BillingMode in ["PAY_PER_REQUEST", "PROVISIONED"]
+    }
+    when Target.Properties.BillingMode == "PAY_PER_REQUEST" {
+        Target.Properties.ProvisionedThroughput not exists
+    }
+    when Target.Properties.BillingMode not exists or
+         Target.Properties.BillingMode == "PROVISIONED" {
+        Target.Properties.ProvisionedThroughput exists
+    }
+}

@@ -57,3 +57,8 @@ mcp.json
 
 # Local sample files - not part of the plugin package
 sample/
+
+# Local agent work area: helpers, raw evidence, targets with account names and
+# nested demo repositories. Never published (Phase 2 M1 WP1; checked by
+# `python3 .github/scripts/public_preflight.py`).
+.agents/

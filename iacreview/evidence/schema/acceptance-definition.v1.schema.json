@@ -1,0 +1,613 @@
+{
+  "$id": "iacreview/evidence/schema/acceptance-definition.v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Structure of an Acceptance Definition. Documentation of the format: the enforcing validator is iacreview/evidence/registry.py (standard library, no jsonschema dependency), which also checks what a schema cannot: rule ids against the rule catalog, test references, quoted text against git, Phase 1 locked results, duplicate ids and the file-name version. Source: docs/v2/phase2/m1/wp0/m1-architecture-proposal.md \u00a74-1.",
+  "properties": {
+    "acceptance_criteria": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "ac_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "axis": {
+            "enum": [
+              "app_check_provenance",
+              "artifact_integrity",
+              "evidence_recording",
+              "g11_environment_boundary",
+              "gate_provenance",
+              "issuer_pinning_independent_proof",
+              "merge_blocking",
+              "required_check",
+              "scenario_composition"
+            ]
+          },
+          "criteria": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "criterion_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                "criterion_text": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "evaluator_rule_id": {
+                  "description": "must be a key of iacreview.evidence.rules.RULE_CATALOG",
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "expected_result": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "evidence_missing": {
+                      "const": "NOT_PROVEN"
+                    },
+                    "satisfied": {
+                      "enum": [
+                        "FAILED",
+                        "NOT_PROVEN",
+                        "PASS"
+                      ]
+                    },
+                    "violated": {
+                      "enum": [
+                        "FAILED",
+                        "NOT_PROVEN"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "evidence_missing",
+                    "satisfied",
+                    "violated"
+                  ],
+                  "type": "object"
+                },
+                "historical_classification": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "basis": {
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "basis_source_id": {
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                        "type": "string"
+                      },
+                      "status": {
+                        "enum": [
+                          "FAILED",
+                          "NOT_APPLICABLE",
+                          "NOT_CLASSIFIED",
+                          "NOT_PROVEN",
+                          "OBSERVED",
+                          "PARTIAL",
+                          "PASS"
+                        ]
+                      },
+                      "subject": {
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "basis",
+                      "basis_source_id",
+                      "status",
+                      "subject"
+                    ],
+                    "type": "object"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                },
+                "historical_implementation": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "alignment": {
+                      "enum": [
+                        "ALIGNED",
+                        "CRITERION_ABSENT",
+                        "DIVERGENT",
+                        "NOT_AUDITED",
+                        "NOT_IMPLEMENTED",
+                        "PARTIAL_DEFAULTS"
+                      ]
+                    },
+                    "audit_ref": {
+                      "minLength": 1,
+                      "type": "string"
+                    },
+                    "helper_function": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "alignment",
+                    "audit_ref",
+                    "helper_function"
+                  ],
+                  "type": "object"
+                },
+                "origin": {
+                  "enum": [
+                    "historical_text",
+                    "phase2_added"
+                  ]
+                },
+                "required_evidence_types": {
+                  "items": {
+                    "enum": [
+                      "acceptance_definition",
+                      "approved_source_definition",
+                      "evidence_store_manifest",
+                      "github_actions_artifact",
+                      "github_actions_job_log",
+                      "github_actions_jobs",
+                      "github_actions_run",
+                      "github_graphql_status_rollup",
+                      "github_rest_branch_rules",
+                      "github_rest_check_run_annotations",
+                      "github_rest_check_runs",
+                      "github_rest_commit_statuses",
+                      "github_rest_contents",
+                      "local_git_tree"
+                    ]
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "source_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                "tests": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "definition_fidelity",
+                          "rule_behaviour"
+                        ]
+                      },
+                      "planned_wp": {
+                        "anyOf": [
+                          {
+                            "enum": [
+                              "WP2",
+                              "WP3",
+                              "WP4",
+                              "WP5"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "status": {
+                        "enum": [
+                          "IMPLEMENTED",
+                          "PLANNED"
+                        ]
+                      },
+                      "test_id": {
+                        "pattern": "^tests/[A-Za-z0-9_/]+\\.py::test_[A-Za-z0-9_]+$",
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "planned_wp",
+                      "status",
+                      "test_id"
+                    ],
+                    "type": "object"
+                  },
+                  "minItems": 1,
+                  "type": "array"
+                }
+              },
+              "required": [
+                "criterion_id",
+                "criterion_text",
+                "evaluator_rule_id",
+                "expected_result",
+                "historical_classification",
+                "historical_implementation",
+                "origin",
+                "required_evidence_types",
+                "source_id",
+                "tests"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "historical_source_text": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "source_id": {
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+                  "type": "string"
+                },
+                "text": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_id",
+                "text"
+              ],
+              "type": "object"
+            },
+            "minItems": 0,
+            "type": "array"
+          },
+          "phase1_ac_refs": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 0,
+            "type": "array"
+          },
+          "title": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "ac_id",
+          "axis",
+          "criteria",
+          "historical_source_text",
+          "phase1_ac_refs",
+          "title"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "definition_id": {
+      "pattern": "^[a-z0-9][a-z0-9-]*$",
+      "type": "string"
+    },
+    "definition_version": {
+      "minimum": 1,
+      "type": "integer"
+    },
+    "historical_evaluator": {
+      "additionalProperties": false,
+      "properties": {
+        "helper_path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "public": {
+          "const": false
+        },
+        "reason": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256_at_wp0": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        "version_at_evidence_time": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "helper_path",
+        "public",
+        "reason",
+        "sha256_at_wp0",
+        "version_at_evidence_time"
+      ],
+      "type": "object"
+    },
+    "historical_sources": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "blob_ids": {
+            "additionalProperties": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "commit": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "complete",
+                  "excerpt"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "phase1_decision_record",
+              "phase2_document",
+              "pre_fixed_criterion"
+            ]
+          },
+          "note": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "path": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "public": {
+            "type": "boolean"
+          },
+          "section": {
+            "pattern": "^[1-9][0-9]?$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sha256_at_wp0": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "verified_commits": {
+            "items": {
+              "pattern": "^[0-9a-f]{40}$",
+              "type": "string"
+            },
+            "minItems": 0,
+            "type": "array"
+          }
+        },
+        "required": [
+          "blob_ids",
+          "commit",
+          "coverage",
+          "kind",
+          "note",
+          "path",
+          "public",
+          "section",
+          "sha256_at_wp0",
+          "source_id",
+          "verified_commits"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "machine_readable_origin": {
+      "additionalProperties": false,
+      "properties": {
+        "committed_in_phase1": {
+          "const": false
+        },
+        "created_by_work_package": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "phase": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "statement": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "committed_in_phase1",
+        "created_by_work_package",
+        "phase",
+        "statement"
+      ],
+      "type": "object"
+    },
+    "non_normative_text": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "source_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "text": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "source_id",
+          "text"
+        ],
+        "type": "object"
+      },
+      "minItems": 0,
+      "type": "array"
+    },
+    "phase1_final_results": {
+      "additionalProperties": false,
+      "properties": {
+        "ac_rev3_counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "basis_source_ids": {
+          "items": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "scenario_counts": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "type": "object"
+        },
+        "scenarios": {
+          "additionalProperties": {
+            "enum": [
+              "FAILED",
+              "NOT_APPLICABLE",
+              "NOT_CLASSIFIED",
+              "NOT_PROVEN",
+              "OBSERVED",
+              "PARTIAL",
+              "PASS"
+            ]
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "ac_rev3_counts",
+        "basis_source_ids",
+        "scenario_counts",
+        "scenarios"
+      ],
+      "type": "object"
+    },
+    "phase1_locked_classifications": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "axis": {
+            "enum": [
+              "app_check_provenance",
+              "artifact_integrity",
+              "evidence_recording",
+              "g11_environment_boundary",
+              "gate_provenance",
+              "issuer_pinning_independent_proof",
+              "merge_blocking",
+              "required_check",
+              "scenario_composition"
+            ]
+          },
+          "basis": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "basis_source_id": {
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "FAILED",
+              "NOT_APPLICABLE",
+              "NOT_CLASSIFIED",
+              "NOT_PROVEN",
+              "OBSERVED",
+              "PARTIAL",
+              "PASS"
+            ]
+          },
+          "subject": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "axis",
+          "basis",
+          "basis_source_id",
+          "status",
+          "subject"
+        ],
+        "type": "object"
+      },
+      "minItems": 0,
+      "type": "array"
+    },
+    "purpose": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
+    "title": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "acceptance_criteria",
+    "definition_id",
+    "definition_version",
+    "historical_evaluator",
+    "historical_sources",
+    "machine_readable_origin",
+    "non_normative_text",
+    "phase1_final_results",
+    "phase1_locked_classifications",
+    "purpose",
+    "schema_version",
+    "title"
+  ],
+  "title": "Acceptance Definition (schema_version 1)",
+  "type": "object"
+}
