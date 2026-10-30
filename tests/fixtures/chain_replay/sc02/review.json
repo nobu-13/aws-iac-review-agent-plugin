@@ -1,0 +1,185 @@
+{
+  "errors": [],
+  "findings": [
+    {
+      "Confidence": "Confirmed",
+      "Evidence": [
+        {
+          "Detail": "Action \"*\" grants sts:AssumeRole and Resource is \"*\". Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "assumerole_unrestricted",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Principal \"lambda.amazonaws.com\" under Service is service and none of ['aws:principalorgid', 'aws:sourceaccount', 'aws:sourcearn'] is present in this statement. Detected in the trust_policy at Resources.IngestRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "cross_service_missing_condition",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "ec2:RunInstances is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1 and iam:PassRole is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "dangerous_ec2_passrole",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "lambda:UpdateFunctionCode is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1 and lambda:InvokeFunction is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "dangerous_lambda_combo",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "The three actions ['s3:GetObject', 's3:PutObject', 's3:DeleteObject'] are all allowed on Resource \"*\", at ['Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1']. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "dangerous_s3_combo",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Action \"*\" grants iam:PassRole and Resource \"*\" does not restrict which role may be passed. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "passrole_unrestricted",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "The trust policy allows sts:AssumeRole for the service principal \"lambda.amazonaws.com\" under Service and carries no Condition key. Detected in the trust_policy at Resources.IngestRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "privesc_broad_trust",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "lambda:CreateFunction is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1 and iam:PassRole is allowed at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "privesc_lambda_passrole",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Action \"*\" grants at least one of the policy-mutating actions ['iam:CreatePolicyVersion', 'iam:SetDefaultPolicyVersion', 'iam:AttachUserPolicy', 'iam:AttachGroupPolicy', 'iam:AttachRolePolicy', 'iam:PutUserPolicy', 'iam:PutGroupPolicy', 'iam:PutRolePolicy']. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "privesc_policy_mutation",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Effect is Allow on the sensitive action \"s3:GetObject\" and the statement carries no Condition key. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "sensitive_prefix_without_condition",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Effect is Allow on the sensitive action \"sts:AssumeRole\" and the statement carries no Condition key. Detected in the trust_policy at Resources.IngestRole.Properties.AssumeRolePolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "sensitive_prefix_without_condition",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Effect is Allow, Action includes \"*\" and Resource includes \"*\" in the same statement. Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "star_action_star_resource",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Unresolved intrinsic function: Fn::Sub substitutes ${InputBucket.Arn}, which is not determined by the Template, so only the fixed parts of the string were evaluated.",
+          "Excerpt": null,
+          "RuleId": "unresolvable_value",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Action contains the wildcard value \"*\". Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "wildcard_action",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Resource contains the wildcard value \"${InputBucket.Arn}/*\". Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.0.",
+          "Excerpt": null,
+          "RuleId": "wildcard_resource",
+          "Source": "IAM Review"
+        },
+        {
+          "Detail": "Resource contains the wildcard value \"*\". Detected in the inline_role_policy at Resources.IngestRole.Properties.Policies.0.PolicyDocument.Statement.1.",
+          "Excerpt": null,
+          "RuleId": "wildcard_resource",
+          "Source": "IAM Review"
+        }
+      ],
+      "Finding": "[assumerole_unrestricted] This statement allows sts:AssumeRole on Resource \"*\", so every role that trusts this identity can be assumed.",
+      "FindingType": "Security",
+      "ID": 1,
+      "Location": {
+        "Column": null,
+        "File": "infra/template.yaml",
+        "Line": null,
+        "TemplatePath": [
+          "Resources",
+          "IngestRole",
+          "Properties",
+          "Policies",
+          0,
+          "PolicyDocument",
+          "Statement",
+          1
+        ]
+      },
+      "Normalized_Category": "IAM",
+      "Recommendation": "Restrict Resource to the specific role ARNs this identity needs to assume.",
+      "Resource": "IngestRole",
+      "Severity": "CRITICAL",
+      "Source": [
+        "IAM Review"
+      ],
+      "SuggestedRemediation": null,
+      "WhyItMatters": "sts:AssumeRole on Resource \"*\" lets the holder assume every role whose trust policy admits it, so its effective permissions are the union of those roles rather than what this policy lists."
+    }
+  ],
+  "schema_version": "1.0.0",
+  "sources_enabled": [
+    "cfn-lint",
+    "IAM Review"
+  ],
+  "summary": {
+    "by_finding_type": {
+      "BestPractice": 0,
+      "Informational": 0,
+      "Security": 1,
+      "Validity": 0
+    },
+    "by_severity": {
+      "CRITICAL": 1,
+      "HIGH": 0,
+      "INFO": 0,
+      "LOW": 0,
+      "MEDIUM": 0
+    },
+    "by_source": {
+      "Agent Review": 0,
+      "IAM Review": 1,
+      "Network Review": 0,
+      "Quality Review": 0,
+      "Secret Review": 0,
+      "cfn-guard": 0,
+      "cfn-lint": 0
+    },
+    "by_template_group": {
+      "standalone": 1,
+      "synthesized": 0
+    },
+    "passed_all_checks": false,
+    "total": 1
+  },
+  "target": {
+    "cdk": {
+      "detected": false,
+      "synthesis": "not_applicable",
+      "synthesized_templates": []
+    },
+    "files": [
+      "infra/template.yaml"
+    ]
+  },
+  "tools": [
+    {
+      "available": true,
+      "name": "cfn-lint",
+      "version": "1.46.0"
+    }
+  ]
+}

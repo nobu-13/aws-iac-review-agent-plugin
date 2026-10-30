@@ -1,0 +1,17 @@
+{
+  "expected_format": "iacreview.chain.replay-expected/1",
+  "note": "Phase 2 M2 WP1 Regression Anchor (detects change; not an independent proof of correctness). Recorded by hand; never written by a test or the CI check. Gate is not evaluated in WP1, so both chains are INCOMPLETE (gate_record_missing). Revision 2 (WP1 final audit, N-5): validator source 49a4e338... -> 0790a1ca...; payload sc01 0863d3bf... -> 7c5c30cf..., sc02 7a0a074f... -> f24c0001.... Cause: the validator-identity schema check and diagnostic, and the constant observed.validator_identity = NOT_PROVEN in the verification link. Removing those two changes from the new payload reproduces the old digests exactly; manifest digests are unchanged.",
+  "scenarios": {
+    "sc01": {
+      "chain_status": "INCOMPLETE",
+      "manifest_sha256": "136994dd65ab2115949f8c957f9a7d063e38b80825924938d7da90d6328dec35",
+      "payload_sha256": "7c5c30cf9c07f330d58f27c42b52cc5e14b4652bde0ad8703178ce85eccc7940"
+    },
+    "sc02": {
+      "chain_status": "INCOMPLETE",
+      "manifest_sha256": "e94da38f22e81abac04c82931b31cf5e1cefdfea64a99a0adb0da1a26d36a8c6",
+      "payload_sha256": "f24c000188bca6349fcb75c3f130115d12225d7e52047ca22c4f20ed925b6736"
+    }
+  },
+  "validator_source_sha256": "0790a1ca4265105a2fe34c434465ede979614cedc7b1c0e5bf8b42d4677b23ee"
+}
