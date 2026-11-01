@@ -10,7 +10,7 @@
 
 * 判定（各 Link の Status と `chain_status`）の**期待値は置かない**。結果から Ground Truth を逆算しないため（M1 計画 §1 と同じ）
 * 合格条件は「手順が成立し、判定が再現し、Fail-closed が守られ、Secret が漏れない」ことに置く（§7）
-* 単一 Owner の Repository では Gate Link は NOT_PROVEN（GV-2 Approval Authority）になる見込み（§6）。これは失敗ではなく、事前に予測した限界として記録する。第2 Account は必須にしない（D-4）
+* 単一 Owner の Repository では Gate Link は NOT_PROVEN（GV-2 Account Separation、`approval_not_shown`。rev2 で GV-2 は承認権限ではなく Account の分離の観測に限定）になる見込み（§6）。これは失敗ではなく、事前に予測した限界として記録する。第2 Account は必須にしない（D-4）
 * Merge Enforcement（GV-5）は M2 の対象外で、E2E でも判定しない・主張しない
 
 ## 2. Scenario の選択

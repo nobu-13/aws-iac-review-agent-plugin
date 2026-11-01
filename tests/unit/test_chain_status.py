@@ -105,14 +105,20 @@ def test_tc_06_03_a_real_chain_in_wp1_is_incomplete_because_of_the_gate(chain: c
     assert result["payload"]["chain_status"] == st.INCOMPLETE and validator.exit_code(result) == 32
 
 
-def test_tc_06_03_gate_records_are_not_evaluated_before_wp2(chain: cs.Chain) -> None:
+def test_tc_06_03_a_self_declared_gate_record_is_never_a_pass(chain: cs.Chain) -> None:
+    """WP1 asserted ``gate_evaluation_not_implemented`` here; WP2 evaluates the record (m2-schemas.md rev2 §2-4).
+
+    The safety property is the same: an agent's "approved" record never makes the gate LINKED.
+    """
     doc = copy.deepcopy(chain.doc)
     record = cs.write(chain.root, "gate/agent-says-approved.json", b'{"approved_by": "agent"}')
     doc["gate_records"] = [{"locator": record, "sha256": cs.sha256(b'{"approved_by": "agent"}'), "kind": "candidate_review"}]
     result = validator.validate(cs.write_manifest(chain.root, doc, "gate-manifest.json"), chain.setup.repo)
     gate = next(e for e in result["payload"]["links"] if e["link"] == "gate")
-    assert (gate["status"], gate["codes"]) == ("NOT_PROVEN", ["gate_evaluation_not_implemented"])
+    assert gate["status"] != "LINKED" and "approval_self_declared_only" in gate["codes"]
+    assert gate["gate_aspects"]["integrity"]["status"] != "LINKED"
     assert result["payload"]["chain_status"] != st.COMPLETE
+    assert "gate_evaluation_not_implemented" in st.REASONS  # kept for WP1 compatibility (D2-3)
 
 
 def test_tc_06_04_an_error_inside_a_link_check_is_never_a_pass(chain: cs.Chain, monkeypatch: pytest.MonkeyPatch) -> None:

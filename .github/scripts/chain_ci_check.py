@@ -37,6 +37,9 @@ from typing import Dict, List, Optional, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 EXPECTED_FORMAT = "iacreview.chain.replay-expected/1"
+GATE_EXPECTED_FORMAT = "iacreview.chain.replay-expected-gate/1"
+GATE_EXPECTED_NAME = "expected-gate.json"  # next to --expected (WP2, D2-4: a separate anchor file)
+GATE_SCENARIOS = {"gate-complete": "COMPLETE", "gate-not-proven": "NOT_PROVEN", "gate-broken": "BROKEN"}
 EXIT = {"OK": 0, "CHECK_ERROR": 40, "EXPECTED_INVALID": 41, "TEST_FAILURES": 42, "REQUIRED_TEST_MISSING": 43, "SOURCE_MISMATCH": 44}
 ORDER = ("EXPECTED_INVALID", "SOURCE_MISMATCH", "TEST_FAILURES", "REQUIRED_TEST_MISSING")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -79,6 +82,44 @@ REQUIRED_TESTS = (
     "tests/unit/test_chain_isolation.py::test_tc_00_01_the_m1_expected_values_and_sources_are_unchanged",
     "tests/unit/test_chain_isolation.py::test_tc_00_03_nothing_outside_the_chain_package_imports_it",
     "tests/unit/test_chain_mutations.py::test_every_chain_mutant_is_killed_in_an_isolated_copy",
+    # WP2 (M2-08..M2-10, gate anchor)
+    "tests/unit/test_chain_gate.py::test_tc_08_03_the_array_order_and_the_page_split_do_not_matter",
+    "tests/unit/test_chain_gate.py::test_tc_08_04_a_forged_decision_is_broken",
+    "tests/unit/test_chain_gate.py::test_tc_08_06_a_self_declared_approval_is_never_an_approval",
+    "tests/unit/test_chain_gate.py::test_tc_08_07_a_source_outside_the_manifest_list_is_missing",
+    "tests/unit/test_chain_gate.py::test_tc_08_11_a_missing_page_is_incomplete",
+    "tests/unit/test_chain_gate.py::test_tc_08_11_the_page_sequence_rule",
+    "tests/unit/test_chain_gate.py::test_tc_08_13_one_review_id_with_two_contents_is_a_conflict",
+    "tests/unit/test_chain_gate.py::test_tc_08_15_conflicting_reviews_at_the_same_time_are_ambiguous",
+    "tests/unit/test_chain_gate.py::test_tc_08_17_the_decision_table",
+    "tests/unit/test_chain_gate.py::test_tc_08_18_login_avatar_and_email_never_leave_the_store",
+    "tests/unit/test_chain_gate.py::test_tc_08_21_a_dismissal_acts_on_its_own_review_only",
+    # WP2 review N2-2 / N2-3 (wp2-gate-record-decision-table.md G-02..G-13)
+    "tests/unit/test_chain_gate.py::test_g_02_an_absent_record_file_is_missing_not_a_missing_raw",
+    "tests/unit/test_chain_gate.py::test_g_04_a_record_outside_the_schema_is_invalid_not_a_self_declaration",
+    "tests/unit/test_chain_gate.py::test_g_05_a_self_declaration_next_to_a_real_approval_is_not_hidden",
+    "tests/unit/test_chain_gate.py::test_g_07_a_record_presented_twice_is_invalid_and_each_copy_is_compared",
+    "tests/unit/test_chain_gate.py::test_g_09_a_reviewer_the_complete_raw_does_not_have_is_broken",
+    "tests/unit/test_chain_gate.py::test_g_09_a_merge_decision_of_another_pull_is_broken",
+    "tests/unit/test_chain_gate.py::test_g_10_g_11_a_record_whose_raw_cannot_be_read_is_never_broken_by_the_record",
+    "tests/unit/test_chain_gate.py::test_g_13_a_record_left_out_is_missing_not_broken",
+    "tests/unit/test_chain_gate.py::test_g_one_bad_record_among_good_ones_decides_the_gate",
+    "tests/unit/test_chain_gate.py::test_g_several_bad_records_keep_every_cause",
+    # WP2 final review items 3 and 4 (G-13a, G-05)
+    "tests/unit/test_chain_gate.py::test_g_13a_the_primary_cause_is_not_doubled_by_a_secondary_missing_code",
+    "tests/unit/test_chain_gate.py::test_g_05_the_three_self_declaration_forms",
+    "tests/unit/test_chain_gate.py::test_g_05_other_fields_and_undefined_wording_are_not_self_declarations",
+    "tests/unit/test_chain_gate.py::test_tc_09_02_an_approval_of_an_old_head_only_is_not_proven_not_broken",
+    "tests/unit/test_chain_gate.py::test_tc_09_04_a_pr_head_after_the_chain_head_is_broken",
+    "tests/unit/test_chain_gate.py::test_tc_09_11_a_record_that_moves_an_old_approval_to_the_head_is_broken",
+    "tests/unit/test_chain_gate.py::test_tc_09_12_outstanding_changes_old_approvals_and_missing_pages_have_their_own_codes",
+    "tests/unit/test_chain_gate.py::test_tc_10_02_the_authors_own_approval_is_recorded_but_not_counted",
+    "tests/unit/test_chain_gate.py::test_tc_10_05_an_outstanding_change_request_is_never_complete",
+    "tests/unit/test_chain_gate.py::test_tc_10_06_author_association_decides_nothing",
+    "tests/unit/test_chain_gate.py::test_tc_10_07_a_full_chain_is_complete_and_claims_nothing_more",
+    "tests/unit/test_chain_gate.py::test_tc_10_11_a_chain_without_gate_records_keeps_the_wp1_shape",
+    "tests/unit/test_chain_gate_replay.py::test_gate_anchor_scenarios_meet_the_specification",
+    "tests/unit/test_chain_gate_replay.py::test_gate_anchor_four_runs_give_the_expected_payload_digest",
 )
 
 
@@ -123,6 +164,32 @@ def check_expected(path: Path, out: Outcome) -> Optional[Dict[str, object]]:
                 problems.append(name)
     if problems:
         out.fail("EXPECTED_INVALID", "expected file problems: {0}".format(", ".join(problems)))
+        return None
+    return doc
+
+
+def check_gate_expected(path: Path, wp1: Dict[str, object], out: Outcome) -> Optional[Dict[str, object]]:
+    """The separate gate anchor: its own format, the three scenarios, and the same validator digest as the WP1 anchor."""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        out.fail("EXPECTED_INVALID", "gate expected file {0} is missing or unreadable".format(path.name))
+        return None
+    problems = []
+    if not isinstance(doc, dict) or set(doc) != {"expected_format", "validator_source_sha256", "scenarios", "note"}:
+        problems.append("keys")
+    elif doc["expected_format"] != GATE_EXPECTED_FORMAT or doc["validator_source_sha256"] != wp1["validator_source_sha256"]:
+        problems.append("format or validator digest (must equal the WP1 anchor's)")
+    elif not isinstance(doc["scenarios"], dict) or set(doc["scenarios"]) != set(GATE_SCENARIOS):
+        problems.append("scenarios")
+    else:
+        for name, entry in sorted(doc["scenarios"].items()):
+            if (not isinstance(entry, dict) or set(entry) != {"chain_status", "manifest_sha256", "payload_sha256"}
+                    or not _SHA256.match(str(entry["manifest_sha256"])) or not _SHA256.match(str(entry["payload_sha256"]))
+                    or entry["chain_status"] != GATE_SCENARIOS[name]):
+                problems.append(name)
+    if problems:
+        out.fail("EXPECTED_INVALID", "gate expected file problems: {0}".format(", ".join(problems)))
         return None
     return doc
 
@@ -175,11 +242,12 @@ def check_junit(path: Path, out: Outcome) -> None:
 def summary(out: Outcome, expected: Optional[Dict[str, object]]) -> str:
     verdict = "FAILED (exit {0})".format(out.exit_code) if out.exit_code else "PASS for the checks this job runs"
     lines = ["## M2 remediation evidence chain (CI)", "", "* verdict: **{0}**".format(verdict),
-             "* scope: WP1 (manifest, reason codes, chain status, subject / contract / review / verification / GitHub-evidence links)",
-             "* the gate link is not evaluated before WP2: no chain is COMPLETE in WP1 (by design, not a pass)",
+             "* scope: WP1 (manifest, reason codes, chain status, five links) and WP2 (gate records, GV-1..GV-4, gate anchor)",
+             "* WP2: gate records (GV-1..GV-4) are evaluated; COMPLETE means only that the evidence chain's references agree",
+             "* approval authority, rule enforcement, merge permission and capture authenticity stay NOT_PROVEN",
              "* independent of the M1 evidence-integrity job; the M1 expected values are not read here", "",
              "| value | observed |", "| --- | --- |"]
-    for key in ("validator_source_sha256", "test_cases", "required", "skipped"):
+    for key in ("validator_source_sha256", "test_cases", "required", "skipped", "gate_scenarios"):
         if key in out.values:
             lines.append("| {0} | `{1}` |".format(key, out.values[key]))
     scenarios = expected.get("scenarios") if expected else None
@@ -201,6 +269,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         expected = check_expected(Path(args.expected), out)
         if expected is not None:
             check_source(expected, out)
+            gate = check_gate_expected(Path(args.expected).with_name(GATE_EXPECTED_NAME), expected, out)
+            if gate is not None:
+                out.values["gate_scenarios"] = len(gate["scenarios"])  # type: ignore[arg-type]
         check_junit(Path(args.junit), out)
     except CheckError as exc:
         sys.stderr.write("chain check error: {0}\n".format(exc))

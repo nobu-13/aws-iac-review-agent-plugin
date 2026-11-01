@@ -48,6 +48,8 @@ class LinkResult:
     present: bool = True
     #: Environment-dependent notes (never reason codes, never in the payload): see ``status.DIAGNOSTICS``.
     diagnostics: List[Dict[str, Any]] = field(default_factory=list)
+    #: gate only: reason codes per verification aspect (GV-1..GV-4); empty for every other link.
+    aspects: Dict[str, List[str]] = field(default_factory=dict)
 
     def add(self, code: str) -> None:
         if code not in self.codes:
@@ -61,6 +63,8 @@ class LinkResult:
         out: Dict[str, Any] = {"link": self.link, "status": self.status, "codes": sorted(self.codes)}
         if self.observed:
             out["observed"] = dict(sorted(self.observed.items()))
+        if self.aspects:
+            out["gate_aspects"] = {k: {"status": st.link_status(v), "codes": sorted(v)} for k, v in sorted(self.aspects.items())}
         return out
 
 
@@ -383,13 +387,14 @@ def check_verification(ctx: Context, loaded: LinkResult) -> LinkResult:
 
 
 def check_gate(ctx: Context) -> LinkResult:
-    """WP1: never LINKED. No record is INCOMPLETE (gate_record_missing); records are not evaluated yet."""
-    res = LinkResult("gate")
+    """No record: INCOMPLETE ``gate_record_missing`` (the WP1 result, unchanged). Otherwise GV-1..GV-4 (WP2)."""
     if not ctx.doc["gate_records"]:
+        res = LinkResult("gate")
         res.add("gate_record_missing")
-    else:
-        res.add("gate_evaluation_not_implemented")
-    return res
+        return res
+    from iacreview.chain import gate
+
+    return gate.check(ctx)
 
 
 # ---------------------------------------------------------------------------

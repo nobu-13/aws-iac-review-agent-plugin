@@ -28,7 +28,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 for extra in (ROOT, ROOT / "tests" / "remediation_bench"):
@@ -186,6 +186,113 @@ def make_store(root: Path, base: str, head: str, repo: str = REPO, locator: str 
 
 
 # ---------------------------------------------------------------------------
+# WP2: synthetic pull and review answers for the gate
+# ---------------------------------------------------------------------------
+
+PR_AUTHOR = 5000001
+REVIEWER_A = 5000002
+REVIEWER_B = 5000003
+
+
+def review(rid: int, state: str, user: Optional[int], at: Optional[str], commit: Optional[str],
+           assoc: Optional[str] = "COLLABORATOR", **extra: Any) -> Dict[str, Any]:
+    """One GitHub review object (the fields the gate reads, plus the kind of extra fields GitHub sends)."""
+    obj: Dict[str, Any] = {"id": rid, "state": state, "user": None if user is None else {"id": user, "login": "user-{0}".format(user)},
+                           "submitted_at": at, "commit_id": commit, "author_association": assoc, "body": ""}
+    obj.update(extra)
+    return obj
+
+
+def stamp(minute: int) -> str:
+    return "2026-10-30T06:{0:02d}:00Z".format(minute)
+
+
+def make_gate_store(root: Path, base: str, head: str, reviews: List[Dict[str, Any]], pr_author: Optional[int] = PR_AUTHOR,
+                    pr_head: Optional[str] = None, pages: int = 1, locator: str = "gate-store", repo: str = REPO,
+                    number: int = 7, review_number: Optional[int] = None, state: str = "open", merged: bool = False,
+                    mutate: Any = None, pull_extra: Optional[Dict[str, Any]] = None, with_pull: bool = True) -> Dict[str, Any]:
+    """An M1 store with a pull capture and a review capture of ``pages`` pages; returns ``github_evidence``.
+
+    ``mutate(captured)`` may change the list of captured pages before the revision is sealed (to build
+    missing, duplicated or reordered pages)."""
+    n = [0]
+
+    def ids() -> str:
+        n[0] += 1
+        return "cap-gate-{0:04d}".format(n[0])
+
+    pull = {"number": number, "state": state, "merged": merged, "merged_at": "2026-10-30T07:00:00Z" if merged else None,
+            "user": None if pr_author is None else {"id": pr_author, "login": "user-{0}".format(pr_author)},
+            "head": {"sha": pr_head or head}, "base": {"sha": base}}
+    pull.update(pull_extra or {})
+    captured: List[collector.CapturedEvidence] = []
+    queue = [collector.HttpResponse(200, {"Content-Type": "application/json"}, json.dumps(pull, sort_keys=True).encode())]
+    cap = collector.Collector(lambda r: queue.pop(0) if queue else None, repo, now=lambda: T0, id_factory=ids).capture(
+        "GET", "/repos/{0}/pulls/{1}".format(repo, number), subject_commit_sha=head)
+    if with_pull:
+        captured.extend(cap.evidence)
+    chunks = [reviews[i::pages] for i in range(pages)] if reviews else [[] for _ in range(pages)]
+    rn = review_number or number
+    path = "/repos/{0}/pulls/{1}/reviews".format(repo, rn)
+    responses = []
+    for i, chunk in enumerate(chunks):
+        headers = {"Content-Type": "application/json"}
+        if i + 1 < pages:
+            headers["Link"] = '<{0}{1}?per_page=100&page={2}>; rel="next"'.format(collector.API_ROOT, path, i + 2)
+        responses.append(collector.HttpResponse(200, headers, json.dumps(chunk, sort_keys=True).encode()))
+    cap = collector.Collector(lambda r: responses.pop(0) if responses else None, repo, now=lambda: T0, id_factory=ids).capture(
+        "GET", path + "?per_page=100", subject_commit_sha=head)
+    captured.extend(cap.evidence)
+    if mutate is not None:
+        captured = mutate(captured)
+    st = store.EvidenceStore(root / locator, root, now=lambda: T0)
+    w = st.begin_revision("synthetic M2 gate evidence")
+    for e in captured:
+        w.add(e)
+    w.seal()
+    rev = next(r for r in st.verify().revisions if r.revision_id == w.revision_id)
+    return {"store_locator": locator, "revision": w.revision_id, "manifest_sha256": rev.manifest_sha256,
+            "evidence_ids": sorted(e.evidence_id for e in captured)}
+
+
+def write_gate_records(root: Path, records: List[Dict[str, Any]], prefix: str = "gate") -> List[Dict[str, Any]]:
+    """Write each record as canonical JSON below ``root``; returns the manifest's ``gate_records``."""
+    entries = []
+    for i, rec in enumerate(records):
+        data = remediation_report.canonical(rec)
+        kind = rec.get("kind") if rec.get("kind") in ("contract_approval", "candidate_review", "merge_decision") else "candidate_review"
+        rel = write(root, "{0}/{1:02d}-{2}.json".format(prefix, i, kind), data)
+        entries.append({"locator": rel, "sha256": sha256(data), "kind": kind})
+    return entries
+
+
+class GateChain:
+    """A C02 chain with a gate store and the records regenerated from it (the correct records)."""
+
+    def __init__(self, tmp: Path, reviews: List[Dict[str, Any]], with_review: bool = True, review_bytes: Optional[bytes] = None,
+                 verification: Optional[bytes] = None, chain_id: str = "chain-gate-0001", **store_over: Any) -> None:
+        from iacreview.chain import gate
+
+        review_data = review_bytes if review_bytes is not None else (cached_review("sc02") if with_review else None)
+        self.chain = Chain(tmp, "C02", "IngestRole", review_data, verification, with_github=False, chain_id=chain_id)
+        self.setup = self.chain.setup
+        self.root = self.chain.root
+        self.chain.doc["github_evidence"] = make_gate_store(self.root, self.setup.base, self.setup.head, reviews, **store_over)
+        self.chain.rewrite()
+        self.records = gate.regenerate(self.chain.path)
+        self.chain.doc["gate_records"] = write_gate_records(self.root, self.records)
+        self.path = self.chain.rewrite()
+
+    @property
+    def doc(self) -> Dict[str, Any]:
+        return self.chain.doc
+
+    def with_records(self, records: List[Dict[str, Any]], name: str, prefix: str = "") -> Path:
+        doc = dict(self.chain.doc, gate_records=write_gate_records(self.root, records, prefix or "gate-" + name))
+        return write_manifest(self.root, doc, name + "-manifest.json")
+
+
+# ---------------------------------------------------------------------------
 # Chain root and manifest
 # ---------------------------------------------------------------------------
 
@@ -265,6 +372,31 @@ def fixture_chain(tmp: Path, scenario: str) -> Chain:
     built = {"case": subject["case"], "base": chain.setup.base, "head": chain.setup.head, "config": chain.setup.config_rev}
     assert built == subject, "the case repository no longer reproduces the fixture's commits"
     return chain
+
+
+#: WP2 gate Regression Anchor scenarios (D2-4, R2-4): name -> (reviews(head), store options).
+GATE_SCENARIOS = ("gate-complete", "gate-not-proven", "gate-broken")
+
+
+def gate_scenario(name: str, head: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    if name == "gate-complete":  # another account approves the head
+        return [review(81000010, "APPROVED", REVIEWER_A, stamp(10), head)], {}
+    if name == "gate-not-proven":  # single owner: GitHub accepts only a comment from the author
+        return [review(81000010, "COMMENTED", PR_AUTHOR, stamp(10), head, assoc="OWNER")], {}
+    if name == "gate-broken":  # a push after the approval: the chain verified a head that is no longer the PR's
+        return [review(81000010, "APPROVED", REVIEWER_A, stamp(10), head)], {"pr_head": "f" * 40}
+    raise KeyError(name)
+
+
+def fixture_gate_chain(tmp: Path, name: str) -> "GateChain":
+    """A gate anchor chain: the committed sc02 review and verification fixtures plus synthetic gate evidence."""
+    subject = json.loads((FIXTURES / "sc02" / "subject.json").read_text(encoding="utf-8"))
+    reviews, over = gate_scenario(name, subject["head"])
+    g = GateChain(tmp, reviews, review_bytes=(FIXTURES / "sc02" / "review.json").read_bytes(),
+                  verification=(FIXTURES / "sc02" / "remediation-report.json").read_bytes(), chain_id="chain-" + name, **over)
+    built = {"case": "C02", "base": g.setup.base, "head": g.setup.head, "config": g.setup.config_rev}
+    assert built == subject, "the case repository no longer reproduces the fixture's commits"
+    return g
 
 
 def write_fixtures() -> None:

@@ -1,6 +1,6 @@
 # Phase 2 / M2 — WP1〜WP6 の計画（依存関係、完了条件、必要 Evidence）
 
-* 状態: **WP0 の計画 rev1（Human Review の条件付き承認を受けた修正版）。未実施。** WP1 は Human の実装承認まで開始しない
+* 状態: **WP0 の計画 rev1（rev2 で WP2 の行を更新。`wp0-revision-2.md`）。WP1 は完了（Human 承認、GitHub CI は Human 提供 Evidence）。WP2 以降は未実施**
 * 共通: 各 WP の完了条件に `m2-scope-and-baseline.md` §5 の RG-1〜RG-9 と `m2-acceptance-test-matrix.md` §12 の TC-00-01〜04 を含める。各 WP の開始と完了で Human の承認を得る（`development-workflow.md`）。Commit は WP ごとに Human 承認後
 * 新規 Code の配置（D-1 で採用）: `iacreview/chain/`（新 Package）。Test は `tests/unit/test_chain_*.py`、期待値は `tests/fixtures/chain_replay/`。既存 Package と Test は変更しない（F-1〜F-7）
 
@@ -39,9 +39,9 @@ WP4 は WP1〜WP3 と並行できる（共有するのは M1 Collector と `proc
 | 項目 | 内容 |
 | --- | --- |
 | 対象 AC | M2-08、M2-09、M2-10（GV-2、静的検査） |
-| 作るもの | Gate Record Builder（Raw → Record）、Reader、GV-1〜GV-4 の判定、`gate` Link の合成、`actor_ref` の計算 |
-| 開始前の Human 決定 | WP2 の実装承認。`actor_ref` の方式（User id の SHA-256 先頭12桁）の確認 |
-| 完了条件 | TC-08、TC-09、TC-10-01〜08 がすべて期待どおり。MU2-21〜MU2-28 を検出。PII canary が出ない。RG-1〜RG-9 PASS |
+| 作るもの | Gate Record Builder（Raw → Record）、Reader、Evidence の範囲の検査（`m2-schemas.md` rev2 §2-1）、Review の集約（§2-2）、GV-1〜GV-4 の判定、`gate_aspects`、`actor_ref` の計算。`author_association` は Record の観測値だけ |
+| 開始前の Human 決定 | WP0 rev2 の承認、WP2 の実装承認、`wp0-revision-2.md` §6 の残課題。WP2 の Branch は Merge 後の main から作る |
+| 完了条件 | TC-08-01〜18、TC-09-01〜09、TC-10-01〜09・11 がすべて期待どおり。MU2-21〜29、MU2-33〜45 を検出し、MU2-01〜20 と M1 の32 Mutant も全数検出のまま。PII canary が出ない。RG-1〜RG-9 PASS。WP1 Anchor の更新は `wp0-revision-2.md` §4 の手順の記録つき、Gate を含む Anchor は別ファイルで追加（D2-4） |
 | 必要 Evidence | JUnit、Mutation 結果、canary 検索の結果 |
 
 ### WP3 Chain Result、Summary、利用手順
