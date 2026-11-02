@@ -75,7 +75,9 @@ jobs:
   test:
     name: tests (${{ matrix.os }}, Python ${{ matrix.python-version }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
+    # 60 minutes for every combination, except the one that sets `timeout-minutes`
+    # in its `include` entry below (the Intel macOS runner with Python 3.9).
+    timeout-minutes: ${{ matrix.timeout-minutes || 60 }}
     strategy:
       # A failure on one combination should not hide the result of the others:
       # "does this break on 3.9 only, or on macOS only" is the question this
@@ -96,6 +98,11 @@ jobs:
         include:
           - os: macos-15-intel
             python-version: "3.9"
+            # PR #10 (run 41305260650): this runner did not finish the suite in
+            # 60 minutes. The chain tests start many cfn-lint / cfn-guard
+            # processes, which cost the most here. Only this combination gets
+            # the longer limit; the suite and its coverage floor are unchanged.
+            timeout-minutes: 90
     steps:
       - name: Check out the repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -39,7 +39,9 @@ import casegen  # noqa: E402
 
 from iacreview.chain import links as chain_links  # noqa: E402
 from iacreview.chain import manifest as chain_manifest  # noqa: E402
+from iacreview import proc  # noqa: E402
 from iacreview.evidence import collector, store  # noqa: E402
+from iacreview.remediation import checks  # noqa: E402
 from iacreview.remediation import report as remediation_report  # noqa: E402
 from iacreview.remediation import verify  # noqa: E402
 
@@ -117,8 +119,108 @@ def review_report_bytes(template_text: str, sources: Sequence[str] = REVIEW_SOUR
         shutil.rmtree(str(work), ignore_errors=True)
 
 
-def verification_report_bytes(setup: casegen.Setup, execution_mode: str = "local_preview") -> bytes:
-    """A Remediation_Verification_Report of the case, made in this process (the Phase 1 verify)."""
+#: Cache of the verification reports made in this process (WP2 CI performance audit, option A).
+#:
+#: What is cached is the output of ``iacreview.remediation.verify.run``, a test *input* that no chain mutant
+#: touches (every mutant edits ``iacreview/chain/`` only; ``test_chain_synth_cache`` checks that), so the
+#: kill power of the mutation tests is unchanged. The cache lives in this process's memory only (nothing is
+#: written to disk, no other process sees it), and its values are ``bytes``, which cannot be mutated.
+#:
+#: Scope (WP2 CI performance fix review): this is a test helper and nothing outside ``tests/`` imports it, so
+#: the cache cannot reach the production code or the evidence verification it exercises. It serves only
+#: *committed* inputs: a worktree preview (``setup.head is None``) reads uncommitted files, which a commit id
+#: does not name, so it is never cached (``bypassed``).
+_VERIFICATION_CACHE: Dict[Any, bytes] = {}
+_VERIFICATION_STATS = {"calls": 0, "hits": 0, "misses": 0, "bypassed": 0}
+
+
+def verification_cache_stats() -> Dict[str, int]:
+    """A copy of the counters: ``calls``, ``hits``, ``misses`` (one real generation each) and ``bypassed``."""
+    return dict(_VERIFICATION_STATS)
+
+
+def clear_verification_cache() -> None:
+    """Forget every cached report and reset the counters."""
+    _VERIFICATION_CACHE.clear()
+    for name in _VERIFICATION_STATS:
+        _VERIFICATION_STATS[name] = 0
+
+
+def _tool_identity(name: str) -> Tuple[Any, ...]:
+    """The executable ``name`` resolves to on the current PATH: its real path, size, mtime and inode.
+
+    This stands in for the tool version, for this test helper only (Human decision, WP2 CI performance fix
+    review). A replaced or upgraded tool file changes the identity, so a report made with one tool is not
+    served for another. What it does NOT show, by design:
+
+    * the version string: ``--version`` costs a process start per call, and the mutation harness starts a
+      fresh process per mutant, so asking would cancel the saving. The report records the versions it was
+      made with;
+    * a change that keeps path, size, mtime and inode (a file rewritten in place with the same length and
+      a restored mtime), or a change of the interpreter or packages behind a console script (``cfn-lint`` is
+      a script; its package can change while the script file does not). Both need a changed environment
+      inside one running process, which the tests never do: the cache is per process and in memory only;
+    * where the tools' own inputs come from: PATH and the other inherited variables are in the key.
+
+    Do not use this identity for anything that crosses a process or is kept on disk.
+    """
+    found = shutil.which(name)
+    if found is None:
+        return (name, None)
+    real = os.path.realpath(found)
+    try:
+        st = os.stat(real)
+    except OSError:
+        return (name, real, None)
+    return (name, real, st.st_size, st.st_mtime_ns, st.st_ino)
+
+
+def verification_cache_key(setup: casegen.Setup, execution_mode: str = "local_preview") -> Tuple[Any, ...]:
+    """Everything that can change the report of :func:`verification_report_bytes`, as a hashable key.
+
+    The commits name the repository content (a committed verification reads git objects only); the contract
+    file, when the case uses one, is keyed by its content. The environment part is the variables the child
+    tools inherit (``proc.INHERITED_ENV_VARS``, which includes PATH) and the two the verifier itself reads.
+    The plugin's own source is not in the key: the cache lives in one process, and no source file changes
+    while a process runs (every mutant gets a new process and an empty cache).
+    """
+    if setup.head is None:
+        raise ValueError("a worktree preview reads uncommitted files; its report has no cache key")
+    contract_file = None
+    if setup.contract_file is not None:
+        contract_file = sha256(Path(setup.contract_file).read_bytes())
+    env_names = sorted(set(proc.INHERITED_ENV_VARS) | {checks.TIMEOUT_OVERRIDE_ENV, "IACREVIEW_RUN_ID"})
+    return (
+        "verification/1", REPO, execution_mode, setup.base, setup.head, setup.config_rev, setup.contract_path, contract_file,
+        tuple((n, os.environ.get(n)) for n in env_names),
+        _tool_identity(checks.CFN_LINT), _tool_identity(checks.CFN_GUARD),
+        sys.executable, tuple(sys.version_info[:3]),
+    )
+
+
+def verification_report_bytes(setup: casegen.Setup, execution_mode: str = "local_preview", cache: bool = True) -> bytes:
+    """A Remediation_Verification_Report of the case, made in this process (the Phase 1 verify).
+
+    Served from the per-process cache when the same inputs were already verified here (``cache=False``
+    always generates). The cached and the generated bytes are equal (``test_chain_synth_cache``).
+    """
+    if not cache:
+        return _generate_verification_report(setup, execution_mode)
+    _VERIFICATION_STATS["calls"] += 1
+    if setup.head is None:  # a worktree preview: uncommitted files decide the report
+        _VERIFICATION_STATS["bypassed"] += 1
+        return _generate_verification_report(setup, execution_mode)
+    key = verification_cache_key(setup, execution_mode)
+    if key in _VERIFICATION_CACHE:
+        _VERIFICATION_STATS["hits"] += 1
+        return _VERIFICATION_CACHE[key]
+    _VERIFICATION_STATS["misses"] += 1
+    data = _generate_verification_report(setup, execution_mode)
+    _VERIFICATION_CACHE[key] = data
+    return data
+
+
+def _generate_verification_report(setup: casegen.Setup, execution_mode: str) -> bytes:
     req = verify.Request(repo=setup.repo, base=setup.base, head=setup.head, config_rev=setup.config_rev,
                          contract_path=setup.contract_path, contract_file=None, execution_mode=execution_mode,
                          repository_id=REPO)

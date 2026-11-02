@@ -308,3 +308,80 @@ M1 固定 Hash（不変）: Evaluator `ee765e0c18ba76b9d4a27a0d4277548f21296757f
 * 実 GitHub Raw と strict JSON の互換性（N2-4）: WP5
 * Approval Authority、Ruleset Enforcement、Merge 権限、Raw の真正性: NOT_PROVEN（主張しない）
 * 全体 pytest、Benchmark、Determinism、Ground_Truth は本節の検証範囲外（Production Code の最終状態では §8-3 以降に未実行。§9 以降の Code 変更は `iacreview/chain/` だけ）
+
+## 11. CI Performance Fix（PR #10 のタイムアウト対応、Human Review 97/100・条件付き承認）
+
+背景: PR #10（Commit `ce9bac35`、CI Run 41305260650）で、macOS Intel / Python 3.9 の pytest が60分でキャンセルされた。ローカル計測（Apple M5 / Python 3.9.6）では、WP2 の追加で Chain Test が WP1 の約3.8倍になり、主因は `verification_report_bytes` の呼び出し（1回約1秒の cfn-lint / cfn-guard 実行、117回）だった。macOS Intel での実測値は NOT_VERIFIED。
+
+### 11-1. 変更
+
+| Path | 内容 |
+| --- | --- |
+| `tests/unit/chain_synth.py` | `verification_report_bytes` にプロセス内メモリのキャッシュ（Test Helper 限定）。Key は commit 群、contract、execution mode、子 Process が引き継ぐ環境変数、`cfn-lint` / `cfn-guard` の実体（実パス・サイズ・mtime・inode）、Python の実行ファイルと version。`cache=False` で常に再生成。`head=None`（未Commit の作業ツリーを読む Worktree Preview）はキャッシュしない（11-3）。Tool 実体識別の制約を `_tool_identity` の Docstring に記録 |
+| `tests/unit/test_chain_synth_cache.py`（新規） | キャッシュの Test 9件 |
+| `.github/scripts/chain_ci_check.py` | 必須 Test に上の9件を追加（70 → 79） |
+| `.github/workflows/ci.yml` | `timeout-minutes: ${{ matrix.timeout-minutes \|\| 60 }}`。`macos-15-intel` / Python 3.9 の `include` エントリだけ `timeout-minutes: 90`。他の Job の Timeout、Job 名、Job 数は不変 |
+| `tests/unit/test_ci.py` | Timeout 設定の静的 Test 2件を追加（Intel / 3.9 だけ90分・他の5組み合わせは60分、Job 名と他の Job の Timeout の不変、Required Check の数 10） |
+
+変更していないもの: `iacreview/`、`skills/`、`rules/`、Frozen Evidence、期待 Hash（`expected.json`、`expected-gate.json`、M1 の `expected.json`）、Mutation の Mutant と Kill Test、`pyproject.toml`、`plugin.json`、`.gitignore`。
+
+### 11-2. Production Code・Evidence 検証への影響
+
+* `chain_synth` を import するのは `tests/unit/` の Test だけ（`iacreview/`、`skills/`、`plugin.json`、CI Script からの参照なし）。キャッシュは Production Code にも本番の Evidence 検証にも届かない
+* キャッシュするのは `iacreview.remediation.verify` の出力で、全 Mutant が編集する `iacreview/chain/` の外。`test_no_chain_mutant_edits_what_the_cached_report_is_made_from` が、全 Mutant の編集先が `iacreview/chain/` だけであることと、`iacreview/remediation/` が `iacreview.chain` を参照しないことを固定する
+* キャッシュは1つの Process のメモリだけ。Mutation Harness は Mutant ごとに新しい Process を使うので、各 Mutant のキャッシュは空から始まる
+
+### 11-3. 未Commit のファイル状態と Cache Key（確認の結果、1件の修正）
+
+* 確認: `verify.Request.head` が `None` のとき、検証は未Commit の作業ツリーを読む。実測では、作業ツリーの未Commit の編集でレポートが変わった。commit だけの Key では、古いレポートを返してしまう
+* 現在の Chain Test は `head=None` の Setup を使わない（C01 / C02 / C05 はすべて Commit 済みの Head）。ただし Helper は一般的に使える形なので、将来の誤用を防ぐ
+* 修正（最小）: `setup.head is None` のときはキャッシュを使わず毎回生成し（`bypassed` を数える）、`verification_cache_key` は `ValueError` を出す。Test `test_a_worktree_preview_is_never_served_from_the_cache` を追加（承認済みの8件に1件の追加。**Human の承認を要する**）
+* Contract に Draft File を使う場合は、その内容の SHA-256 が Key に入る。プラグイン自身のソースは Key に入れない（Process 内で変わらない。Docstring に記載）
+
+### 11-4. Tool 実体識別の制約（Docstring にも記録）
+
+Tool Version の代わりに実体（実パス、サイズ、mtime、inode）を使う。Human の条件付き承認（Test Helper 限定）に従い、次の制約を記録した。
+
+* version の文字列は Key に入らない（Mutant ごとに Process が新しいので、`--version` を毎回呼ぶと節約が相殺される）。レポートには、生成時の version が記録される
+* パス・サイズ・mtime・inode が同じままの書き換え、または `cfn-lint` のスクリプトは変わらずにその背後の Package や Interpreter だけが変わる場合は検出しない。どちらも、1つの Process の実行中に環境が変わることを要するが、Test はそれを行わない
+* Process をまたぐ用途、ディスクに残す用途には使わない
+
+### 11-5. 実測（macOS arm64 / Python 3.9.6、同条件）
+
+| 項目 | 改善前（`ce9bac35`） | 改善後 |
+| --- | --- | --- |
+| Chain Test（Mutation 含む、Coverage なし） | 452秒 | 268秒（11-2 の追加 Test 前の測定） |
+| Chain Test（Mutation 除く） | 190秒 | 83秒 |
+| `verification_report_bytes` の呼び出し / 実際の生成 | 117回 / 117回 | 117回 / 3回（Hit 114、Miss 3、Hit 率97.4%） |
+| `cfn-lint` の実行 | 327回 | 99回 |
+| Mutation（Harness 単独） | 256秒 | 178秒（Baseline 98.7秒 → 26.6秒） |
+| 全体 pytest（`--cov` あり） | 1,225秒（FAIL 1、11-7） | 988秒（FAIL 0） |
+
+### 11-6. 最終検証（本節の変更後、`/usr/bin/python3` 3.9.6）
+
+| 項目 | Exit | 結果 |
+| --- | --- | --- |
+| Chain Test（`tests/unit/test_chain_*.py`、Chain Job と同じコマンド） | 0 | 349件 PASS / FAIL 0 / SKIP 0、272 s |
+| Mutation（Harness 単独） | 0 | 59 / 59 Kill（Chain Test 内の `test_chain_mutations` も PASS） |
+| Chain CI Check | 0 | 必須79件（70 + 9）、SKIP 0、Validator Source `09891f40…` 一致、Gate Anchor 3件 |
+| 5つの Anchor | — | 期待値ファイルは不変。Replay Test PASS。Payload Digest: sc01 `2bd6b538…`、sc02 `6913a37d…`、gate-complete `00e09c73…`、gate-not-proven `7013dc11…`、gate-broken `688c8fff…` |
+| M1 Regression（Evidence Test + CI Check） | 0 / 0 | 519件 PASS / SKIP 0。固定 Hash 一致（Evaluator `ee765e0c…`、Definition `fb4ddef0…`、native `24f091d1…`、final report `4b1f2c54…`、legacy `731a1846…`、M1 `expected.json` `ebe177bd…`、`verified_commits` 5） |
+| 全体 pytest + Coverage | 0 | 8,129件（PASS 8,093 / FAIL 0 / SKIP 36）、Coverage 95%（80%以上）、996 s |
+| Public Preflight / Secret scan | 0 / 0 | PASS（768 files）/ 0 finding（767 files） |
+| `git diff --check` | 0 | — |
+
+SKIP 36件は、改善前と同じ既存の内訳（Benchmark の宣言なし 26件ほか）。新しい SKIP・FAIL はない。
+
+### 11-7. 実行環境と再現性の制約（`test_prop_determinism`、今回は修正しない）
+
+* 全体 pytest は `USER=no-isa LOGNAME=no-isa` を明示して実行した。環境の記録: macOS 26.6.2 arm64（Apple M5）、Python 3.9.6、pytest 8.3.4、hypothesis 6.141.1、cfn-lint 1.46.0、cfn-guard 3.2.1。ツール用 Shell は `USER=no-isa`。改善前の全体 pytest（`--cov` あり）は、バックグラウンド実行の Process が `root` と解決される環境で、`test_stdout_is_a_function_of_the_input_alone` が1件 FAIL した
+* 仕組み: `getpass.getuser()` の `root`（最小長4に該当）が検査対象になり、Template に `root` がなく `Principal.AWS` に12桁のアカウント ID がある例で、IAM Review の固定文言 `the account root` が出力に出る。この仕組みは決定論的に確認した（該当の Template を Review すると出力に `account root` が1回出る）
+* 再現は確率的: `USER=root LOGNAME=root` での1回の実行（26秒）は PASS。失敗した実行は、Hypothesis が該当の Template 形を生成した場合。CI の `runner` ユーザーでは起きない見込みだが、CI では未確認
+* 修正案（未適用、Test は変更していない）: ユーザー名の検査を、前後が区切り文字のパス文脈に限る。または、ユーザー名が Review の固定文言に含まれる場合は検査から外す
+
+### 11-8. 残る NOT_VERIFIED
+
+* macOS Intel / Python 3.9 の実際の所要時間（ローカル比 約3.3倍の見積もりでは、全体は約54分で、60分に近い。90分への延長がその余裕）。見積もりの前提は CI ログの目測で、PR #9 の Intel Job の所要時間は未確認
+* `timeout-minutes: ${{ matrix.timeout-minutes || 60 }}` の式が、GitHub Actions 上で意図どおり評価されること（YAML としては読み込め、同じ展開規則を再現した静的 Test は PASS）
+* GitHub Actions の全 Job、Python 3.11（ローカルに Interpreter なし）、他の Matrix Job の実測
+* Approval Authority、Ruleset Enforcement、Merge 権限、Raw の真正性: NOT_PROVEN のまま（主張しない）
