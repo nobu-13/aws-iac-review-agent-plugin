@@ -1,0 +1,22 @@
+{
+  "expected_format": "iacreview.chain.replay-expected-gate/1",
+  "note": "Phase 2 M2 WP2 gate Regression Anchor (D2-4, R2-4), separate from the WP1 anchor in expected.json. Detects change; not an independent proof of correctness. Recorded by hand after checking each chain's status and gate codes against the specification (TC-10-07 COMPLETE, TC-10-04 NOT_PROVEN approval_not_shown, TC-09-04 BROKEN pr_head_mismatch); never written by a test or the CI check. Inputs: the committed sc02 review and verification fixtures, the Phase 1 case C02, and synthetic pull / review answers (tests/unit/chain_synth.py gate_scenario). Revision 2 (WP2 review N2-2 / N2-3): validator source 2260f7d6... -> 8bef526d...; payload gate-complete 859c494b... -> 3ac9406f..., gate-not-proven 582353b6... -> 5e386951..., gate-broken 2565d223... -> 815a0671.... Cause: the same validator source change as expected.json Revision 4. Setting payload.validator.source_sha256 back to 2260f7d6... reproduces the Revision 1 payload digests exactly; chain_status, gate codes and manifest digests are unchanged. Revision 3 (WP2 final review, items 3 and 4): validator source 8bef526d... -> 09891f40...; payload gate-broken 815a0671... -> 688c8fff..., gate-complete 3ac9406f... -> 00e09c73..., gate-not-proven 5e386951... -> 7013dc11.... Cause: iacreview/chain/gate.py (G-13a secondary left-out records add no code; the self-declaration forms are closed) and status.py (two causes reworded). Setting payload.validator.source_sha256 back to 8bef526d... reproduces the Revision 2 payload digests exactly; chain_status, gate codes and manifest digests are unchanged.",
+  "scenarios": {
+    "gate-broken": {
+      "chain_status": "BROKEN",
+      "manifest_sha256": "5501f8c241a51a40c1f38e7a9139097cb5a18093b6d86a86a2ad2115400efe72",
+      "payload_sha256": "688c8fff73e9309d2004d21945b1a94454cea60ff29c2b5b5362f4d86ab4c969"
+    },
+    "gate-complete": {
+      "chain_status": "COMPLETE",
+      "manifest_sha256": "154a3c1391727d0ab9ea4f3085617dcc4728777c2519496d5e80be1b22913b31",
+      "payload_sha256": "00e09c732187e48f95366f9c5885617f0b08b30da13de57d4f9efd5dc3c6f1e3"
+    },
+    "gate-not-proven": {
+      "chain_status": "NOT_PROVEN",
+      "manifest_sha256": "8a5f07618101f181a072530d7513a7c34871b9d968b65d800674f6e586bb9df0",
+      "payload_sha256": "7013dc11b228e2fee4bac3630fd2f792f2fb1ee818910dd6674d3151b8df8e6c"
+    }
+  },
+  "validator_source_sha256": "09891f40edb248c412ed9307808293d80f8f57bbe3bd7983b5aa42fe0035b60a"
+}

@@ -1,8 +1,8 @@
-"""Mutation detection of the Remediation Evidence Chain, WP1 (Phase 2 M2, MU2-01..MU2-20).
+"""Mutation detection of the Remediation Evidence Chain (Phase 2 M2: WP1 MU2-01..20, WP2 MU2-21..29 and MU2-33..62).
 
 Runs ``tests/mutation/chain_mutants.py``: each mutant is applied to an isolated temporary copy (never to
 the work tree) and its kill tests must fail there by an assertion, after a passing baseline. The detection
-rate is for this mutant set only. MU2-21..MU2-32 belong to WP2 (Gate) and WP4 (Transport).
+rate is for this mutant set only. MU2-30..MU2-32 belong to WP4 (Transport).
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 HARNESS = ROOT / "tests" / "mutation" / "chain_mutants.py"
-REQUIRED = {"MU2-{0:02d}".format(n) for n in range(1, 21)}
+REQUIRED = {"MU2-{0:02d}".format(n) for n in list(range(1, 30)) + list(range(33, 63))}  # MU2-30..32: WP4
 
 
 def _harness() -> Any:
@@ -46,4 +46,4 @@ def test_every_chain_mutant_is_killed_in_an_isolated_copy() -> None:
     assert before == after  # the work tree is never mutated
     assert result["baseline"]["exit_code"] == 0, result["baseline"]
     survivors = [r for r in result["mutants"] if not r["killed"]]
-    assert survivors == [] and result["killed"] == result["total"] == 20
+    assert survivors == [] and result["killed"] == result["total"] == len(REQUIRED) == 59

@@ -514,6 +514,65 @@ def test_matrix_uses_only_supported_operating_systems(
     )
 
 
+#: Job id -> the job's ``name`` and ``timeout-minutes`` (WP2 CI performance fix). The ``test`` job's timeout is
+#: an expression over the matrix; the other gate jobs and the advisory lint job keep their fixed limits.
+EXPECTED_JOB_NAMES: Dict[str, str] = {
+    "test": "tests (${{ matrix.os }}, Python ${{ matrix.python-version }})",
+    "determinism": "determinism (PYTHONHASHSEED=random)",
+    "repository-hygiene": "repository hygiene",
+    "evidence-integrity": "evidence integrity (M1)",
+    "chain-integrity": "remediation evidence chain (M2)",
+    "lint": "lint (advisory)",
+}
+EXPECTED_FIXED_TIMEOUTS: Dict[str, int] = {
+    "determinism": 45, "repository-hygiene": 15, "evidence-integrity": 20, "chain-integrity": 30, "lint": 15,
+}
+DEFAULT_MATRIX_TIMEOUT_MINUTES = 60
+SLOW_MATRIX_TIMEOUT_MINUTES = 90
+SLOW_COMBINATION = ("macos-15-intel", "3.9")
+
+
+def effective_matrix_timeouts(matrix: Dict[str, Any]) -> Dict[Tuple[str, str], int]:
+    """The ``timeout-minutes`` each expanded combination gets: its ``include`` entry's value, else the default.
+
+    Mirrors the expression ``matrix.timeout-minutes || 60`` for the part of GitHub's expansion this workflow uses.
+    """
+    overrides: Dict[Tuple[str, str], int] = {}
+    for entry in matrix.get("include", []):
+        if "timeout-minutes" in entry:
+            overrides[(str(entry["os"]), str(entry["python-version"]))] = int(entry["timeout-minutes"])
+    return {
+        combination: overrides.get(combination, DEFAULT_MATRIX_TIMEOUT_MINUTES)
+        for combination in matrix_combinations(matrix)
+    }
+
+
+def test_only_the_intel_python_39_combination_gets_the_longer_timeout(workflow: Dict[str, Any]) -> None:
+    """90 minutes for ``macos-15-intel`` / Python 3.9 (PR #10, run 41305260650); 60 for every other combination."""
+    matrix = matrix_of(workflow, MATRIX_JOB)
+    assert job_of(workflow, MATRIX_JOB)["timeout-minutes"] == "${{ matrix.timeout-minutes || 60 }}"
+    assert "timeout-minutes" not in {key for key in matrix if key not in ("include", "exclude")}  # not a matrix axis
+    with_timeout = [entry for entry in matrix.get("include", []) if "timeout-minutes" in entry]
+    assert with_timeout == [
+        {"os": SLOW_COMBINATION[0], "python-version": SLOW_COMBINATION[1], "timeout-minutes": SLOW_MATRIX_TIMEOUT_MINUTES}
+    ]
+    timeouts = effective_matrix_timeouts(matrix)
+    assert len(timeouts) == 6  # three Python versions on two operating systems, as before
+    assert {c: t for c, t in timeouts.items() if t != DEFAULT_MATRIX_TIMEOUT_MINUTES} == {
+        SLOW_COMBINATION: SLOW_MATRIX_TIMEOUT_MINUTES
+    }
+    assert SLOW_COMBINATION in timeouts
+
+
+def test_no_other_job_changes_its_name_or_timeout(workflow: Dict[str, Any]) -> None:
+    """The check names are what branch protection requires: 6 matrix combinations + 4 gate jobs = 10 checks."""
+    jobs = workflow["jobs"]
+    assert {job_id: job.get("name") for job_id, job in jobs.items()} == EXPECTED_JOB_NAMES
+    assert {job_id: jobs[job_id].get("timeout-minutes") for job_id in EXPECTED_FIXED_TIMEOUTS} == EXPECTED_FIXED_TIMEOUTS
+    gate_checks = len(effective_matrix_timeouts(matrix_of(workflow, MATRIX_JOB))) + len(GATE_JOBS) - 1
+    assert gate_checks == 10
+
+
 def test_the_matrix_does_not_stop_at_the_first_failure(
     workflow: Dict[str, Any]
 ) -> None:

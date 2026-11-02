@@ -28,7 +28,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 for extra in (ROOT, ROOT / "tests" / "remediation_bench"):
@@ -39,7 +39,9 @@ import casegen  # noqa: E402
 
 from iacreview.chain import links as chain_links  # noqa: E402
 from iacreview.chain import manifest as chain_manifest  # noqa: E402
+from iacreview import proc  # noqa: E402
 from iacreview.evidence import collector, store  # noqa: E402
+from iacreview.remediation import checks  # noqa: E402
 from iacreview.remediation import report as remediation_report  # noqa: E402
 from iacreview.remediation import verify  # noqa: E402
 
@@ -117,8 +119,108 @@ def review_report_bytes(template_text: str, sources: Sequence[str] = REVIEW_SOUR
         shutil.rmtree(str(work), ignore_errors=True)
 
 
-def verification_report_bytes(setup: casegen.Setup, execution_mode: str = "local_preview") -> bytes:
-    """A Remediation_Verification_Report of the case, made in this process (the Phase 1 verify)."""
+#: Cache of the verification reports made in this process (WP2 CI performance audit, option A).
+#:
+#: What is cached is the output of ``iacreview.remediation.verify.run``, a test *input* that no chain mutant
+#: touches (every mutant edits ``iacreview/chain/`` only; ``test_chain_synth_cache`` checks that), so the
+#: kill power of the mutation tests is unchanged. The cache lives in this process's memory only (nothing is
+#: written to disk, no other process sees it), and its values are ``bytes``, which cannot be mutated.
+#:
+#: Scope (WP2 CI performance fix review): this is a test helper and nothing outside ``tests/`` imports it, so
+#: the cache cannot reach the production code or the evidence verification it exercises. It serves only
+#: *committed* inputs: a worktree preview (``setup.head is None``) reads uncommitted files, which a commit id
+#: does not name, so it is never cached (``bypassed``).
+_VERIFICATION_CACHE: Dict[Any, bytes] = {}
+_VERIFICATION_STATS = {"calls": 0, "hits": 0, "misses": 0, "bypassed": 0}
+
+
+def verification_cache_stats() -> Dict[str, int]:
+    """A copy of the counters: ``calls``, ``hits``, ``misses`` (one real generation each) and ``bypassed``."""
+    return dict(_VERIFICATION_STATS)
+
+
+def clear_verification_cache() -> None:
+    """Forget every cached report and reset the counters."""
+    _VERIFICATION_CACHE.clear()
+    for name in _VERIFICATION_STATS:
+        _VERIFICATION_STATS[name] = 0
+
+
+def _tool_identity(name: str) -> Tuple[Any, ...]:
+    """The executable ``name`` resolves to on the current PATH: its real path, size, mtime and inode.
+
+    This stands in for the tool version, for this test helper only (Human decision, WP2 CI performance fix
+    review). A replaced or upgraded tool file changes the identity, so a report made with one tool is not
+    served for another. What it does NOT show, by design:
+
+    * the version string: ``--version`` costs a process start per call, and the mutation harness starts a
+      fresh process per mutant, so asking would cancel the saving. The report records the versions it was
+      made with;
+    * a change that keeps path, size, mtime and inode (a file rewritten in place with the same length and
+      a restored mtime), or a change of the interpreter or packages behind a console script (``cfn-lint`` is
+      a script; its package can change while the script file does not). Both need a changed environment
+      inside one running process, which the tests never do: the cache is per process and in memory only;
+    * where the tools' own inputs come from: PATH and the other inherited variables are in the key.
+
+    Do not use this identity for anything that crosses a process or is kept on disk.
+    """
+    found = shutil.which(name)
+    if found is None:
+        return (name, None)
+    real = os.path.realpath(found)
+    try:
+        st = os.stat(real)
+    except OSError:
+        return (name, real, None)
+    return (name, real, st.st_size, st.st_mtime_ns, st.st_ino)
+
+
+def verification_cache_key(setup: casegen.Setup, execution_mode: str = "local_preview") -> Tuple[Any, ...]:
+    """Everything that can change the report of :func:`verification_report_bytes`, as a hashable key.
+
+    The commits name the repository content (a committed verification reads git objects only); the contract
+    file, when the case uses one, is keyed by its content. The environment part is the variables the child
+    tools inherit (``proc.INHERITED_ENV_VARS``, which includes PATH) and the two the verifier itself reads.
+    The plugin's own source is not in the key: the cache lives in one process, and no source file changes
+    while a process runs (every mutant gets a new process and an empty cache).
+    """
+    if setup.head is None:
+        raise ValueError("a worktree preview reads uncommitted files; its report has no cache key")
+    contract_file = None
+    if setup.contract_file is not None:
+        contract_file = sha256(Path(setup.contract_file).read_bytes())
+    env_names = sorted(set(proc.INHERITED_ENV_VARS) | {checks.TIMEOUT_OVERRIDE_ENV, "IACREVIEW_RUN_ID"})
+    return (
+        "verification/1", REPO, execution_mode, setup.base, setup.head, setup.config_rev, setup.contract_path, contract_file,
+        tuple((n, os.environ.get(n)) for n in env_names),
+        _tool_identity(checks.CFN_LINT), _tool_identity(checks.CFN_GUARD),
+        sys.executable, tuple(sys.version_info[:3]),
+    )
+
+
+def verification_report_bytes(setup: casegen.Setup, execution_mode: str = "local_preview", cache: bool = True) -> bytes:
+    """A Remediation_Verification_Report of the case, made in this process (the Phase 1 verify).
+
+    Served from the per-process cache when the same inputs were already verified here (``cache=False``
+    always generates). The cached and the generated bytes are equal (``test_chain_synth_cache``).
+    """
+    if not cache:
+        return _generate_verification_report(setup, execution_mode)
+    _VERIFICATION_STATS["calls"] += 1
+    if setup.head is None:  # a worktree preview: uncommitted files decide the report
+        _VERIFICATION_STATS["bypassed"] += 1
+        return _generate_verification_report(setup, execution_mode)
+    key = verification_cache_key(setup, execution_mode)
+    if key in _VERIFICATION_CACHE:
+        _VERIFICATION_STATS["hits"] += 1
+        return _VERIFICATION_CACHE[key]
+    _VERIFICATION_STATS["misses"] += 1
+    data = _generate_verification_report(setup, execution_mode)
+    _VERIFICATION_CACHE[key] = data
+    return data
+
+
+def _generate_verification_report(setup: casegen.Setup, execution_mode: str) -> bytes:
     req = verify.Request(repo=setup.repo, base=setup.base, head=setup.head, config_rev=setup.config_rev,
                          contract_path=setup.contract_path, contract_file=None, execution_mode=execution_mode,
                          repository_id=REPO)
@@ -183,6 +285,113 @@ def make_store(root: Path, base: str, head: str, repo: str = REPO, locator: str 
     rev = next(r for r in report.revisions if r.revision_id == revision)
     return {"store_locator": locator, "revision": revision, "manifest_sha256": rev.manifest_sha256,
             "evidence_ids": sorted(e.evidence_id for e in captured)}
+
+
+# ---------------------------------------------------------------------------
+# WP2: synthetic pull and review answers for the gate
+# ---------------------------------------------------------------------------
+
+PR_AUTHOR = 5000001
+REVIEWER_A = 5000002
+REVIEWER_B = 5000003
+
+
+def review(rid: int, state: str, user: Optional[int], at: Optional[str], commit: Optional[str],
+           assoc: Optional[str] = "COLLABORATOR", **extra: Any) -> Dict[str, Any]:
+    """One GitHub review object (the fields the gate reads, plus the kind of extra fields GitHub sends)."""
+    obj: Dict[str, Any] = {"id": rid, "state": state, "user": None if user is None else {"id": user, "login": "user-{0}".format(user)},
+                           "submitted_at": at, "commit_id": commit, "author_association": assoc, "body": ""}
+    obj.update(extra)
+    return obj
+
+
+def stamp(minute: int) -> str:
+    return "2026-10-30T06:{0:02d}:00Z".format(minute)
+
+
+def make_gate_store(root: Path, base: str, head: str, reviews: List[Dict[str, Any]], pr_author: Optional[int] = PR_AUTHOR,
+                    pr_head: Optional[str] = None, pages: int = 1, locator: str = "gate-store", repo: str = REPO,
+                    number: int = 7, review_number: Optional[int] = None, state: str = "open", merged: bool = False,
+                    mutate: Any = None, pull_extra: Optional[Dict[str, Any]] = None, with_pull: bool = True) -> Dict[str, Any]:
+    """An M1 store with a pull capture and a review capture of ``pages`` pages; returns ``github_evidence``.
+
+    ``mutate(captured)`` may change the list of captured pages before the revision is sealed (to build
+    missing, duplicated or reordered pages)."""
+    n = [0]
+
+    def ids() -> str:
+        n[0] += 1
+        return "cap-gate-{0:04d}".format(n[0])
+
+    pull = {"number": number, "state": state, "merged": merged, "merged_at": "2026-10-30T07:00:00Z" if merged else None,
+            "user": None if pr_author is None else {"id": pr_author, "login": "user-{0}".format(pr_author)},
+            "head": {"sha": pr_head or head}, "base": {"sha": base}}
+    pull.update(pull_extra or {})
+    captured: List[collector.CapturedEvidence] = []
+    queue = [collector.HttpResponse(200, {"Content-Type": "application/json"}, json.dumps(pull, sort_keys=True).encode())]
+    cap = collector.Collector(lambda r: queue.pop(0) if queue else None, repo, now=lambda: T0, id_factory=ids).capture(
+        "GET", "/repos/{0}/pulls/{1}".format(repo, number), subject_commit_sha=head)
+    if with_pull:
+        captured.extend(cap.evidence)
+    chunks = [reviews[i::pages] for i in range(pages)] if reviews else [[] for _ in range(pages)]
+    rn = review_number or number
+    path = "/repos/{0}/pulls/{1}/reviews".format(repo, rn)
+    responses = []
+    for i, chunk in enumerate(chunks):
+        headers = {"Content-Type": "application/json"}
+        if i + 1 < pages:
+            headers["Link"] = '<{0}{1}?per_page=100&page={2}>; rel="next"'.format(collector.API_ROOT, path, i + 2)
+        responses.append(collector.HttpResponse(200, headers, json.dumps(chunk, sort_keys=True).encode()))
+    cap = collector.Collector(lambda r: responses.pop(0) if responses else None, repo, now=lambda: T0, id_factory=ids).capture(
+        "GET", path + "?per_page=100", subject_commit_sha=head)
+    captured.extend(cap.evidence)
+    if mutate is not None:
+        captured = mutate(captured)
+    st = store.EvidenceStore(root / locator, root, now=lambda: T0)
+    w = st.begin_revision("synthetic M2 gate evidence")
+    for e in captured:
+        w.add(e)
+    w.seal()
+    rev = next(r for r in st.verify().revisions if r.revision_id == w.revision_id)
+    return {"store_locator": locator, "revision": w.revision_id, "manifest_sha256": rev.manifest_sha256,
+            "evidence_ids": sorted(e.evidence_id for e in captured)}
+
+
+def write_gate_records(root: Path, records: List[Dict[str, Any]], prefix: str = "gate") -> List[Dict[str, Any]]:
+    """Write each record as canonical JSON below ``root``; returns the manifest's ``gate_records``."""
+    entries = []
+    for i, rec in enumerate(records):
+        data = remediation_report.canonical(rec)
+        kind = rec.get("kind") if rec.get("kind") in ("contract_approval", "candidate_review", "merge_decision") else "candidate_review"
+        rel = write(root, "{0}/{1:02d}-{2}.json".format(prefix, i, kind), data)
+        entries.append({"locator": rel, "sha256": sha256(data), "kind": kind})
+    return entries
+
+
+class GateChain:
+    """A C02 chain with a gate store and the records regenerated from it (the correct records)."""
+
+    def __init__(self, tmp: Path, reviews: List[Dict[str, Any]], with_review: bool = True, review_bytes: Optional[bytes] = None,
+                 verification: Optional[bytes] = None, chain_id: str = "chain-gate-0001", **store_over: Any) -> None:
+        from iacreview.chain import gate
+
+        review_data = review_bytes if review_bytes is not None else (cached_review("sc02") if with_review else None)
+        self.chain = Chain(tmp, "C02", "IngestRole", review_data, verification, with_github=False, chain_id=chain_id)
+        self.setup = self.chain.setup
+        self.root = self.chain.root
+        self.chain.doc["github_evidence"] = make_gate_store(self.root, self.setup.base, self.setup.head, reviews, **store_over)
+        self.chain.rewrite()
+        self.records = gate.regenerate(self.chain.path)
+        self.chain.doc["gate_records"] = write_gate_records(self.root, self.records)
+        self.path = self.chain.rewrite()
+
+    @property
+    def doc(self) -> Dict[str, Any]:
+        return self.chain.doc
+
+    def with_records(self, records: List[Dict[str, Any]], name: str, prefix: str = "") -> Path:
+        doc = dict(self.chain.doc, gate_records=write_gate_records(self.root, records, prefix or "gate-" + name))
+        return write_manifest(self.root, doc, name + "-manifest.json")
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +474,31 @@ def fixture_chain(tmp: Path, scenario: str) -> Chain:
     built = {"case": subject["case"], "base": chain.setup.base, "head": chain.setup.head, "config": chain.setup.config_rev}
     assert built == subject, "the case repository no longer reproduces the fixture's commits"
     return chain
+
+
+#: WP2 gate Regression Anchor scenarios (D2-4, R2-4): name -> (reviews(head), store options).
+GATE_SCENARIOS = ("gate-complete", "gate-not-proven", "gate-broken")
+
+
+def gate_scenario(name: str, head: str) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    if name == "gate-complete":  # another account approves the head
+        return [review(81000010, "APPROVED", REVIEWER_A, stamp(10), head)], {}
+    if name == "gate-not-proven":  # single owner: GitHub accepts only a comment from the author
+        return [review(81000010, "COMMENTED", PR_AUTHOR, stamp(10), head, assoc="OWNER")], {}
+    if name == "gate-broken":  # a push after the approval: the chain verified a head that is no longer the PR's
+        return [review(81000010, "APPROVED", REVIEWER_A, stamp(10), head)], {"pr_head": "f" * 40}
+    raise KeyError(name)
+
+
+def fixture_gate_chain(tmp: Path, name: str) -> "GateChain":
+    """A gate anchor chain: the committed sc02 review and verification fixtures plus synthetic gate evidence."""
+    subject = json.loads((FIXTURES / "sc02" / "subject.json").read_text(encoding="utf-8"))
+    reviews, over = gate_scenario(name, subject["head"])
+    g = GateChain(tmp, reviews, review_bytes=(FIXTURES / "sc02" / "review.json").read_bytes(),
+                  verification=(FIXTURES / "sc02" / "remediation-report.json").read_bytes(), chain_id="chain-" + name, **over)
+    built = {"case": "C02", "base": g.setup.base, "head": g.setup.head, "config": g.setup.config_rev}
+    assert built == subject, "the case repository no longer reproduces the fixture's commits"
+    return g
 
 
 def write_fixtures() -> None:

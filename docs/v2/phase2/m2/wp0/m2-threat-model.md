@@ -1,6 +1,6 @@
 # Phase 2 / M2 — Threat Model と Trust Boundary
 
-* 状態: **WP0 設計 rev1（Human Review の条件付き承認を受けた修正版）。未実装**
+* 状態: **WP0 設計 rev1（rev2 で T-05 と §4 の GV-2 の扱いを更新。`wp0-revision-2.md`）。WP1 実装済み、WP2 以降は未実装**
 * 前提文書: `docs/v2/phase1/threat-model.md`（Phase 1）、`docs/v2/phase2/m1/wp3/raw-evidence-security-policy.md`（M1）、`m2-schemas.md`
 * 分類（`security.md`）: 確認済み Issue / 高い可能性のある Risk / 文脈依存の Recommendation / Informational。本書の脅威は設計上の想定で、実測ではない
 
@@ -74,8 +74,8 @@ Steering は Security Boundary ではない（`security.md`）。上の境界は
 | T-01 | Manifest の Digest を、改変した Report に合わせて書き換える | AS-1 | Report の payload を Validator が再計算し、Subject・Contract を Git から再取得して照合。Manifest の Digest だけでは LINKED にしない | M2-02、M2-03 | §5 の「整合的な全面改変」 |
 | T-02 | Report の `decision` を `VERIFIED` に書き換える（payload_sha256 も再計算） | AS-1 | `local_recompute` / `local_import` とも Validator が Phase 1 Verifier を再実行し、payload が一致しなければ BROKEN。再実行できなければ NOT_PROVEN | M2-03 | Tool 不在の環境では NOT_PROVEN 止まり |
 | T-03 | Agent が「Human が承認した」と自己申告する（Record を作る、Summary に書く） | AS-2 | Gate Record は Raw からの再生成と一致したときだけ有効（GV-1）。Raw の裏付けがない承認は `approval_self_declared_only`（NOT_PROVEN）。Raw と矛盾する Record は `gate_record_mismatch`（BROKEN） | M2-08 | Raw の取得元の出所は NOT_PROVEN（T-07） |
-| T-04 | 古い Approve を新しい Head に流用する | AS-2 | GV-3（Record の Commit と `head_commit`）と GV-4（`pull.head.sha` と承認の Commit）。不一致が確認できれば `approval_stale` / `gate_binds_other_commit`（BROKEN）、照合できなければ NOT_PROVEN | M2-09 | 取得後の変化（§6） |
-| T-05 | PR 作成者が自分の PR を承認したように見せる（同一 Account、または自分の別 Account） | AS-2 | GV-2 で `same_actor` を NOT_PROVEN。`distinct_actor` でも別人であることは主張しない（`not_claimed: human_identity`） | M2-10 | 別 Account の Sockpuppet は検出できない（Informational） |
+| T-04 | 古い Approve を新しい Head に流用する、Record の Revision を偽る | AS-2 | 古い Head への承認は有効承認に数えない（GV-3 `approval_on_previous_head_only`、NOT_PROVEN）。Record の `binds_to` と Raw の `commit_id` の不一致は BROKEN `approval_revision_misrecorded`。Subject と PR の現在の Head の不一致は GV-4 BROKEN `pr_head_mismatch`（rev2、R2-1） | M2-09 | 取得後の変化（§6） |
+| T-05 | PR 作成者が自分の PR を承認したように見せる（同一 Account、または自分の別 Account） | AS-2 | GV-2（rev2: Account Separation の観測）で `same_actor` を NOT_PROVEN。`author_association` は判定に使わない（D2-1）。`distinct_actor` でも別人であることは主張しない（`not_claimed: human_identity`） | M2-10 | 別 Account の Sockpuppet は検出できない（Informational） |
 | T-06 | 外部 Consumer が `passed_all_checks: true` の Review_Report を「問題なし」と読み、それを Chain の起点にする | AS-1 | Chain は `passed_all_checks` を読まない。`errors[]` と `tools[].available` で判定し、満たさなければ `review` Link が INCOMPLETE で Chain は COMPLETE にならない。`passed_all_checks` の値を書き換えた Report は Report Digest の不一致で BROKEN | M2-04、M2-06 | Chain の外での誤読そのものは残る（P-B の文書改善で軽減） |
 | T-07 | GitHub 応答の偽造（中間者、改変した Raw を Store に入れる） | AS-1、AS-2 | 保存後の改変は M1 Integrity が検出。取得時の出所は NOT_PROVEN として明示し、COMPLETE の意味に含めない | M2-05 | `capture_authenticity` は常に NOT_PROVEN（確認済みの限界） |
 | T-08 | Locator の Path Traversal / Symlink で Root 外のファイルを読ませる | AS-6 | Root 相対、`..`・絶対 Path 拒否、`O_NOFOLLOW`、Containment 確認 | M2-01 | — |

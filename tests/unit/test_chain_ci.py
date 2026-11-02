@@ -98,9 +98,19 @@ def _expected(tmp: Path, script: ModuleType, **over: Any) -> Path:
                            "validator_source_sha256": validator.validator_source_sha256(),
                            "scenarios": {s: {"chain_status": "INCOMPLETE", "manifest_sha256": "a" * 64, "payload_sha256": "b" * 64}
                                          for s in ("sc01", "sc02")}}
+    gate_over = over.pop("gate", None)
     doc.update(over)
     path = tmp / "expected.json"
     path.write_text(json.dumps(doc), encoding="utf-8")
+    gate_doc: Dict[str, Any] = {"expected_format": "iacreview.chain.replay-expected-gate/1", "note": "test",
+                                "validator_source_sha256": doc["validator_source_sha256"],
+                                "scenarios": {n: {"chain_status": s, "manifest_sha256": "a" * 64, "payload_sha256": "b" * 64}
+                                              for n, s in script.GATE_SCENARIOS.items()}}
+    if gate_over == "absent":
+        return path
+    gate_doc.update(gate_over or {})
+    gate_path = tmp / script.GATE_EXPECTED_NAME
+    gate_path.write_text(json.dumps(gate_doc), encoding="utf-8")
     return path
 
 
@@ -157,3 +167,19 @@ def test_the_summary_names_no_path(script: ModuleType, tmp_path: Path, monkeypat
     _run(script, tmp_path, [_case(t) for t in script.REQUIRED_TESTS])
     text = target.read_text(encoding="utf-8")
     assert str(tmp_path) not in text and str(ROOT) not in text and "PASS for the checks this job runs" in text
+
+
+def test_the_gate_anchor_must_be_present(script: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    assert _run(script, tmp_path, [_case(t) for t in script.REQUIRED_TESTS], gate="absent") == 41
+
+
+def test_the_gate_anchor_must_share_the_validator_digest(script: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    assert _run(script, tmp_path, [_case(t) for t in script.REQUIRED_TESTS], gate={"validator_source_sha256": "0" * 64}) == 41
+
+
+def test_the_gate_anchor_statuses_are_fixed_by_the_specification(script: ModuleType, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("GITHUB_STEP_SUMMARY", raising=False)
+    bad = {"scenarios": {n: {"chain_status": "COMPLETE", "manifest_sha256": "a" * 64, "payload_sha256": "b" * 64} for n in script.GATE_SCENARIOS}}
+    assert _run(script, tmp_path, [_case(t) for t in script.REQUIRED_TESTS], gate=bad) == 41
